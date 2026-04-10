@@ -2,6 +2,7 @@ using Marten;
 using Wolverine;
 using Wolverine.FluentValidation;
 using Wolverine.Http;
+using Wolverine.Marten;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,11 +18,13 @@ builder.Services.AddMarten(opts =>
     opts.DatabaseSchemaName = "todos";
     opts.Schema.For<CleanArchitectureTodos.TodoList>().Index(x => x.Title);
 })
+.IntegrateWithWolverine()
 .UseLightweightSessions();
 
 builder.Host.UseWolverine(opts =>
 {
     opts.Discovery.IncludeAssembly(typeof(Program).Assembly);
+    opts.Policies.AutoApplyTransactions();
     opts.UseFluentValidation();
 });
 

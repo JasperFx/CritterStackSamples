@@ -1,6 +1,7 @@
 using Marten;
 using Wolverine;
 using Wolverine.Http;
+using Wolverine.Marten;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,11 +20,13 @@ builder.Services.AddMarten(opts =>
     opts.Schema.For<CqrsMinimalApi.Student>().UseNumericRevisions(true);
     opts.Schema.For<CqrsMinimalApi.Student>().Index(x => x.Name);
 })
+.IntegrateWithWolverine()
 .UseLightweightSessions();
 
 builder.Host.UseWolverine(opts =>
 {
     opts.Discovery.IncludeAssembly(typeof(Program).Assembly);
+    opts.Policies.AutoApplyTransactions();
 });
 
 var app = builder.Build();

@@ -102,7 +102,7 @@ public static class StudentEndpoints
 
         return student;
     }
-    
+
     // Use [Entity(Required = true)] to deal with 200 vs 404
     // Try to be synchronous
     // Rely on Wolverine transactional middleware whereever possible

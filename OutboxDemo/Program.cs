@@ -28,6 +28,7 @@ builder.Services.AddMarten(opts =>
 builder.Host.UseWolverine(opts =>
 {
     opts.Discovery.IncludeAssembly(typeof(Program).Assembly);
+    opts.Policies.AutoApplyTransactions();
 
     // Wolverine's durable inbox/outbox with Marten persistence
     // replaces MassTransit's BusOutbox + InboxState + OutboxMessage tables
