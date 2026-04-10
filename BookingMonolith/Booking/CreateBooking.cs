@@ -1,8 +1,10 @@
 using FluentValidation;
 using Marten;
-using Microsoft.AspNetCore.Mvc;
 using BookingMonolith;
+using Flight;
+using Passenger;
 using Wolverine.Http;
+using Wolverine.Persistence;
 
 namespace Booking;
 
@@ -20,39 +22,28 @@ public record CreateBooking(Guid PassengerId, Guid FlightId, string? Description
 
 public static class CreateBookingEndpoint
 {
-    // Validate that both the passenger and flight exist
-    public static async Task<ProblemDetails> ValidateAsync(
-        CreateBooking command,
-        IQuerySession session)
-    {
-        var passenger = await session.LoadAsync<Passenger.PassengerRecord>(command.PassengerId);
-        if (passenger is null)
-            return new ProblemDetails { Detail = "Passenger not found", Status = 404 };
-
-        var flight = await session.LoadAsync<Flight.FlightRecord>(command.FlightId);
-        if (flight is null)
-            return new ProblemDetails { Detail = "Flight not found", Status = 404 };
-
-        return WolverineContinue.NoProblems;
-    }
-
     // Event-sourced: starts a new event stream in Marten.
     // Replaces: gRPC calls to Flight/Passenger + EventStoreDB append + MongoDB projection
     [WolverinePost("/api/bookings")]
-    public static async Task<(BookingRecord, BookingCreated)> Post(
+
+    // Multiple [Entity] parameters enable Marten batch querying — Wolverine loads
+    // both the PassengerRecord and FlightRecord in a single database round-trip
+    // instead of two sequential LoadAsync calls. This is a significant performance win.
+    // OnMissing = ProblemDetailsWith400 treats missing referenced entities as bad input
+    // (the IDs come from the client), eliminating the need for a separate ValidateAsync.
+    public static (BookingRecord, BookingCreated) Post(
         CreateBooking command,
+        [Entity(Required = true, OnMissing = OnMissing.ProblemDetailsWith400)] PassengerRecord passenger,
+        [Entity(Required = true, OnMissing = OnMissing.ProblemDetailsWith400)] FlightRecord flight,
         IDocumentSession session)
     {
-        var passenger = await session.LoadAsync<Passenger.PassengerRecord>(command.PassengerId);
-        var flight = await session.LoadAsync<Flight.FlightRecord>(command.FlightId);
-
         var bookingId = Guid.NewGuid();
 
         var domainEvent = new BookingCreatedDomainEvent(
             bookingId,
-            passenger!.Id,
+            passenger.Id,
             passenger.Name,
-            flight!.Id,
+            flight.Id,
             flight.FlightNumber,
             flight.Price,
             command.Description,
