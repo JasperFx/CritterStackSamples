@@ -16,15 +16,3 @@ public static class AddEventAttendeeHandler
         Console.WriteLine($"[AddAttendee] Added member {message.MemberId} to event {message.EventId}");
     }
 }
-
-/// <summary>
-/// Replaces ValidateRegistrationConsumer — validates and publishes RegistrationValidated.
-/// </summary>
-public static class ValidateRegistrationHandler
-{
-    public static RegistrationValidated Handle(AddEventAttendee message)
-    {
-        Console.WriteLine($"[ValidateRegistration] Validating registration {message.RegistrationId}");
-        return new RegistrationValidated(message.RegistrationId);
-    }
-}

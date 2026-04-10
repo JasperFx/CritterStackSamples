@@ -44,7 +44,9 @@ public static class SubmitRegistrationEndpoint
             Payment = command.Payment,
         };
 
-        session.Store(registration);
+        // Wolverine will automatically persist the new Registration
+        // saga
+        // session.Store(registration);
 
         return (
             registration,
