@@ -7,10 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Shared\Shared.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="WolverineFx.FluentValidation" Version="5.30.0" />
     <PackageReference Include="WolverineFx.Http" Version="5.28.0" />
     <PackageReference Include="WolverineFx.Marten" Version="5.28.0" />

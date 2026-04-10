@@ -1,4 +1,6 @@
-# E-Commerce Microservices — Critter Stack Conversion
+# E-Commerce Microservices (RabbitMQ) — Critter Stack Conversion
+
+> **See also:** `EcommerceModularMonolith/` — the same domain collapsed into a single application with durable local queues.
 
 ## Original Project
 

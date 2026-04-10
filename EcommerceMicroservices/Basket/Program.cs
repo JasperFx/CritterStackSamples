@@ -1,7 +1,9 @@
 using Marten;
+using Shared;
 using Wolverine;
 using Wolverine.Http;
 using Wolverine.Marten;
+using Wolverine.RabbitMQ;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,13 +13,13 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddMarten(opts =>
 {
     var connectionString = builder.Configuration.GetConnectionString("Marten")
-        ?? "Host=localhost;Database=ordering;Username=postgres;Password=postgres";
+        ?? "Host=localhost;Database=basket;Username=postgres;Password=postgres";
 
     opts.Connection(connectionString);
-    opts.DatabaseSchemaName = "ordering";
+    opts.DatabaseSchemaName = "basket";
 
-    opts.Schema.For<Ordering.Order>().Index(x => x.CustomerId);
-    opts.Schema.For<Ordering.Order>().Index(x => x.OrderName);
+    // ShoppingCart uses UserName (string) as identity
+    opts.Schema.For<Basket.ShoppingCart>().Identity(x => x.Id);
 })
 .IntegrateWithWolverine()
 .UseLightweightSessions();
@@ -26,7 +28,19 @@ builder.Host.UseWolverine(opts =>
 {
     opts.Discovery.IncludeAssembly(typeof(Program).Assembly);
     opts.Policies.AutoApplyTransactions();
-    opts.ServiceName = "Ordering";
+    opts.ServiceName = "Basket";
+
+    // Publish BasketCheckoutEvent to RabbitMQ for the Ordering service
+    opts.UseRabbitMq(rabbit =>
+    {
+        rabbit.HostName = builder.Configuration["RabbitMQ:Host"] ?? "localhost";
+    }).AutoProvision();
+
+    opts.Publish(x =>
+    {
+        x.Message<BasketCheckoutEvent>();
+        x.ToRabbitQueue("basket-checkout");
+    });
 });
 
 var app = builder.Build();
