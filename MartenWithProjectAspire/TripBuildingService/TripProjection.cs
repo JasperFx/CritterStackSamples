@@ -1,7 +1,7 @@
 using Marten.Events.Aggregation;
 using TripDomain;
 
-public class TripProjection: SingleStreamProjection<Trip>
+public class TripProjection: SingleStreamProjection<Trip, Guid>
 {
     public TripProjection()
     {

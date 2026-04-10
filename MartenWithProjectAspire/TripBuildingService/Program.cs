@@ -1,6 +1,6 @@
-﻿using Marten;
-using Marten.Events.Daemon.Resiliency;
-using Marten.Events.Projections;
+﻿using JasperFx.Events.Daemon;
+using JasperFx.Events.Projections;
+using Marten;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
