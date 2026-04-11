@@ -17,7 +17,7 @@ builder.Services.AddWolverineHttp();
 builder.Services.AddMarten(opts =>
 {
     var connectionString = builder.Configuration.GetConnectionString("Marten")
-        ?? "Host=localhost;Database=meeting_groups;Username=postgres;Password=postgres";
+        ?? "Host=localhost;Port=5433;Database=meeting_groups;Username=postgres;Password=postgres";
 
     opts.Connection(connectionString);
 
