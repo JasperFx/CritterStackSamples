@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="MoreSpeakersES.Tests" />
+    <InternalsVisibleTo Include="Tests" />
   </ItemGroup>
 
   <ItemGroup>
@@ -15,6 +15,12 @@
     <PackageReference Include="WolverineFx.Http" Version="5.28.0" />
     <PackageReference Include="WolverineFx.Marten" Version="5.28.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Tests/**" />
+    <Content Remove="Tests/**" />
+    <None Remove="Tests/**" />
   </ItemGroup>
 
 </Project>

@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MoreSpeakers\MoreSpeakers.csproj" />
+    <ProjectReference Include="..\MoreSpeakersES.csproj" />
   </ItemGroup>
 
 </Project>

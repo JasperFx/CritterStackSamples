@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CqrsMinimalApi\CqrsMinimalApi.csproj" />
+    <ProjectReference Include="..\MoreSpeakers.csproj" />
   </ItemGroup>
 
 </Project>
