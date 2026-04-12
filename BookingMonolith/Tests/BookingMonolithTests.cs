@@ -75,7 +75,7 @@ public class BookingMonolithTests : IAsyncLifetime
             x.StatusCodeShouldBeOk();
         });
 
-        var passenger = result.ReadAsJson<PassengerRecord>();
+        var passenger = result.ReadAsJson<Passenger.Passenger>();
         Assert.NotNull(passenger);
         Assert.NotEqual(Guid.Empty, passenger!.Id);
         Assert.Equal("Bob Jones", passenger.Name);
@@ -117,7 +117,7 @@ public class BookingMonolithTests : IAsyncLifetime
             x.StatusCodeShouldBeOk();
         });
 
-        var flight = result.ReadAsJson<FlightRecord>();
+        var flight = result.ReadAsJson<Flight.Flight>();
         Assert.NotNull(flight);
         Assert.NotEqual(Guid.Empty, flight!.Id);
         Assert.Equal("FL100", flight.FlightNumber);
@@ -161,7 +161,7 @@ public class BookingMonolithTests : IAsyncLifetime
             x.StatusCodeShouldBeOk();
         });
 
-        var flights = result.ReadAsJson<List<FlightRecord>>();
+        var flights = result.ReadAsJson<List<Flight.Flight>>();
         Assert.NotNull(flights);
         Assert.NotEmpty(flights!);
     }
@@ -180,7 +180,7 @@ public class BookingMonolithTests : IAsyncLifetime
             )).ToUrl("/api/flights");
         });
 
-        var created = createResult.ReadAsJson<FlightRecord>()!;
+        var created = createResult.ReadAsJson<Flight.Flight>()!;
 
         var result = await _host.Scenario(x =>
         {
@@ -188,7 +188,7 @@ public class BookingMonolithTests : IAsyncLifetime
             x.StatusCodeShouldBeOk();
         });
 
-        var flight = result.ReadAsJson<FlightRecord>();
+        var flight = result.ReadAsJson<Flight.Flight>();
         Assert.NotNull(flight);
         Assert.Equal(created.Id, flight!.Id);
         Assert.Equal("FL300", flight.FlightNumber);
@@ -216,7 +216,7 @@ public class BookingMonolithTests : IAsyncLifetime
         {
             x.Post.Json(new CreatePassenger("Jane Doe", "XY789012", PassengerType.Female, 28)).ToUrl("/api/passengers");
         });
-        var passenger = passengerResult.ReadAsJson<PassengerRecord>()!;
+        var passenger = passengerResult.ReadAsJson<Passenger.Passenger>()!;
 
         // Create flight
         var flightResult = await _host.Scenario(x =>
@@ -229,7 +229,7 @@ public class BookingMonolithTests : IAsyncLifetime
                 new DateTime(2026, 9, 1)
             )).ToUrl("/api/flights");
         });
-        var flight = flightResult.ReadAsJson<FlightRecord>()!;
+        var flight = flightResult.ReadAsJson<Flight.Flight>()!;
 
         // Create booking
         var result = await _host.Scenario(x =>
@@ -262,7 +262,7 @@ public class BookingMonolithTests : IAsyncLifetime
                 new DateTime(2026, 10, 1)
             )).ToUrl("/api/flights");
         });
-        var flight = flightResult.ReadAsJson<FlightRecord>()!;
+        var flight = flightResult.ReadAsJson<Flight.Flight>()!;
 
         await _host.Scenario(x =>
         {
@@ -278,7 +278,7 @@ public class BookingMonolithTests : IAsyncLifetime
         {
             x.Post.Json(new CreatePassenger("Test User", "ZZ000000", PassengerType.Male, 40)).ToUrl("/api/passengers");
         });
-        var passenger = passengerResult.ReadAsJson<PassengerRecord>()!;
+        var passenger = passengerResult.ReadAsJson<Passenger.Passenger>()!;
 
         await _host.Scenario(x =>
         {
@@ -295,7 +295,7 @@ public class BookingMonolithTests : IAsyncLifetime
         {
             x.Post.Json(new CreatePassenger("List Test", "LT123456", PassengerType.Male, 25)).ToUrl("/api/passengers");
         });
-        var passenger = passengerResult.ReadAsJson<PassengerRecord>()!;
+        var passenger = passengerResult.ReadAsJson<Passenger.Passenger>()!;
 
         var flightResult = await _host.Scenario(x =>
         {
@@ -307,7 +307,7 @@ public class BookingMonolithTests : IAsyncLifetime
                 new DateTime(2026, 11, 1)
             )).ToUrl("/api/flights");
         });
-        var flight = flightResult.ReadAsJson<FlightRecord>()!;
+        var flight = flightResult.ReadAsJson<Flight.Flight>()!;
 
         await _host.Scenario(x =>
         {
@@ -332,7 +332,7 @@ public class BookingMonolithTests : IAsyncLifetime
         {
             x.Post.Json(new CreatePassenger("ById Test", "BI123456", PassengerType.Female, 35)).ToUrl("/api/passengers");
         });
-        var passenger = passengerResult.ReadAsJson<PassengerRecord>()!;
+        var passenger = passengerResult.ReadAsJson<Passenger.Passenger>()!;
 
         var flightResult = await _host.Scenario(x =>
         {
@@ -344,7 +344,7 @@ public class BookingMonolithTests : IAsyncLifetime
                 new DateTime(2026, 12, 1)
             )).ToUrl("/api/flights");
         });
-        var flight = flightResult.ReadAsJson<FlightRecord>()!;
+        var flight = flightResult.ReadAsJson<Flight.Flight>()!;
 
         var bookingResult = await _host.Scenario(x =>
         {

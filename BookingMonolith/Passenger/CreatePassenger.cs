@@ -20,9 +20,9 @@ public record CreatePassenger(string Name, string PassportNumber, PassengerType 
 public static class CreatePassengerEndpoint
 {
     [WolverinePost("/api/passengers")]
-    public static (PassengerRecord, PassengerCreated) Post(CreatePassenger command, IDocumentSession session)
+    public static (Passenger, PassengerCreated) Post(CreatePassenger command, IDocumentSession session)
     {
-        var passenger = new PassengerRecord
+        var passenger = new Passenger
         {
             Id = Guid.NewGuid(),
             Name = command.Name,
@@ -45,7 +45,7 @@ public static class UserCreatedHandler
 {
     public static void Handle(UserCreated message, IDocumentSession session)
     {
-        session.Store(new PassengerRecord
+        session.Store(new Passenger
         {
             Id = message.UserId,
             Name = $"{message.FirstName} {message.LastName}",

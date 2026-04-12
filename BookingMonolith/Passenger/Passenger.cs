@@ -1,6 +1,6 @@
 namespace Passenger;
 
-public class PassengerRecord
+public class Passenger
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;

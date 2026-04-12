@@ -23,8 +23,8 @@ builder.Services.AddMarten(opts =>
 
     // Schema-per-module
     opts.Schema.For<Identity.UserAccount>().DatabaseSchemaName("identity");
-    opts.Schema.For<Passenger.PassengerRecord>().DatabaseSchemaName("passenger");
-    opts.Schema.For<Flight.FlightRecord>().DatabaseSchemaName("flight");
+    opts.Schema.For<Passenger.Passenger>().DatabaseSchemaName("passenger");
+    opts.Schema.For<Flight.Flight>().DatabaseSchemaName("flight");
     opts.Schema.For<Flight.Aircraft>().DatabaseSchemaName("flight");
     opts.Schema.For<Flight.Airport>().DatabaseSchemaName("flight");
     opts.Schema.For<Flight.Seat>().DatabaseSchemaName("flight");

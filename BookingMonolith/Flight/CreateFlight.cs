@@ -31,9 +31,9 @@ public record CreateFlight(
 public static class CreateFlightEndpoint
 {
     [WolverinePost("/api/flights")]
-    public static (FlightRecord, FlightCreated) Post(CreateFlight command, IDocumentSession session)
+    public static (Flight, FlightCreated) Post(CreateFlight command, IDocumentSession session)
     {
-        var flight = new FlightRecord
+        var flight = new Flight
         {
             Id = Guid.NewGuid(),
             FlightNumber = command.FlightNumber,
@@ -57,12 +57,12 @@ public static class CreateFlightEndpoint
 public static class GetFlightsEndpoint
 {
     [WolverineGet("/api/flights")]
-    public static Task<IReadOnlyList<FlightRecord>> Get(IQuerySession session)
-        => session.Query<FlightRecord>().OrderBy(f => f.FlightDate).ToListAsync();
+    public static Task<IReadOnlyList<Flight>> Get(IQuerySession session)
+        => session.Query<Flight>().OrderBy(f => f.FlightDate).ToListAsync();
 }
 
 public static class GetFlightByIdEndpoint
 {
     [WolverineGet("/api/flights/{id}")]
-    public static FlightRecord? Get(Guid id, [Wolverine.Persistence.Entity] FlightRecord? flight) => flight;
+    public static Flight? Get(Guid id, [Wolverine.Persistence.Entity] Flight? flight) => flight;
 }

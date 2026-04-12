@@ -33,8 +33,8 @@ public static class CreateBookingEndpoint
     // (the IDs come from the client), eliminating the need for a separate ValidateAsync.
     public static (BookingRecord, BookingCreated) Post(
         CreateBooking command,
-        [Entity(Required = true, OnMissing = OnMissing.ProblemDetailsWith400)] PassengerRecord passenger,
-        [Entity(Required = true, OnMissing = OnMissing.ProblemDetailsWith400)] FlightRecord flight,
+        [Entity(Required = true, OnMissing = OnMissing.ProblemDetailsWith400)] Passenger.Passenger passenger,
+        [Entity(Required = true, OnMissing = OnMissing.ProblemDetailsWith400)] Flight.Flight flight,
         IDocumentSession session)
     {
         var bookingId = Guid.NewGuid();
