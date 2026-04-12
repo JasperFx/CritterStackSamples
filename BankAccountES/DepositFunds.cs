@@ -21,7 +21,7 @@ public static class DepositFundsEndpoint
     // [AggregateHandler] loads the Account from the event stream,
     // appends the returned event, and commits — all in one transaction
     [WolverinePost("/api/accounts/{accountId}/deposits")]
-    [AggregateHandler]
+    [AggregateHandler, EmptyResponse]
     public static FundsDeposited Post(DepositFunds command, Account account)
     {
         var newBalance = account.Balance + command.Amount;

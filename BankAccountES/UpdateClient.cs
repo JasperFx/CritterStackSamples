@@ -19,7 +19,7 @@ public record UpdateClient(Guid ClientId, string Name, string Email)
 public static class UpdateClientEndpoint
 {
     [WolverinePut("/api/clients/{clientId}")]
-    [AggregateHandler]
+    [AggregateHandler, EmptyResponse]
     public static ClientUpdated Put(UpdateClient command, Client client)
     {
         return new ClientUpdated(command.ClientId, command.Name, command.Email);

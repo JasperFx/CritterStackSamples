@@ -33,7 +33,7 @@ public static class WithdrawFundsEndpoint
     }
 
     [WolverinePost("/api/accounts/{accountId}/withdrawals")]
-    [AggregateHandler]
+    [AggregateHandler, EmptyResponse]
     public static FundsWithdrawn Post(WithdrawFunds command, Account account)
     {
         var newBalance = account.Balance - command.Amount;

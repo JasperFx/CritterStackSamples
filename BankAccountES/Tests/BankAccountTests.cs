@@ -12,9 +12,7 @@ public class BankAccountTests : IAsyncLifetime
     public async Task InitializeAsync()
     {
         _host = await AlbaHost.For<Program>();
-        var store = _host.Services.GetRequiredService<IDocumentStore>();
-        await store.Advanced.Clean.DeleteAllDocumentsAsync();
-        await store.Advanced.Clean.DeleteAllEventDataAsync();
+        await _host.CleanAllMartenDataAsync();
     }
 
     public async Task DisposeAsync() => await _host.DisposeAsync();
@@ -60,7 +58,7 @@ public class BankAccountTests : IAsyncLifetime
         {
             x.Put.Json(new UpdateClient(client.Id, "Updated Name", "updated@test.com"))
                 .ToUrl($"/api/clients/{client.Id}");
-            x.StatusCodeShouldBe(200);
+            x.StatusCodeShouldBe(204);
         });
 
         var getResult = await _host.Scenario(x =>
@@ -110,13 +108,12 @@ public class BankAccountTests : IAsyncLifetime
         await _host.Scenario(x =>
         {
             x.Post.Json(new DepositFunds(account.Id, 500m)).ToUrl($"/api/accounts/{account.Id}/deposits");
-            x.StatusCodeShouldBe(200);
+            x.StatusCodeShouldBe(204);
         });
 
         var getResult = await _host.Scenario(x =>
         {
             x.Get.Url($"/api/accounts/{account.Id}");
-            x.StatusCodeShouldBe(200);
         });
 
         var updated = getResult.ReadAsJson<Account>();
@@ -135,12 +132,13 @@ public class BankAccountTests : IAsyncLifetime
         await _host.Scenario(x =>
         {
             x.Post.Json(new DepositFunds(account.Id, 1000m)).ToUrl($"/api/accounts/{account.Id}/deposits");
+            x.StatusCodeShouldBe(204);
         });
 
         await _host.Scenario(x =>
         {
             x.Post.Json(new WithdrawFunds(account.Id, 300m)).ToUrl($"/api/accounts/{account.Id}/withdrawals");
-            x.StatusCodeShouldBe(200);
+            x.StatusCodeShouldBe(204);
         });
 
         var getResult = await _host.Scenario(x =>
@@ -162,6 +160,7 @@ public class BankAccountTests : IAsyncLifetime
         await _host.Scenario(x =>
         {
             x.Post.Json(new DepositFunds(account.Id, 100m)).ToUrl($"/api/accounts/{account.Id}/deposits");
+            x.StatusCodeShouldBe(204);
         });
 
         await _host.Scenario(x =>
@@ -182,10 +181,12 @@ public class BankAccountTests : IAsyncLifetime
         await _host.Scenario(x =>
         {
             x.Post.Json(new DepositFunds(account.Id, 1000m)).ToUrl($"/api/accounts/{account.Id}/deposits");
+            x.StatusCodeShouldBe(204);
         });
         await _host.Scenario(x =>
         {
             x.Post.Json(new WithdrawFunds(account.Id, 200m)).ToUrl($"/api/accounts/{account.Id}/withdrawals");
+            x.StatusCodeShouldBe(204);
         });
 
         var result = await _host.Scenario(x =>
