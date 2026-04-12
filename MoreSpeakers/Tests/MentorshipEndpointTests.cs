@@ -1,6 +1,7 @@
 using Alba;
 using Marten;
 using Mentorships;
+using Shouldly;
 using Speakers;
 
 namespace MoreSpeakers.Tests;
@@ -51,9 +52,9 @@ public class MentorshipEndpointTests : IAsyncLifetime
         });
 
         var mentorship = result.ReadAsJson<Mentorship>();
-        Assert.NotNull(mentorship);
-        Assert.Equal(MentorshipStatus.Pending, mentorship!.Status);
-        Assert.Equal(mentor.Id, mentorship.MentorId);
+        mentorship.ShouldNotBeNull();
+        mentorship!.Status.ShouldBe(MentorshipStatus.Pending);
+        mentorship.MentorId.ShouldBe(mentor.Id);
     }
 
     [Fact]
@@ -93,8 +94,8 @@ public class MentorshipEndpointTests : IAsyncLifetime
         });
 
         var accepted = result.ReadAsJson<Mentorship>();
-        Assert.Equal(MentorshipStatus.Active, accepted!.Status);
-        Assert.Equal("Happy to help!", accepted.ResponseMessage);
+        accepted!.Status.ShouldBe(MentorshipStatus.Active);
+        accepted.ResponseMessage.ShouldBe("Happy to help!");
     }
 
     [Fact]
@@ -135,7 +136,7 @@ public class MentorshipEndpointTests : IAsyncLifetime
         });
 
         var completed = result.ReadAsJson<Mentorship>();
-        Assert.Equal(MentorshipStatus.Completed, completed!.Status);
-        Assert.NotNull(completed.CompletedAt);
+        completed!.Status.ShouldBe(MentorshipStatus.Completed);
+        completed.CompletedAt.ShouldNotBeNull();
     }
 }

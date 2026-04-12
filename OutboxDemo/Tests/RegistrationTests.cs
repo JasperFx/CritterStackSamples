@@ -1,6 +1,7 @@
 using Alba;
 using Marten;
 using OutboxDemo;
+using Shouldly;
 
 namespace OutboxDemo.Tests;
 
@@ -31,8 +32,8 @@ public class RegistrationTests : IAsyncLifetime
         var registrations = await session.Query<Registration>()
             .Where(r => r.MemberId == "member-1" && r.EventId == "event-1")
             .ToListAsync();
-        Assert.Single(registrations);
-        Assert.Equal(100m, registrations[0].Payment);
+        registrations.ShouldHaveSingleItem();
+        registrations[0].Payment.ShouldBe(100m);
     }
 
     [Fact]
@@ -64,9 +65,9 @@ public class RegistrationTests : IAsyncLifetime
         var loaded = await session.Query<Registration>()
             .FirstOrDefaultAsync(r => r.MemberId == "member-3" && r.EventId == "event-3");
 
-        Assert.NotNull(loaded);
-        Assert.Equal("member-3", loaded!.MemberId);
-        Assert.Equal("event-3", loaded.EventId);
+        loaded.ShouldNotBeNull();
+        loaded!.MemberId.ShouldBe("member-3");
+        loaded.EventId.ShouldBe("event-3");
     }
 
     [Fact]

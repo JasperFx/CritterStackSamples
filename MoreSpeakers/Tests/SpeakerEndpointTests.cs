@@ -1,5 +1,6 @@
 using Alba;
 using Marten;
+using Shouldly;
 using Speakers;
 
 namespace MoreSpeakers.Tests;
@@ -27,9 +28,9 @@ public class SpeakerEndpointTests : IAsyncLifetime
         });
 
         var speaker = result.ReadAsJson<Speaker>();
-        Assert.NotNull(speaker);
-        Assert.Equal("Alice", speaker!.FirstName);
-        Assert.Equal("alice@test.com", speaker.Email);
+        speaker.ShouldNotBeNull();
+        speaker!.FirstName.ShouldBe("Alice");
+        speaker.Email.ShouldBe("alice@test.com");
     }
 
     [Fact]
@@ -62,8 +63,8 @@ public class SpeakerEndpointTests : IAsyncLifetime
         });
 
         var speakers = result.ReadAsJson<Speaker[]>();
-        Assert.NotNull(speakers);
-        Assert.True(speakers!.Length >= 1);
+        speakers.ShouldNotBeNull();
+        (speakers!.Length >= 1).ShouldBeTrue();
     }
 
     [Fact]
@@ -94,9 +95,9 @@ public class SpeakerEndpointTests : IAsyncLifetime
         });
 
         var updated = result.ReadAsJson<Speaker>();
-        Assert.Equal("Updated", updated!.FirstName);
-        Assert.True(updated.IsAvailableForMentoring);
-        Assert.Equal(3, updated.MaxMentees);
-        Assert.Contains("C#", updated.Expertise);
+        updated!.FirstName.ShouldBe("Updated");
+        updated.IsAvailableForMentoring.ShouldBeTrue();
+        updated.MaxMentees.ShouldBe(3);
+        updated.Expertise.ShouldContain("C#");
     }
 }

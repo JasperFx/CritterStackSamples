@@ -2,6 +2,7 @@ using Alba;
 using Catalog;
 using Marten;
 using Microsoft.Extensions.DependencyInjection;
+using Shouldly;
 
 namespace Tests;
 
@@ -39,11 +40,11 @@ public class CatalogTests : IAsyncLifetime
     {
         var product = await CreateProduct("Test Phone", ["Smart Phone"], "A test phone", 599.99m);
 
-        Assert.NotEqual(Guid.Empty, product.Id);
-        Assert.Equal("Test Phone", product.Name);
-        Assert.Contains("Smart Phone", product.Category);
-        Assert.Equal("A test phone", product.Description);
-        Assert.Equal(599.99m, product.Price);
+        product.Id.ShouldNotBe(Guid.Empty);
+        product.Name.ShouldBe("Test Phone");
+        product.Category.ShouldContain("Smart Phone");
+        product.Description.ShouldBe("A test phone");
+        product.Price.ShouldBe(599.99m);
     }
 
     [Fact]
@@ -93,7 +94,7 @@ public class CatalogTests : IAsyncLifetime
         });
 
         var products = result.ReadAsJson<List<Product>>()!;
-        Assert.True(products.Count >= 2);
+        (products.Count >= 2).ShouldBeTrue();
     }
 
     [Fact]
@@ -108,8 +109,8 @@ public class CatalogTests : IAsyncLifetime
         });
 
         var product = result.ReadAsJson<Product>()!;
-        Assert.Equal(created.Id, product.Id);
-        Assert.Equal("ById Product", product.Name);
+        product.Id.ShouldBe(created.Id);
+        product.Name.ShouldBe("ById Product");
     }
 
     [Fact]
@@ -135,8 +136,11 @@ public class CatalogTests : IAsyncLifetime
         });
 
         var products = result.ReadAsJson<List<Product>>()!;
-        Assert.NotEmpty(products);
-        Assert.All(products, p => Assert.Contains("Smart Phone", p.Category));
+        products.ShouldNotBeEmpty();
+        foreach (var p in products)
+        {
+            p.Category.ShouldContain("Smart Phone");
+        }
     }
 
     #endregion
@@ -155,11 +159,11 @@ public class CatalogTests : IAsyncLifetime
         });
 
         var updated = result.ReadAsJson<Product>()!;
-        Assert.Equal(created.Id, updated.Id);
-        Assert.Equal("Updated", updated.Name);
-        Assert.Contains("New Cat", updated.Category);
-        Assert.Equal("Updated desc", updated.Description);
-        Assert.Equal(250m, updated.Price);
+        updated.Id.ShouldBe(created.Id);
+        updated.Name.ShouldBe("Updated");
+        updated.Category.ShouldContain("New Cat");
+        updated.Description.ShouldBe("Updated desc");
+        updated.Price.ShouldBe(250m);
     }
 
     [Fact]

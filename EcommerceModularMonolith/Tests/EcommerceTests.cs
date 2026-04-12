@@ -5,6 +5,7 @@ using Discount;
 using Marten;
 using Microsoft.Extensions.DependencyInjection;
 using Ordering;
+using Shouldly;
 
 namespace Tests;
 
@@ -40,10 +41,10 @@ public class EcommerceTests : IAsyncLifetime
         });
 
         var product = result.ReadAsJson<Product>();
-        Assert.NotNull(product);
-        Assert.NotEqual(Guid.Empty, product!.Id);
-        Assert.Equal("Widget", product.Name);
-        Assert.Equal(29.99m, product.Price);
+        product.ShouldNotBeNull();
+        product!.Id.ShouldNotBe(Guid.Empty);
+        product.Name.ShouldBe("Widget");
+        product.Price.ShouldBe(29.99m);
     }
 
     [Fact]
@@ -72,9 +73,9 @@ public class EcommerceTests : IAsyncLifetime
         });
 
         var updated = result.ReadAsJson<Product>();
-        Assert.NotNull(updated);
-        Assert.Equal("Updated", updated!.Name);
-        Assert.Equal(20m, updated.Price);
+        updated.ShouldNotBeNull();
+        updated!.Name.ShouldBe("Updated");
+        updated.Price.ShouldBe(20m);
     }
 
     [Fact]
@@ -122,8 +123,8 @@ public class EcommerceTests : IAsyncLifetime
         });
 
         var products = result.ReadAsJson<List<Product>>();
-        Assert.NotNull(products);
-        Assert.True(products!.Count >= 2);
+        products.ShouldNotBeNull();
+        (products!.Count >= 2).ShouldBeTrue();
     }
 
     [Fact]
@@ -142,8 +143,8 @@ public class EcommerceTests : IAsyncLifetime
         });
 
         var product = result.ReadAsJson<Product>();
-        Assert.NotNull(product);
-        Assert.Equal("FindMe", product!.Name);
+        product.ShouldNotBeNull();
+        product!.Name.ShouldBe("FindMe");
     }
 
     [Fact]
@@ -162,9 +163,9 @@ public class EcommerceTests : IAsyncLifetime
         });
 
         var products = result.ReadAsJson<List<Product>>();
-        Assert.NotNull(products);
-        Assert.Single(products!);
-        Assert.Equal("CatProd", products[0].Name);
+        products.ShouldNotBeNull();
+        products!.ShouldHaveSingleItem();
+        products[0].Name.ShouldBe("CatProd");
     }
 
     #endregion
@@ -203,9 +204,9 @@ public class EcommerceTests : IAsyncLifetime
         });
 
         var retrieved = result.ReadAsJson<ShoppingCart>();
-        Assert.NotNull(retrieved);
-        Assert.Equal("testuser", retrieved!.Id);
-        Assert.Single(retrieved.Items);
+        retrieved.ShouldNotBeNull();
+        retrieved!.Id.ShouldBe("testuser");
+        retrieved.Items.ShouldHaveSingleItem();
     }
 
     [Fact]
@@ -295,9 +296,9 @@ public class EcommerceTests : IAsyncLifetime
         });
 
         var order = result.ReadAsJson<Order>();
-        Assert.NotNull(order);
-        Assert.Equal("TestOrder-1", order!.OrderName);
-        Assert.Equal(OrderStatus.Pending, order.Status);
+        order.ShouldNotBeNull();
+        order!.OrderName.ShouldBe("TestOrder-1");
+        order.Status.ShouldBe(OrderStatus.Pending);
     }
 
     [Fact]
@@ -321,8 +322,8 @@ public class EcommerceTests : IAsyncLifetime
         });
 
         var orders = result.ReadAsJson<List<OrderDto>>();
-        Assert.NotNull(orders);
-        Assert.NotEmpty(orders!);
+        orders.ShouldNotBeNull();
+        orders!.ShouldNotBeEmpty();
     }
 
     [Fact]
@@ -346,8 +347,8 @@ public class EcommerceTests : IAsyncLifetime
         });
 
         var order = result.ReadAsJson<OrderDto>();
-        Assert.NotNull(order);
-        Assert.Equal("FindOrder", order!.OrderName);
+        order.ShouldNotBeNull();
+        order!.OrderName.ShouldBe("FindOrder");
     }
 
     [Fact]
@@ -391,9 +392,9 @@ public class EcommerceTests : IAsyncLifetime
         });
 
         var coupon = result.ReadAsJson<Coupon>();
-        Assert.NotNull(coupon);
-        Assert.Equal("TestProduct", coupon!.ProductName);
-        Assert.Equal(25m, coupon.Amount);
+        coupon.ShouldNotBeNull();
+        coupon!.ProductName.ShouldBe("TestProduct");
+        coupon.Amount.ShouldBe(25m);
     }
 
     [Fact]
@@ -412,8 +413,8 @@ public class EcommerceTests : IAsyncLifetime
         });
 
         var coupon = result.ReadAsJson<Coupon>();
-        Assert.NotNull(coupon);
-        Assert.Equal("UniqueProd", coupon!.ProductName);
+        coupon.ShouldNotBeNull();
+        coupon!.ProductName.ShouldBe("UniqueProd");
     }
 
     [Fact]
@@ -432,9 +433,9 @@ public class EcommerceTests : IAsyncLifetime
         });
 
         var updated = result.ReadAsJson<Coupon>();
-        Assert.NotNull(updated);
-        Assert.Equal("Updated", updated!.Description);
-        Assert.Equal(20m, updated.Amount);
+        updated.ShouldNotBeNull();
+        updated!.Description.ShouldBe("Updated");
+        updated.Amount.ShouldBe(20m);
     }
 
     [Fact]

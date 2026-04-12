@@ -4,6 +4,7 @@ using Marten;
 using Microsoft.Extensions.DependencyInjection;
 using Payments;
 using PaymentsMonolith;
+using Shouldly;
 using Users;
 using Wallets;
 
@@ -39,10 +40,10 @@ public class PaymentsTests : IAsyncLifetime
         });
 
         var user = result.ReadAsJson<User>();
-        Assert.NotNull(user);
-        Assert.NotEqual(Guid.Empty, user!.Id);
-        Assert.Equal("alice@example.com", user.Email);
-        Assert.Equal("Alice Smith", user.FullName);
+        user.ShouldNotBeNull();
+        user!.Id.ShouldNotBe(Guid.Empty);
+        user.Email.ShouldBe("alice@example.com");
+        user.FullName.ShouldBe("Alice Smith");
     }
 
     [Fact]
@@ -105,10 +106,10 @@ public class PaymentsTests : IAsyncLifetime
         });
 
         var customer = result.ReadAsJson<Customer>();
-        Assert.NotNull(customer);
-        Assert.True(customer!.IsCompleted);
-        Assert.Equal("Bob", customer.Name);
-        Assert.Equal("US", customer.Nationality);
+        customer.ShouldNotBeNull();
+        customer!.IsCompleted.ShouldBeTrue();
+        customer.Name.ShouldBe("Bob");
+        customer.Nationality.ShouldBe("US");
     }
 
     #endregion
@@ -146,8 +147,8 @@ public class PaymentsTests : IAsyncLifetime
         });
 
         var wallets = walletsResult.ReadAsJson<List<Wallet>>();
-        Assert.NotNull(wallets);
-        Assert.NotEmpty(wallets!);
+        wallets.ShouldNotBeNull();
+        wallets!.ShouldNotBeEmpty();
 
         var wallet = wallets[0];
 
@@ -160,9 +161,9 @@ public class PaymentsTests : IAsyncLifetime
         });
 
         var updated = result.ReadAsJson<Wallet>();
-        Assert.NotNull(updated);
-        Assert.Equal(500m, updated!.Balance);
-        Assert.Single(updated.Transfers);
+        updated.ShouldNotBeNull();
+        updated!.Balance.ShouldBe(500m);
+        updated.Transfers.ShouldHaveSingleItem();
     }
 
     [Fact]
@@ -234,8 +235,8 @@ public class PaymentsTests : IAsyncLifetime
         });
 
         var fromWallet = result.ReadAsJson<Wallet>();
-        Assert.NotNull(fromWallet);
-        Assert.Equal(700m, fromWallet!.Balance);
+        fromWallet.ShouldNotBeNull();
+        fromWallet!.Balance.ShouldBe(700m);
 
         // Verify destination wallet
         var destResult = await _host.Scenario(x =>
@@ -245,8 +246,8 @@ public class PaymentsTests : IAsyncLifetime
         });
 
         var toWallet = destResult.ReadAsJson<Wallet>();
-        Assert.NotNull(toWallet);
-        Assert.Equal(300m, toWallet!.Balance);
+        toWallet.ShouldNotBeNull();
+        toWallet!.Balance.ShouldBe(300m);
     }
 
     [Fact]
@@ -316,7 +317,7 @@ public class PaymentsTests : IAsyncLifetime
         });
 
         var wallets = result.ReadAsJson<List<Wallet>>();
-        Assert.NotNull(wallets);
+        wallets.ShouldNotBeNull();
     }
 
     #endregion
@@ -336,11 +337,11 @@ public class PaymentsTests : IAsyncLifetime
         });
 
         var deposit = result.ReadAsJson<Deposit>();
-        Assert.NotNull(deposit);
-        Assert.Equal(customerId, deposit!.CustomerId);
-        Assert.Equal("PLN", deposit.Currency);
-        Assert.Equal(250m, deposit.Amount);
-        Assert.Equal(DepositStatus.Completed, deposit.Status);
+        deposit.ShouldNotBeNull();
+        deposit!.CustomerId.ShouldBe(customerId);
+        deposit.Currency.ShouldBe("PLN");
+        deposit.Amount.ShouldBe(250m);
+        deposit.Status.ShouldBe(DepositStatus.Completed);
     }
 
     [Fact]

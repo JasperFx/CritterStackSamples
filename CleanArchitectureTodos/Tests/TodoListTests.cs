@@ -2,6 +2,7 @@ using Alba;
 using CleanArchitectureTodos;
 using Marten;
 using Microsoft.Extensions.DependencyInjection;
+using Shouldly;
 
 namespace CleanArchitectureTodos.Tests;
 
@@ -30,9 +31,9 @@ public class TodoListTests : IAsyncLifetime
         });
 
         var list = result.ReadAsJson<TodoList>();
-        Assert.NotNull(list);
-        Assert.Equal("Groceries", list!.Title);
-        Assert.Equal("#FF0000", list.Colour);
+        list.ShouldNotBeNull();
+        list!.Title.ShouldBe("Groceries");
+        list.Colour.ShouldBe("#FF0000");
     }
 
     [Fact]
@@ -45,8 +46,8 @@ public class TodoListTests : IAsyncLifetime
         });
 
         var list = result.ReadAsJson<TodoList>();
-        Assert.NotNull(list);
-        Assert.Equal("#808080", list!.Colour);
+        list.ShouldNotBeNull();
+        list!.Colour.ShouldBe("#808080");
     }
 
     [Fact]
@@ -83,9 +84,9 @@ public class TodoListTests : IAsyncLifetime
         });
 
         var updated = updateResult.ReadAsJson<TodoList>();
-        Assert.NotNull(updated);
-        Assert.Equal("Updated", updated!.Title);
-        Assert.Equal("#FF0000", updated.Colour);
+        updated.ShouldNotBeNull();
+        updated!.Title.ShouldBe("Updated");
+        updated.Colour.ShouldBe("#FF0000");
     }
 
     [Fact]
@@ -149,10 +150,10 @@ public class TodoListTests : IAsyncLifetime
         });
 
         var vm = result.ReadAsJson<TodosVm>();
-        Assert.NotNull(vm);
-        Assert.True(vm!.Lists.Count >= 2);
-        Assert.NotEmpty(vm.PriorityLevels);
-        Assert.NotEmpty(vm.Colours);
+        vm.ShouldNotBeNull();
+        (vm!.Lists.Count >= 2).ShouldBeTrue();
+        vm.PriorityLevels.ShouldNotBeEmpty();
+        vm.Colours.ShouldNotBeEmpty();
     }
 
     // --- TodoItem CRUD ---
@@ -173,9 +174,9 @@ public class TodoListTests : IAsyncLifetime
         });
 
         var item = itemResult.ReadAsJson<TodoItem>();
-        Assert.NotNull(item);
-        Assert.Equal("Buy milk", item!.Title);
-        Assert.False(item.Done);
+        item.ShouldNotBeNull();
+        item!.Title.ShouldBe("Buy milk");
+        item.Done.ShouldBeFalse();
     }
 
     [Fact]

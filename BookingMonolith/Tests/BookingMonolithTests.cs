@@ -6,6 +6,7 @@ using Identity;
 using Marten;
 using Microsoft.Extensions.DependencyInjection;
 using Passenger;
+using Shouldly;
 
 namespace Tests;
 
@@ -35,11 +36,11 @@ public class BookingMonolithTests : IAsyncLifetime
         });
 
         var user = result.ReadAsJson<UserAccount>();
-        Assert.NotNull(user);
-        Assert.NotEqual(Guid.Empty, user!.Id);
-        Assert.Equal("alice@test.com", user.Email);
-        Assert.Equal("Alice", user.FirstName);
-        Assert.Equal("Smith", user.LastName);
+        user.ShouldNotBeNull();
+        user!.Id.ShouldNotBe(Guid.Empty);
+        user.Email.ShouldBe("alice@test.com");
+        user.FirstName.ShouldBe("Alice");
+        user.LastName.ShouldBe("Smith");
     }
 
     [Fact]
@@ -76,12 +77,12 @@ public class BookingMonolithTests : IAsyncLifetime
         });
 
         var passenger = result.ReadAsJson<Passenger.Passenger>();
-        Assert.NotNull(passenger);
-        Assert.NotEqual(Guid.Empty, passenger!.Id);
-        Assert.Equal("Bob Jones", passenger.Name);
-        Assert.Equal("AB123456", passenger.PassportNumber);
-        Assert.Equal(PassengerType.Male, passenger.Type);
-        Assert.Equal(30, passenger.Age);
+        passenger.ShouldNotBeNull();
+        passenger!.Id.ShouldNotBe(Guid.Empty);
+        passenger.Name.ShouldBe("Bob Jones");
+        passenger.PassportNumber.ShouldBe("AB123456");
+        passenger.Type.ShouldBe(PassengerType.Male);
+        passenger.Age.ShouldBe(30);
     }
 
     [Fact]
@@ -118,10 +119,10 @@ public class BookingMonolithTests : IAsyncLifetime
         });
 
         var flight = result.ReadAsJson<Flight.Flight>();
-        Assert.NotNull(flight);
-        Assert.NotEqual(Guid.Empty, flight!.Id);
-        Assert.Equal("FL100", flight.FlightNumber);
-        Assert.Equal(299.99m, flight.Price);
+        flight.ShouldNotBeNull();
+        flight!.Id.ShouldNotBe(Guid.Empty);
+        flight.FlightNumber.ShouldBe("FL100");
+        flight.Price.ShouldBe(299.99m);
     }
 
     [Fact]
@@ -162,8 +163,8 @@ public class BookingMonolithTests : IAsyncLifetime
         });
 
         var flights = result.ReadAsJson<List<Flight.Flight>>();
-        Assert.NotNull(flights);
-        Assert.NotEmpty(flights!);
+        flights.ShouldNotBeNull();
+        flights!.ShouldNotBeEmpty();
     }
 
     [Fact]
@@ -189,9 +190,9 @@ public class BookingMonolithTests : IAsyncLifetime
         });
 
         var flight = result.ReadAsJson<Flight.Flight>();
-        Assert.NotNull(flight);
-        Assert.Equal(created.Id, flight!.Id);
-        Assert.Equal("FL300", flight.FlightNumber);
+        flight.ShouldNotBeNull();
+        flight!.Id.ShouldBe(created.Id);
+        flight.FlightNumber.ShouldBe("FL300");
     }
 
     [Fact]
@@ -239,13 +240,13 @@ public class BookingMonolithTests : IAsyncLifetime
         });
 
         var booking = result.ReadAsJson<BookingRecord>();
-        Assert.NotNull(booking);
-        Assert.NotEqual(Guid.Empty, booking!.Id);
-        Assert.Equal(passenger.Id, booking.PassengerId);
-        Assert.Equal(flight.Id, booking.FlightId);
-        Assert.Equal("FL400", booking.FlightNumber);
-        Assert.Equal(499.99m, booking.Price);
-        Assert.Equal("Window seat please", booking.Description);
+        booking.ShouldNotBeNull();
+        booking!.Id.ShouldNotBe(Guid.Empty);
+        booking.PassengerId.ShouldBe(passenger.Id);
+        booking.FlightId.ShouldBe(flight.Id);
+        booking.FlightNumber.ShouldBe("FL400");
+        booking.Price.ShouldBe(499.99m);
+        booking.Description.ShouldBe("Window seat please");
     }
 
     [Fact]
@@ -321,8 +322,8 @@ public class BookingMonolithTests : IAsyncLifetime
         });
 
         var bookings = result.ReadAsJson<List<BookingRecord>>();
-        Assert.NotNull(bookings);
-        Assert.NotEmpty(bookings!);
+        bookings.ShouldNotBeNull();
+        bookings!.ShouldNotBeEmpty();
     }
 
     [Fact]
@@ -359,8 +360,8 @@ public class BookingMonolithTests : IAsyncLifetime
         });
 
         var booking = result.ReadAsJson<BookingRecord>();
-        Assert.NotNull(booking);
-        Assert.Equal(created.Id, booking!.Id);
+        booking.ShouldNotBeNull();
+        booking!.Id.ShouldBe(created.Id);
     }
 
     [Fact]

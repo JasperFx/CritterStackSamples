@@ -2,6 +2,7 @@ using Alba;
 using BankAccountES;
 using Marten;
 using Microsoft.Extensions.DependencyInjection;
+using Shouldly;
 
 namespace BankAccountES.Tests;
 
@@ -44,9 +45,9 @@ public class BankAccountTests : IAsyncLifetime
     {
         var client = await EnrollTestClient("Alice Smith", "alice@test.com");
 
-        Assert.NotEqual(Guid.Empty, client.Id);
-        Assert.Equal("Alice Smith", client.Name);
-        Assert.Equal("alice@test.com", client.Email);
+        client.Id.ShouldNotBe(Guid.Empty);
+        client.Name.ShouldBe("Alice Smith");
+        client.Email.ShouldBe("alice@test.com");
     }
 
     [Fact]
@@ -68,9 +69,9 @@ public class BankAccountTests : IAsyncLifetime
         });
 
         var updated = getResult.ReadAsJson<Client>();
-        Assert.NotNull(updated);
-        Assert.Equal("Updated Name", updated!.Name);
-        Assert.Equal("updated@test.com", updated.Email);
+        updated.ShouldNotBeNull();
+        updated!.Name.ShouldBe("Updated Name");
+        updated.Email.ShouldBe("updated@test.com");
     }
 
     // --- Account ---
@@ -81,10 +82,10 @@ public class BankAccountTests : IAsyncLifetime
         var client = await EnrollTestClient();
         var account = await OpenTestAccount(client.Id);
 
-        Assert.NotEqual(Guid.Empty, account.Id);
-        Assert.Equal(client.Id, account.ClientId);
-        Assert.Equal("USD", account.Currency);
-        Assert.Equal(0m, account.Balance);
+        account.Id.ShouldNotBe(Guid.Empty);
+        account.ClientId.ShouldBe(client.Id);
+        account.Currency.ShouldBe("USD");
+        account.Balance.ShouldBe(0m);
     }
 
     [Fact]
@@ -117,8 +118,8 @@ public class BankAccountTests : IAsyncLifetime
         });
 
         var updated = getResult.ReadAsJson<Account>();
-        Assert.NotNull(updated);
-        Assert.Equal(500m, updated!.Balance);
+        updated.ShouldNotBeNull();
+        updated!.Balance.ShouldBe(500m);
     }
 
     // --- Withdrawals ---
@@ -147,8 +148,8 @@ public class BankAccountTests : IAsyncLifetime
         });
 
         var updated = getResult.ReadAsJson<Account>();
-        Assert.NotNull(updated);
-        Assert.Equal(700m, updated!.Balance);
+        updated.ShouldNotBeNull();
+        updated!.Balance.ShouldBe(700m);
     }
 
     [Fact]
@@ -196,13 +197,13 @@ public class BankAccountTests : IAsyncLifetime
         });
 
         var txns = result.ReadAsJson<AccountTransactions>();
-        Assert.NotNull(txns);
-        Assert.Equal(2, txns!.Transactions.Count);
-        Assert.Equal("Deposit", txns.Transactions[0].Type);
-        Assert.Equal(1000m, txns.Transactions[0].Amount);
-        Assert.Equal("Withdrawal", txns.Transactions[1].Type);
-        Assert.Equal(200m, txns.Transactions[1].Amount);
-        Assert.Equal(800m, txns.Balance);
+        txns.ShouldNotBeNull();
+        txns!.Transactions.Count.ShouldBe(2);
+        txns.Transactions[0].Type.ShouldBe("Deposit");
+        txns.Transactions[0].Amount.ShouldBe(1000m);
+        txns.Transactions[1].Type.ShouldBe("Withdrawal");
+        txns.Transactions[1].Amount.ShouldBe(200m);
+        txns.Balance.ShouldBe(800m);
     }
 
     // --- Query Endpoints ---
@@ -219,8 +220,8 @@ public class BankAccountTests : IAsyncLifetime
         });
 
         var fetched = result.ReadAsJson<Client>();
-        Assert.NotNull(fetched);
-        Assert.Equal("Bob", fetched!.Name);
+        fetched.ShouldNotBeNull();
+        fetched!.Name.ShouldBe("Bob");
     }
 
     [Fact]
@@ -237,7 +238,7 @@ public class BankAccountTests : IAsyncLifetime
         });
 
         var accounts = result.ReadAsJson<List<Account>>();
-        Assert.NotNull(accounts);
-        Assert.Equal(2, accounts!.Count);
+        accounts.ShouldNotBeNull();
+        accounts!.Count.ShouldBe(2);
     }
 }

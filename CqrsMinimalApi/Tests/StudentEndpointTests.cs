@@ -1,6 +1,7 @@
 using Alba;
 using CqrsMinimalApi;
 using Marten;
+using Shouldly;
 
 namespace CqrsMinimalApi.Tests;
 
@@ -29,9 +30,9 @@ public class StudentEndpointTests : IAsyncLifetime
         });
 
         var student = result.ReadAsJson<Student>();
-        Assert.NotNull(student);
-        Assert.Equal("Alice Test", student!.Name);
-        Assert.True(student.Id > 0);
+        student.ShouldNotBeNull();
+        student!.Name.ShouldBe("Alice Test");
+        (student.Id > 0).ShouldBeTrue();
     }
 
     [Fact]
@@ -50,10 +51,10 @@ public class StudentEndpointTests : IAsyncLifetime
         });
 
         var students = result.ReadAsJson<Student[]>();
-        Assert.NotNull(students);
-        Assert.True(students!.Length >= 2);
+        students.ShouldNotBeNull();
+        (students!.Length >= 2).ShouldBeTrue();
         // Should be ordered by name
-        Assert.Equal("Amy Second", students[0].Name);
+        students[0].Name.ShouldBe("Amy Second");
     }
 
     [Fact]
@@ -85,8 +86,8 @@ public class StudentEndpointTests : IAsyncLifetime
         });
 
         var updated = result.ReadAsJson<Student>();
-        Assert.Equal("Updated Name", updated!.Name);
-        Assert.Equal("updated@test.com", updated.Email);
+        updated!.Name.ShouldBe("Updated Name");
+        updated.Email.ShouldBe("updated@test.com");
     }
 
     [Fact]

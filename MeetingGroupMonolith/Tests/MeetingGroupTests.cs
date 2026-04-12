@@ -6,6 +6,7 @@ using MeetingGroupMonolith;
 using Microsoft.Extensions.DependencyInjection;
 using Payments;
 using Registrations;
+using Shouldly;
 using UserAccess;
 
 namespace Tests;
@@ -17,7 +18,7 @@ public class MeetingGroupTests : IAsyncLifetime
     public async Task InitializeAsync()
     {
         _host = await AlbaHost.For<Program>();
-        
+
         // This is a short hand way to delete all existing
         // data in a Marten document store in one call
         await _host.CleanAllMartenDataAsync();
@@ -44,10 +45,10 @@ public class MeetingGroupTests : IAsyncLifetime
         });
 
         var user = result.ReadAsJson<User>();
-        Assert.NotNull(user);
-        Assert.NotEqual(Guid.Empty, user!.Id);
-        Assert.Equal("jdoe", user.Login);
-        Assert.Equal("jdoe@example.com", user.Email);
+        user.ShouldNotBeNull();
+        user!.Id.ShouldNotBe(Guid.Empty);
+        user.Login.ShouldBe("jdoe");
+        user.Email.ShouldBe("jdoe@example.com");
     }
 
     [Fact]
@@ -81,9 +82,9 @@ public class MeetingGroupTests : IAsyncLifetime
         });
 
         var proposal = result.ReadAsJson<MeetingGroupProposal>();
-        Assert.NotNull(proposal);
-        Assert.Equal("C# Enthusiasts", proposal!.Name);
-        Assert.Equal(ProposalStatus.InVerification, proposal.Status);
+        proposal.ShouldNotBeNull();
+        proposal!.Name.ShouldBe("C# Enthusiasts");
+        proposal.Status.ShouldBe(ProposalStatus.InVerification);
     }
 
     [Fact]
@@ -112,9 +113,9 @@ public class MeetingGroupTests : IAsyncLifetime
         });
 
         var accepted = result.ReadAsJson<MeetingGroupProposal>();
-        Assert.NotNull(accepted);
-        Assert.Equal(ProposalStatus.Accepted, accepted!.Status);
-        Assert.NotNull(accepted.DecisionDate);
+        accepted.ShouldNotBeNull();
+        accepted!.Status.ShouldBe(ProposalStatus.Accepted);
+        accepted.DecisionDate.ShouldNotBeNull();
     }
 
     #endregion
@@ -151,8 +152,8 @@ public class MeetingGroupTests : IAsyncLifetime
         });
 
         var groups = groupsResult.ReadAsJson<List<MeetingGroup>>();
-        Assert.NotNull(groups);
-        Assert.NotEmpty(groups!);
+        groups.ShouldNotBeNull();
+        groups!.ShouldNotBeEmpty();
 
         var group = groups.First(g => g.Name == "Dev Group");
 
@@ -174,9 +175,9 @@ public class MeetingGroupTests : IAsyncLifetime
         });
 
         var meeting = result.ReadAsJson<Meeting>();
-        Assert.NotNull(meeting);
-        Assert.Equal("Monthly Standup", meeting!.Title);
-        Assert.Equal(group.Id, meeting.MeetingGroupId);
+        meeting.ShouldNotBeNull();
+        meeting!.Title.ShouldBe("Monthly Standup");
+        meeting.MeetingGroupId.ShouldBe(group.Id);
     }
 
     [Fact]
@@ -233,9 +234,9 @@ public class MeetingGroupTests : IAsyncLifetime
         });
 
         var updated = result.ReadAsJson<Meeting>();
-        Assert.NotNull(updated);
-        Assert.Single(updated!.Attendees);
-        Assert.Equal(memberId, updated.Attendees[0].MemberId);
+        updated.ShouldNotBeNull();
+        updated!.Attendees.ShouldHaveSingleItem();
+        updated.Attendees[0].MemberId.ShouldBe(memberId);
     }
 
     [Fact]
@@ -248,7 +249,7 @@ public class MeetingGroupTests : IAsyncLifetime
         });
 
         var groups = result.ReadAsJson<List<MeetingGroup>>();
-        Assert.NotNull(groups);
+        groups.ShouldNotBeNull();
     }
 
     [Fact]
@@ -261,7 +262,7 @@ public class MeetingGroupTests : IAsyncLifetime
         });
 
         var meetings = result.ReadAsJson<List<Meeting>>();
-        Assert.NotNull(meetings);
+        meetings.ShouldNotBeNull();
     }
 
     #endregion
@@ -282,7 +283,7 @@ public class MeetingGroupTests : IAsyncLifetime
         });
 
         var subscriptionId = result.ReadAsJson<Guid>();
-        Assert.NotEqual(Guid.Empty, subscriptionId);
+        subscriptionId.ShouldNotBe(Guid.Empty);
     }
 
     [Fact]
