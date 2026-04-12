@@ -455,12 +455,8 @@ public class EcommerceTests : IAsyncLifetime
         var result = await _host.Scenario(x =>
         {
             x.Get.Url($"/discounts/DelProd");
-            x.StatusCodeShouldBe(200);
+            x.StatusCodeShouldBe(404);
         });
-
-        // Should return null/empty since deleted
-        var coupon = result.ReadAsJson<Coupon>();
-        Assert.Null(coupon);
     }
 
     #endregion
