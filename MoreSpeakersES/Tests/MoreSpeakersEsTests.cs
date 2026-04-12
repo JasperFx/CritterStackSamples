@@ -37,7 +37,7 @@ public class MoreSpeakersEsTests : IAsyncLifetime
         await _host.Scenario(x =>
         {
             x.Put.Json(new ChangeMentoringAvailability(speaker.Id, true, 5, "General")).ToUrl($"/api/speakers/{speaker.Id}/mentoring");
-            x.StatusCodeShouldBeOk();
+            x.StatusCodeShouldBe(204);
         });
 
         return speaker;
@@ -110,13 +110,13 @@ public class MoreSpeakersEsTests : IAsyncLifetime
     {
         var speaker = await RegisterSpeaker("update@test.com", "Original", "Name");
 
-        var result = await _host.Scenario(x =>
+        await _host.Scenario(x =>
         {
             x.Put.Json(new UpdateSpeakerProfile(
                 speaker.Id, "Updated", "Name", "My bio", "My goals", "http://headshot.png",
                 ["C#", ".NET"], [new SocialLink { Platform = "Twitter", Url = "https://twitter.com/test" }]
             )).ToUrl($"/api/speakers/{speaker.Id}");
-            x.StatusCodeShouldBeOk();
+            x.StatusCodeShouldBe(204);
         });
 
         // Verify via GET
@@ -158,7 +158,7 @@ public class MoreSpeakersEsTests : IAsyncLifetime
         await _host.Scenario(x =>
         {
             x.Put.Json(new ChangeMentoringAvailability(speaker.Id, true, 3, "Architecture")).ToUrl($"/api/speakers/{speaker.Id}/mentoring");
-            x.StatusCodeShouldBeOk();
+            x.StatusCodeShouldBe(204);
         });
 
         var getResult = await _host.Scenario(x =>
@@ -296,7 +296,7 @@ public class MoreSpeakersEsTests : IAsyncLifetime
         await _host.Scenario(x =>
         {
             x.Post.Json(new AcceptMentorship(mentorship.Id, "Welcome aboard!")).ToUrl($"/api/mentorships/{mentorship.Id}/accept");
-            x.StatusCodeShouldBeOk();
+            x.StatusCodeShouldBe(204);
         });
 
         // Verify status
@@ -319,7 +319,7 @@ public class MoreSpeakersEsTests : IAsyncLifetime
         await _host.Scenario(x =>
         {
             x.Post.Json(new AcceptMentorship(mentorship.Id, null)).ToUrl($"/api/mentorships/{mentorship.Id}/accept");
-            x.StatusCodeShouldBeOk();
+            x.StatusCodeShouldBe(204);
         });
 
         // Second accept should fail
@@ -344,7 +344,7 @@ public class MoreSpeakersEsTests : IAsyncLifetime
         await _host.Scenario(x =>
         {
             x.Post.Json(new DeclineMentorship(mentorship.Id, "Too busy right now")).ToUrl($"/api/mentorships/{mentorship.Id}/decline");
-            x.StatusCodeShouldBeOk();
+            x.StatusCodeShouldBe(204);
         });
 
         var result = await _host.Scenario(x =>
@@ -396,7 +396,7 @@ public class MoreSpeakersEsTests : IAsyncLifetime
         await _host.Scenario(x =>
         {
             x.Post.Json(new CompleteMentorship(mentorship.Id)).ToUrl($"/api/mentorships/{mentorship.Id}/complete");
-            x.StatusCodeShouldBeOk();
+            x.StatusCodeShouldBe(204);
         });
 
         var result = await _host.Scenario(x =>
