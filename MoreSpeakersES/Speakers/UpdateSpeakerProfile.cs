@@ -1,6 +1,7 @@
 using FluentValidation;
+using Marten.Events;
 using Wolverine.Http;
-using Wolverine.Marten;
+using Wolverine.Http.Marten;
 
 namespace Speakers;
 
@@ -28,12 +29,11 @@ public record UpdateSpeakerProfile(
 public static class UpdateSpeakerProfileEndpoint
 {
     [WolverinePut("/api/speakers/{speakerId}")]
-    [AggregateHandler]
-    public static SpeakerProfileUpdated Put(UpdateSpeakerProfile command, Speaker speaker)
+    public static void Put(UpdateSpeakerProfile command, [WriteAggregate] IEventStream<Speaker> stream)
     {
-        return new SpeakerProfileUpdated(
+        stream.AppendOne(new SpeakerProfileUpdated(
             command.SpeakerId, command.FirstName, command.LastName,
             command.Bio, command.Goals, command.HeadshotUrl,
-            command.Expertise, command.SocialLinks);
+            command.Expertise, command.SocialLinks));
     }
 }

@@ -13,9 +13,7 @@ public class MoreSpeakersEsTests : IAsyncLifetime
     public async Task InitializeAsync()
     {
         _host = await AlbaHost.For<Program>();
-        var store = _host.Services.GetRequiredService<IDocumentStore>();
-        await store.Advanced.Clean.DeleteAllDocumentsAsync();
-        await store.Advanced.Clean.DeleteAllEventDataAsync();
+        await _host.CleanAllMartenDataAsync();
     }
 
     public async Task DisposeAsync() => await _host.DisposeAsync();

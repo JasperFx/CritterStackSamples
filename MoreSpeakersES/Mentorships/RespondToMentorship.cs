@@ -1,6 +1,7 @@
+using Marten.Events;
 using Microsoft.AspNetCore.Mvc;
 using Wolverine.Http;
-using Wolverine.Marten;
+using Wolverine.Http.Marten;
 
 namespace Mentorships;
 
@@ -18,10 +19,9 @@ public static class AcceptMentorshipEndpoint
     }
 
     [WolverinePost("/api/mentorships/{mentorshipId}/accept")]
-    [AggregateHandler]
-    public static MentorshipAccepted Post(AcceptMentorship command, Mentorship mentorship)
+    public static void Post(AcceptMentorship command, [WriteAggregate] IEventStream<Mentorship> stream)
     {
-        return new MentorshipAccepted(command.MentorshipId, command.ResponseMessage);
+        stream.AppendOne(new MentorshipAccepted(command.MentorshipId, command.ResponseMessage));
     }
 }
 
@@ -39,10 +39,9 @@ public static class DeclineMentorshipEndpoint
     }
 
     [WolverinePost("/api/mentorships/{mentorshipId}/decline")]
-    [AggregateHandler]
-    public static MentorshipDeclined Post(DeclineMentorship command, Mentorship mentorship)
+    public static void Post(DeclineMentorship command, [WriteAggregate] IEventStream<Mentorship> stream)
     {
-        return new MentorshipDeclined(command.MentorshipId, command.ResponseMessage);
+        stream.AppendOne(new MentorshipDeclined(command.MentorshipId, command.ResponseMessage));
     }
 }
 
@@ -60,9 +59,8 @@ public static class CompleteMentorshipEndpoint
     }
 
     [WolverinePost("/api/mentorships/{mentorshipId}/complete")]
-    [AggregateHandler]
-    public static MentorshipCompleted Post(CompleteMentorship command, Mentorship mentorship)
+    public static void Post(CompleteMentorship command, [WriteAggregate] IEventStream<Mentorship> stream)
     {
-        return new MentorshipCompleted(command.MentorshipId);
+        stream.AppendOne(new MentorshipCompleted(command.MentorshipId));
     }
 }

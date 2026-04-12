@@ -14,6 +14,7 @@
     <PackageReference Include="WolverineFx.FluentValidation" Version="5.30.0" />
     <PackageReference Include="WolverineFx.Http" Version="5.30.0" />
     <PackageReference Include="WolverineFx.Http.FluentValidation" Version="5.30.0" />
+    <PackageReference Include="WolverineFx.Http.Marten" Version="5.30.0" />
     <PackageReference Include="WolverineFx.Marten" Version="5.30.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
   </ItemGroup>
