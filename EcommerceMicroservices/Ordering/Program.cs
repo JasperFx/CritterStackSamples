@@ -1,6 +1,8 @@
+using Wolverine.FluentValidation;
 using Marten;
 using Wolverine;
 using Wolverine.Http;
+using Wolverine.Http.FluentValidation;
 using Wolverine.Marten;
 using Wolverine.RabbitMQ;
 
@@ -29,6 +31,7 @@ builder.Host.UseWolverine(opts =>
 {
     opts.Discovery.IncludeAssembly(typeof(Program).Assembly);
     opts.Policies.AutoApplyTransactions();
+    opts.UseFluentValidation();
     opts.ServiceName = "Ordering";
 
     // Listen for BasketCheckoutEvent from the Basket service via RabbitMQ
@@ -48,6 +51,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.MapWolverineEndpoints();
+app.MapWolverineEndpoints(opts =>
+{
+    opts.UseFluentValidationProblemDetailMiddleware();
+});
 
 await app.RunAsync();

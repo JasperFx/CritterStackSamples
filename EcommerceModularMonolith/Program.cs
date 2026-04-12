@@ -1,6 +1,8 @@
+using Wolverine.FluentValidation;
 using Marten;
 using Wolverine;
 using Wolverine.Http;
+using Wolverine.Http.FluentValidation;
 using Wolverine.Marten;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -33,6 +35,7 @@ builder.Host.UseWolverine(opts =>
 {
     opts.Discovery.IncludeAssembly(typeof(Program).Assembly);
     opts.Policies.AutoApplyTransactions();
+    opts.UseFluentValidation();
     opts.ServiceName = "EcommerceMonolith";
 
     // Inter-module messaging uses durable local queues —
@@ -56,7 +59,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.MapWolverineEndpoints();
+app.MapWolverineEndpoints(opts =>
+{
+    opts.UseFluentValidationProblemDetailMiddleware();
+});
 
 await SeedData(app);
 

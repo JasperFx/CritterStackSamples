@@ -11,8 +11,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="WolverineFx.Http" Version="5.28.0" />
-    <PackageReference Include="WolverineFx.Marten" Version="5.28.0" />
+    <PackageReference Include="WolverineFx.Http" Version="5.30.0" />
+    <PackageReference Include="WolverineFx.Marten" Version="5.30.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
     <PackageReference Include="WolverineFx.RabbitMQ" Version="5.30.0" />
   </ItemGroup>
