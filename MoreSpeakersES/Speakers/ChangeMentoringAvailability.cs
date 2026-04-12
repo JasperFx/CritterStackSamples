@@ -1,6 +1,7 @@
 using Marten.Events;
 using Wolverine.Http;
 using Wolverine.Http.Marten;
+using Wolverine.Marten;
 
 namespace Speakers;
 

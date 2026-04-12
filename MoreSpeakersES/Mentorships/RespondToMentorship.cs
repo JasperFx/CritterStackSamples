@@ -2,6 +2,7 @@ using Marten.Events;
 using Microsoft.AspNetCore.Mvc;
 using Wolverine.Http;
 using Wolverine.Http.Marten;
+using Wolverine.Marten;
 
 namespace Mentorships;
 
