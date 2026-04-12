@@ -126,7 +126,7 @@ public class TodoListTests : IAsyncLifetime
         await _host.Scenario(x =>
         {
             x.Delete.Url($"/api/todolists/{created.Id}");
-            x.StatusCodeShouldBe(200);
+            x.StatusCodeShouldBe(204);
         });
     }
 

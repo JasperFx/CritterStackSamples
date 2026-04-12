@@ -1,7 +1,6 @@
 using Alba;
 using Marten;
 using Mentorships;
-using Microsoft.Extensions.DependencyInjection;
 using Speakers;
 
 namespace MoreSpeakers.Tests;
@@ -14,15 +13,14 @@ public class MentorshipEndpointTests : IAsyncLifetime
     {
         _host = await AlbaHost.For<Program>();
 
-        var store = _host.Services.GetRequiredService<IDocumentStore>();
-        await store.Advanced.Clean.DeleteAllDocumentsAsync();
+        await _host.DocumentStore().Advanced.Clean.DeleteAllDocumentsAsync();
     }
 
     public async Task DisposeAsync() => await _host.DisposeAsync();
 
     private async Task<(Speaker mentor, Speaker mentee)> SeedMentorAndMentee()
     {
-        await using var session = _host.Services.GetRequiredService<IDocumentSession>();
+        await using var session = _host.DocumentStore().LightweightSession();
         var mentor = new Speaker
         {
             FirstName = "Mentor", LastName = "Speaker", Email = "mentor@test.com",
@@ -78,7 +76,7 @@ public class MentorshipEndpointTests : IAsyncLifetime
     {
         var (mentor, mentee) = await SeedMentorAndMentee();
 
-        await using var session = _host.Services.GetRequiredService<IDocumentSession>();
+        await using var session = _host.DocumentStore().LightweightSession();
         var mentorship = new Mentorship
         {
             MentorId = mentor.Id, MentorName = mentor.FullName,
@@ -102,7 +100,7 @@ public class MentorshipEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Cannot_accept_non_pending_mentorship()
     {
-        await using var session = _host.Services.GetRequiredService<IDocumentSession>();
+        await using var session = _host.DocumentStore().LightweightSession();
         var mentorship = new Mentorship
         {
             Status = MentorshipStatus.Active, RequestedAt = DateTimeOffset.UtcNow,
@@ -120,7 +118,7 @@ public class MentorshipEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Can_complete_active_mentorship()
     {
-        await using var session = _host.Services.GetRequiredService<IDocumentSession>();
+        await using var session = _host.DocumentStore().LightweightSession();
         var mentorship = new Mentorship
         {
             Status = MentorshipStatus.Active,

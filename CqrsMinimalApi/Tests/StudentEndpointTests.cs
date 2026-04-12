@@ -114,7 +114,7 @@ public class StudentEndpointTests : IAsyncLifetime
         await _host.Scenario(s =>
         {
             s.Delete.Url($"/student/delete?id={student.Id}");
-            s.StatusCodeShouldBeOk();
+            s.StatusCodeShouldBe(204);
         });
 
         // Verify deleted

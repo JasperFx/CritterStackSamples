@@ -208,7 +208,7 @@ public class CatalogTests : IAsyncLifetime
         await _host.Scenario(x =>
         {
             x.Delete.Url($"/products/{created.Id}");
-            x.StatusCodeShouldBeOk();
+            x.StatusCodeShouldBe(204);
         });
 
         // Verify it's gone

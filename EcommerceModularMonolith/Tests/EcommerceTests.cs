@@ -89,7 +89,7 @@ public class EcommerceTests : IAsyncLifetime
         await _host.Scenario(x =>
         {
             x.Delete.Url($"/products/{created.Id}");
-            x.StatusCodeShouldBe(200);
+            x.StatusCodeShouldBe(204);
         });
 
         // Verify deleted
@@ -226,7 +226,7 @@ public class EcommerceTests : IAsyncLifetime
         await _host.Scenario(x =>
         {
             x.Delete.Url("/basket/deleteuser");
-            x.StatusCodeShouldBe(200);
+            x.StatusCodeShouldBe(204);
         });
 
         await _host.Scenario(x =>
@@ -367,7 +367,7 @@ public class EcommerceTests : IAsyncLifetime
         await _host.Scenario(x =>
         {
             x.Delete.Url($"/orders/{created.Id}");
-            x.StatusCodeShouldBe(200);
+            x.StatusCodeShouldBe(204);
         });
 
         await _host.Scenario(x =>
@@ -449,7 +449,7 @@ public class EcommerceTests : IAsyncLifetime
         await _host.Scenario(x =>
         {
             x.Delete.Url($"/discounts/{created.Id}");
-            x.StatusCodeShouldBe(200);
+            x.StatusCodeShouldBe(204);
         });
 
         var result = await _host.Scenario(x =>

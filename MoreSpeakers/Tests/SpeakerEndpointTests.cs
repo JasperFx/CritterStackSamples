@@ -1,6 +1,5 @@
 using Alba;
 using Marten;
-using Microsoft.Extensions.DependencyInjection;
 using Speakers;
 
 namespace MoreSpeakers.Tests;
@@ -13,8 +12,7 @@ public class SpeakerEndpointTests : IAsyncLifetime
     {
         _host = await AlbaHost.For<Program>();
 
-        var store = _host.Services.GetRequiredService<IDocumentStore>();
-        await store.Advanced.Clean.DeleteAllDocumentsAsync();
+        await _host.DocumentStore().Advanced.Clean.DeleteAllDocumentsAsync();
     }
 
     public async Task DisposeAsync() => await _host.DisposeAsync();
@@ -46,14 +44,14 @@ public class SpeakerEndpointTests : IAsyncLifetime
         await _host.Scenario(s =>
         {
             s.Post.Json(new RegisterSpeaker("dup@test.com", "Second", "Speaker", SpeakerType.New)).ToUrl("/api/speakers");
-            s.StatusCodeShouldBe(400);
+            s.StatusCodeShouldBe(409);
         });
     }
 
     [Fact]
     public async Task Can_get_all_speakers()
     {
-        await using var session = _host.Services.GetRequiredService<IDocumentSession>();
+        await using var session = _host.DocumentStore().LightweightSession();
         session.Store(new Speaker { FirstName = "Bob", LastName = "Test", Email = "bob@test.com" });
         await session.SaveChangesAsync();
 
@@ -81,7 +79,7 @@ public class SpeakerEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Can_update_speaker_profile()
     {
-        await using var session = _host.Services.GetRequiredService<IDocumentSession>();
+        await using var session = _host.DocumentStore().LightweightSession();
         var speaker = new Speaker { FirstName = "Original", LastName = "Name", Email = "orig@test.com" };
         session.Store(speaker);
         await session.SaveChangesAsync();
