@@ -26,14 +26,14 @@ public static class SubmitRegistrationEndpoint
         return WolverineContinue.NoProblems;
     }
 
-    // Happy path: store the registration and cascade RegistrationSubmitted.
-    // The return tuple's first element is the HTTP response body (Registration).
-    // The second element is a cascading message — published via the Marten outbox
-    // in the same transaction. No IMessageBus needed.
-    [WolverinePost("/registration")]
+    // [EmptyResponse] tells Wolverine that ALL return values are cascading messages,
+    // not the HTTP response body. Wolverine will:
+    // 1. Auto-persist the Registration (it extends Saga)
+    // 2. Publish RegistrationSubmitted via the outbox
+    // 3. Return 204 No Content
+    [WolverinePost("/registration"), EmptyResponse]
     public static (Registration, RegistrationSubmitted) Post(
-        SubmitRegistration command,
-        IDocumentSession session)
+        SubmitRegistration command)
     {
         var registration = new Registration
         {
@@ -43,10 +43,6 @@ public static class SubmitRegistrationEndpoint
             EventId = command.EventId,
             Payment = command.Payment,
         };
-
-        // Must explicitly store for saga creation from HTTP endpoints —
-        // Wolverine only auto-persists sagas when loading them for message handlers
-        session.Store(registration);
 
         return (
             registration,

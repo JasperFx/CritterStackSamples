@@ -1,6 +1,5 @@
 using Alba;
 using Marten;
-using Microsoft.Extensions.DependencyInjection;
 using OutboxDemo;
 
 namespace OutboxDemo.Tests;
@@ -20,18 +19,20 @@ public class RegistrationTests : IAsyncLifetime
     [Fact]
     public async Task submit_registration()
     {
-        var result = await _host.Scenario(x =>
+        // [EmptyResponse] → 204, no response body
+        await _host.Scenario(x =>
         {
             x.Post.Json(new SubmitRegistration("event-1", "member-1", 100m)).ToUrl("/registration");
-            x.StatusCodeShouldBe(200);
+            x.StatusCodeShouldBe(204);
         });
 
-        var registration = result.ReadAsJson<Registration>();
-        Assert.NotNull(registration);
-        Assert.NotEqual(Guid.Empty, registration!.Id);
-        Assert.Equal("member-1", registration.MemberId);
-        Assert.Equal("event-1", registration.EventId);
-        Assert.Equal(100m, registration.Payment);
+        // Verify persisted via Marten
+        using var session = _host.DocumentStore().LightweightSession();
+        var registrations = await session.Query<Registration>()
+            .Where(r => r.MemberId == "member-1" && r.EventId == "event-1")
+            .ToListAsync();
+        Assert.Single(registrations);
+        Assert.Equal(100m, registrations[0].Payment);
     }
 
     [Fact]
@@ -40,7 +41,7 @@ public class RegistrationTests : IAsyncLifetime
         await _host.Scenario(x =>
         {
             x.Post.Json(new SubmitRegistration("event-2", "member-2", 50m)).ToUrl("/registration");
-            x.StatusCodeShouldBe(200);
+            x.StatusCodeShouldBe(204);
         });
 
         await _host.Scenario(x =>
@@ -53,16 +54,15 @@ public class RegistrationTests : IAsyncLifetime
     [Fact]
     public async Task registration_is_persisted()
     {
-        var result = await _host.Scenario(x =>
+        await _host.Scenario(x =>
         {
             x.Post.Json(new SubmitRegistration("event-3", "member-3", 200m)).ToUrl("/registration");
-            x.StatusCodeShouldBe(200);
+            x.StatusCodeShouldBe(204);
         });
 
-        var registration = result.ReadAsJson<Registration>()!;
-
-        await using var session = _host.Services.GetRequiredService<IDocumentStore>().QuerySession();
-        var loaded = await session.LoadAsync<Registration>(registration.Id);
+        using var session = _host.DocumentStore().LightweightSession();
+        var loaded = await session.Query<Registration>()
+            .FirstOrDefaultAsync(r => r.MemberId == "member-3" && r.EventId == "event-3");
 
         Assert.NotNull(loaded);
         Assert.Equal("member-3", loaded!.MemberId);
@@ -75,13 +75,13 @@ public class RegistrationTests : IAsyncLifetime
         await _host.Scenario(x =>
         {
             x.Post.Json(new SubmitRegistration("event-4", "member-4", 50m)).ToUrl("/registration");
-            x.StatusCodeShouldBe(200);
+            x.StatusCodeShouldBe(204);
         });
 
         await _host.Scenario(x =>
         {
             x.Post.Json(new SubmitRegistration("event-5", "member-4", 75m)).ToUrl("/registration");
-            x.StatusCodeShouldBe(200);
+            x.StatusCodeShouldBe(204);
         });
     }
 }
