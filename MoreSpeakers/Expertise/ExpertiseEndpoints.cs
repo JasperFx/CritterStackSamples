@@ -1,24 +1,29 @@
+using System.Linq.Expressions;
 using Marten;
 using Marten.AspNetCore;
+using Marten.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Wolverine.Http;
 
 namespace Expertise;
 
+// Compiled query — Marten pre-compiles the SQL and query plan once,
+// then reuses it for every execution. Combined with WriteArray(),
+// the result streams raw JSON from PostgreSQL with zero C# allocation.
+public class ActiveExpertiseCategoriesQuery : ICompiledListQuery<ExpertiseCategory>
+{
+    public Expression<Func<IMartenQueryable<ExpertiseCategory>, IEnumerable<ExpertiseCategory>>> QueryIs()
+        => q => q.Where(c => c.IsActive)
+                 .OrderBy(c => c.Sector)
+                 .ThenBy(c => c.Name);
+}
+
 public static class GetExpertiseCategoriesEndpoint
 {
     [WolverineGet("/api/expertise")]
-    
-    // It's an imperfect world. I've never been able to come up with a syntax
-    // option that would eliminate the need for this attribute that isn't as ugly
-    // as using the attribute, so ¯\_(ツ)_/¯
     [ProducesResponseType<ExpertiseCategory[]>(200, "application/json")]
     public static Task Get(IQuerySession session, HttpContext context)
-        => session.Query<ExpertiseCategory>()
-            .Where(c => c.IsActive)
-            .OrderBy(c => c.Sector)
-            .ThenBy(c => c.Name)
-            .WriteArray(context);
+        => session.WriteArray(new ActiveExpertiseCategoriesQuery(), context);
 }
 
 public static class SearchExpertiseEndpoint
