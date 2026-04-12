@@ -65,8 +65,8 @@ public static class CreateBookingEndpoint
 public static class GetBookingsEndpoint
 {
     [WolverineGet("/api/bookings")]
-    public static Task<IReadOnlyList<BookingRecord>> Get(IQuerySession session)
-        => session.Query<BookingRecord>().ToListAsync();
+    public static Task<IReadOnlyList<BookingRecord>> Get(IQuerySession session, CancellationToken ct)
+        => session.Query<BookingRecord>().ToListAsync(ct);
 }
 
 public static class GetBookingByIdEndpoint

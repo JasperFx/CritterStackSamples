@@ -9,11 +9,11 @@ public static class UpdateTodoItemDetailEndpoint
 {
     // IResult justified: may move item between lists (variable logic paths)
     [WolverinePatch("/api/todoitems/detail/{id}")]
-    public static async Task<IResult> Patch(Guid id, UpdateTodoItemDetailRequest request, IDocumentSession session)
+    public static async Task<IResult> Patch(Guid id, UpdateTodoItemDetailRequest request, IDocumentSession session, CancellationToken ct)
     {
         var currentList = await session.Query<TodoList>()
             .Where(l => l.Items.Any(i => i.Id == id))
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(ct);
 
         if (currentList is null) return Results.NotFound();
 
@@ -23,7 +23,7 @@ public static class UpdateTodoItemDetailEndpoint
 
         if (request.ListId != currentList.Id)
         {
-            var targetList = await session.LoadAsync<TodoList>(request.ListId);
+            var targetList = await session.LoadAsync<TodoList>(request.ListId, ct);
             if (targetList is null) return Results.NotFound();
 
             currentList.Items.Remove(item);

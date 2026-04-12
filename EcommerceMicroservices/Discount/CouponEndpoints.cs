@@ -10,8 +10,8 @@ public record UpdateCoupon(Guid Id, string ProductName, string Description, deci
 public static class GetCouponEndpoint
 {
     [WolverineGet("/discounts/{productName}")]
-    public static async Task<Coupon?> Get(string productName, IQuerySession session)
-        => await session.Query<Coupon>().FirstOrDefaultAsync(c => c.ProductName == productName);
+    public static async Task<Coupon?> Get(string productName, IQuerySession session, CancellationToken ct)
+        => await session.Query<Coupon>().FirstOrDefaultAsync(c => c.ProductName == productName, ct);
 }
 
 public static class CreateCouponEndpoint

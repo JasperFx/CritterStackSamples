@@ -7,8 +7,8 @@ namespace Meetings;
 public static class GetMeetingGroupsEndpoint
 {
     [WolverineGet("/api/meeting-groups")]
-    public static Task<IReadOnlyList<MeetingGroup>> Get(IQuerySession session)
-        => session.Query<MeetingGroup>().ToListAsync();
+    public static Task<IReadOnlyList<MeetingGroup>> Get(IQuerySession session, CancellationToken ct)
+        => session.Query<MeetingGroup>().ToListAsync(ct);
 }
 
 public static class GetMeetingGroupByIdEndpoint
@@ -20,6 +20,6 @@ public static class GetMeetingGroupByIdEndpoint
 public static class GetMeetingsEndpoint
 {
     [WolverineGet("/api/meetings")]
-    public static Task<IReadOnlyList<Meeting>> Get(IQuerySession session)
-        => session.Query<Meeting>().OrderByDescending(m => m.TermStartDate).ToListAsync();
+    public static Task<IReadOnlyList<Meeting>> Get(IQuerySession session, CancellationToken ct)
+        => session.Query<Meeting>().OrderByDescending(m => m.TermStartDate).ToListAsync(ct);
 }

@@ -69,27 +69,27 @@ public class AccountTransactionsProjection : SingleStreamProjection<AccountTrans
 public static class GetTransactionsEndpoint
 {
     [WolverineGet("/api/accounts/{accountId}/transactions")]
-    public static async Task<AccountTransactions?> Get(Guid accountId, IQuerySession session)
-        => await session.LoadAsync<AccountTransactions>(accountId);
+    public static async Task<AccountTransactions?> Get(Guid accountId, IQuerySession session, CancellationToken ct)
+        => await session.LoadAsync<AccountTransactions>(accountId, ct);
 }
 
 public static class GetAccountEndpoint
 {
     [WolverineGet("/api/accounts/{id}")]
-    public static async Task<Account?> Get(Guid id, IQuerySession session)
-        => await session.Events.AggregateStreamAsync<Account>(id);
+    public static async Task<Account?> Get(Guid id, IQuerySession session, CancellationToken ct)
+        => await session.Events.AggregateStreamAsync<Account>(id, token: ct);
 }
 
 public static class GetClientEndpoint
 {
     [WolverineGet("/api/clients/{id}")]
-    public static async Task<Client?> Get(Guid id, IQuerySession session)
-        => await session.Events.AggregateStreamAsync<Client>(id);
+    public static async Task<Client?> Get(Guid id, IQuerySession session, CancellationToken ct)
+        => await session.Events.AggregateStreamAsync<Client>(id, token: ct);
 }
 
 public static class GetClientAccountsEndpoint
 {
     [WolverineGet("/api/clients/{clientId}/accounts")]
-    public static Task<IReadOnlyList<Account>> Get(Guid clientId, IQuerySession session)
-        => session.Query<Account>().Where(a => a.ClientId == clientId).ToListAsync();
+    public static Task<IReadOnlyList<Account>> Get(Guid clientId, IQuerySession session, CancellationToken ct)
+        => session.Query<Account>().Where(a => a.ClientId == clientId).ToListAsync(ct);
 }

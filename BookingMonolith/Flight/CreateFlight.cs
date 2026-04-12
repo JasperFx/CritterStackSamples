@@ -57,8 +57,8 @@ public static class CreateFlightEndpoint
 public static class GetFlightsEndpoint
 {
     [WolverineGet("/api/flights")]
-    public static Task<IReadOnlyList<Flight>> Get(IQuerySession session)
-        => session.Query<Flight>().OrderBy(f => f.FlightDate).ToListAsync();
+    public static Task<IReadOnlyList<Flight>> Get(IQuerySession session, CancellationToken ct)
+        => session.Query<Flight>().OrderBy(f => f.FlightDate).ToListAsync(ct);
 }
 
 public static class GetFlightByIdEndpoint

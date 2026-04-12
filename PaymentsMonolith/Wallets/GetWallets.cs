@@ -7,8 +7,8 @@ namespace Wallets;
 public static class GetWalletsEndpoint
 {
     [WolverineGet("/api/wallets")]
-    public static Task<IReadOnlyList<Wallet>> Get(IQuerySession session)
-        => session.Query<Wallet>().ToListAsync();
+    public static Task<IReadOnlyList<Wallet>> Get(IQuerySession session, CancellationToken ct)
+        => session.Query<Wallet>().ToListAsync(ct);
 }
 
 public static class GetWalletByIdEndpoint
@@ -20,6 +20,6 @@ public static class GetWalletByIdEndpoint
 public static class GetWalletByOwnerEndpoint
 {
     [WolverineGet("/api/wallets/owner/{ownerId}")]
-    public static Task<IReadOnlyList<Wallet>> Get(Guid ownerId, IQuerySession session)
-        => session.Query<Wallet>().Where(w => w.OwnerId == ownerId).ToListAsync();
+    public static Task<IReadOnlyList<Wallet>> Get(Guid ownerId, IQuerySession session, CancellationToken ct)
+        => session.Query<Wallet>().Where(w => w.OwnerId == ownerId).ToListAsync(ct);
 }

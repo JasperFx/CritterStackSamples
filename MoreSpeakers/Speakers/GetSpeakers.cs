@@ -7,8 +7,8 @@ namespace Speakers;
 public static class GetSpeakersEndpoint
 {
     [WolverineGet("/api/speakers")]
-    public static Task<IReadOnlyList<Speaker>> Get(IQuerySession session)
-        => session.Query<Speaker>().OrderBy(s => s.LastName).ToListAsync();
+    public static Task<IReadOnlyList<Speaker>> Get(IQuerySession session, CancellationToken ct)
+        => session.Query<Speaker>().OrderBy(s => s.LastName).ToListAsync(ct);
 }
 
 public static class GetSpeakerByIdEndpoint
@@ -20,18 +20,18 @@ public static class GetSpeakerByIdEndpoint
 public static class GetAvailableMentorsEndpoint
 {
     [WolverineGet("/api/speakers/mentors")]
-    public static Task<IReadOnlyList<Speaker>> Get(IQuerySession session)
+    public static Task<IReadOnlyList<Speaker>> Get(IQuerySession session, CancellationToken ct)
         => session.Query<Speaker>()
             .Where(s => s.IsAvailableForMentoring && s.Type == SpeakerType.Experienced)
             .OrderBy(s => s.LastName)
-            .ToListAsync();
+            .ToListAsync(ct);
 }
 
 public static class SearchSpeakersByExpertiseEndpoint
 {
     [WolverineGet("/api/speakers/search")]
-    public static Task<IReadOnlyList<Speaker>> Get(string expertise, IQuerySession session)
+    public static Task<IReadOnlyList<Speaker>> Get(string expertise, IQuerySession session, CancellationToken ct)
         => session.Query<Speaker>()
             .Where(s => s.Expertise.Contains(expertise))
-            .ToListAsync();
+            .ToListAsync(ct);
 }

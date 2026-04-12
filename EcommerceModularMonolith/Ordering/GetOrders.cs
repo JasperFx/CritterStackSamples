@@ -7,11 +7,11 @@ namespace Ordering;
 public static class GetOrdersEndpoint
 {
     [WolverineGet("/orders")]
-    public static async Task<IReadOnlyList<OrderDto>> Get(IQuerySession session)
+    public static async Task<IReadOnlyList<OrderDto>> Get(IQuerySession session, CancellationToken ct)
     {
         var orders = await session.Query<Order>()
             .OrderByDescending(o => o.CreatedAt)
-            .ToListAsync();
+            .ToListAsync(ct);
 
         return orders.Select(o => new OrderDto(o.Id, o.CustomerId, o.OrderName, o.TotalPrice, o.Status, o.Items)).ToList();
     }
@@ -29,11 +29,11 @@ public static class GetOrderByIdEndpoint
 public static class GetOrdersByCustomerEndpoint
 {
     [WolverineGet("/orders/customer/{customerId}")]
-    public static async Task<IReadOnlyList<OrderDto>> Get(Guid customerId, IQuerySession session)
+    public static async Task<IReadOnlyList<OrderDto>> Get(Guid customerId, IQuerySession session, CancellationToken ct)
     {
         var orders = await session.Query<Order>()
             .Where(o => o.CustomerId == customerId)
-            .ToListAsync();
+            .ToListAsync(ct);
 
         return orders.Select(o => new OrderDto(o.Id, o.CustomerId, o.OrderName, o.TotalPrice, o.Status, o.Items)).ToList();
     }

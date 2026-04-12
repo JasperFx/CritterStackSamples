@@ -20,11 +20,11 @@ public static class UpdateTodoItemEndpoint
     // Items are nested in TodoList documents — must query by child Guid.
     // IResult justified: need to search across lists for the nested item.
     [WolverinePut("/api/todoitems/{id}")]
-    public static async Task<IResult> Put(Guid id, UpdateTodoItemRequest request, IDocumentSession session)
+    public static async Task<IResult> Put(Guid id, UpdateTodoItemRequest request, IDocumentSession session, CancellationToken ct)
     {
         var list = await session.Query<TodoList>()
             .Where(l => l.Items.Any(i => i.Id == id))
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(ct);
 
         if (list is null) return Results.NotFound();
 

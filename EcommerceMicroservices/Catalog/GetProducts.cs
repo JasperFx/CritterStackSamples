@@ -7,8 +7,8 @@ namespace Catalog;
 public static class GetProductsEndpoint
 {
     [WolverineGet("/products")]
-    public static Task<IReadOnlyList<Product>> Get(IQuerySession session)
-        => session.Query<Product>().ToListAsync();
+    public static Task<IReadOnlyList<Product>> Get(IQuerySession session, CancellationToken ct)
+        => session.Query<Product>().ToListAsync(ct);
 }
 
 public static class GetProductByIdEndpoint
@@ -20,8 +20,8 @@ public static class GetProductByIdEndpoint
 public static class GetProductByCategoryEndpoint
 {
     [WolverineGet("/products/category/{category}")]
-    public static Task<IReadOnlyList<Product>> Get(string category, IQuerySession session)
+    public static Task<IReadOnlyList<Product>> Get(string category, IQuerySession session, CancellationToken ct)
         => session.Query<Product>()
             .Where(p => p.Category.Contains(category))
-            .ToListAsync();
+            .ToListAsync(ct);
 }

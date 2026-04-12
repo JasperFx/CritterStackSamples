@@ -29,10 +29,11 @@ public static class TransferFundsEndpoint
     [WolverinePost("/api/wallets/transfer")]
     public static async Task<(Wallet, FundsDeducted, FundsAdded)> Post(
         TransferFunds command,
-        IDocumentSession session)
+        IDocumentSession session,
+        CancellationToken ct)
     {
-        var from = await session.LoadAsync<Wallet>(command.FromWalletId);
-        var to = await session.LoadAsync<Wallet>(command.ToWalletId);
+        var from = await session.LoadAsync<Wallet>(command.FromWalletId, ct);
+        var to = await session.LoadAsync<Wallet>(command.ToWalletId, ct);
 
         var transferId = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;

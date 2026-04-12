@@ -6,11 +6,11 @@ namespace CleanArchitectureTodos;
 public static class GetAllTodoListsEndpoint
 {
     [WolverineGet("/api/todolists")]
-    public static async Task<TodosVm> Get(IQuerySession session)
+    public static async Task<TodosVm> Get(IQuerySession session, CancellationToken ct)
     {
         var lists = await session.Query<TodoList>()
             .OrderBy(l => l.Title)
-            .ToListAsync();
+            .ToListAsync(ct);
 
         var priorityLevels = Enum.GetValues<PriorityLevel>()
             .Select(p => new LookupDto((int)p, p.ToString()))

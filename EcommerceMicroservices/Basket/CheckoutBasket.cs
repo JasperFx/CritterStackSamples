@@ -48,9 +48,10 @@ public static class CheckoutBasketEndpoint
     [WolverinePost("/basket/checkout")]
     public static async Task<(bool, BasketCheckoutEvent)> Post(
         CheckoutBasket command,
-        IDocumentSession session)
+        IDocumentSession session,
+        CancellationToken ct)
     {
-        var cart = await session.LoadAsync<ShoppingCart>(command.UserName);
+        var cart = await session.LoadAsync<ShoppingCart>(command.UserName, ct);
 
         var checkoutEvent = new BasketCheckoutEvent(
             command.UserName,

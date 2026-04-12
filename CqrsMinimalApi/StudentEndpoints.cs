@@ -56,11 +56,11 @@ public static class StudentEndpoints
     // Return the strong typed objects instead of IResult, Wolverine.HTTP
     // handles the 200 and 404 mechanics just fine
     [WolverineGet("/student/get-all")]
-    public static async Task<IReadOnlyList<Student>> GetAll(IQuerySession session)
+    public static async Task<IReadOnlyList<Student>> GetAll(IQuerySession session, CancellationToken ct)
     {
         var students = await session.Query<Student>()
             .OrderBy(s => s.Name)
-            .ToListAsync();
+            .ToListAsync(ct);
 
         return students;
     }
@@ -76,10 +76,10 @@ public static class StudentEndpoints
     // Just return the value, don't use IResult unless there is a conditional
     // return within the endpoint method
     [WolverineGet("/student/get-by-name")]
-    public static async Task<Student?> GetByName([FromQuery] string name, IQuerySession session)
+    public static async Task<Student?> GetByName([FromQuery] string name, IQuerySession session, CancellationToken ct)
     {
         return await session.Query<Student>()
-            .FirstOrDefaultAsync(s => s.Name == name);
+            .FirstOrDefaultAsync(s => s.Name == name, ct);
     }
 
     // Try to be synchronous in all cases
