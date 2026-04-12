@@ -26,13 +26,11 @@ public static class SubmitRegistrationEndpoint
         return WolverineContinue.NoProblems;
     }
 
-    // [EmptyResponse] tells Wolverine that ALL return values are cascading messages,
-    // not the HTTP response body. Wolverine will:
-    // 1. Auto-persist the Registration (it extends Saga)
-    // 2. Publish RegistrationSubmitted via the outbox
-    // 3. Return 204 No Content
-    [WolverinePost("/registration"), EmptyResponse]
-    public static (Registration, RegistrationSubmitted) Post(
+    // Return Results.NoContent() as the HTTP response.
+    // Registration (Saga) and RegistrationSubmitted are cascading messages —
+    // Wolverine auto-persists the saga and publishes via the outbox.
+    [WolverinePost("/registration")]
+    public static (IResult, Registration, RegistrationSubmitted) Post(
         SubmitRegistration command)
     {
         var registration = new Registration
@@ -45,6 +43,7 @@ public static class SubmitRegistrationEndpoint
         };
 
         return (
+            Results.NoContent(),
             registration,
             new RegistrationSubmitted(
                 registration.Id,

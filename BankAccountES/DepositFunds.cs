@@ -18,13 +18,11 @@ public record DepositFunds(Guid AccountId, decimal Amount)
 
 public static class DepositFundsEndpoint
 {
-    // [AggregateHandler] loads the Account from the event stream,
-    // appends the returned event, and commits — all in one transaction
     [WolverinePost("/api/accounts/{accountId}/deposits")]
-    [AggregateHandler, EmptyResponse]
-    public static FundsDeposited Post(DepositFunds command, Account account)
+    [AggregateHandler]
+    public static (IResult, FundsDeposited) Post(DepositFunds command, Account account)
     {
         var newBalance = account.Balance + command.Amount;
-        return new FundsDeposited(command.AccountId, command.Amount, newBalance);
+        return (Results.NoContent(), new FundsDeposited(command.AccountId, command.Amount, newBalance));
     }
 }
