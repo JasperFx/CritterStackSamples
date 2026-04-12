@@ -44,9 +44,9 @@ public static class SubmitRegistrationEndpoint
             Payment = command.Payment,
         };
 
-        // Wolverine will automatically persist the new Registration
-        // saga
-        // session.Store(registration);
+        // Must explicitly store for saga creation from HTTP endpoints —
+        // Wolverine only auto-persists sagas when loading them for message handlers
+        session.Store(registration);
 
         return (
             registration,
