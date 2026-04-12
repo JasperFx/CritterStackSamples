@@ -19,7 +19,9 @@ builder.Services.AddMarten(opts =>
     opts.DatabaseSchemaName = "outbox_demo";
 
     opts.Schema.For<OutboxDemo.Registration>()
-        .UniqueIndex(r => new { r.MemberId, r.EventId });
+        // Watch this syntax. Marten does this by making you specify a separate expression for each property
+        // rather than using an anonymous type
+        .UniqueIndex(r => r.MemberId, r => r.EventId);
 })
 // IntegrateWithWolverine() enables the Marten outbox — messages published during
 // a handler or HTTP request are stored in the same Marten transaction and delivered

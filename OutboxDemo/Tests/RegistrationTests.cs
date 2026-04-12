@@ -12,8 +12,7 @@ public class RegistrationTests : IAsyncLifetime
     public async Task InitializeAsync()
     {
         _host = await AlbaHost.For<Program>();
-        var store = _host.Services.GetRequiredService<IDocumentStore>();
-        await store.Advanced.Clean.DeleteAllDocumentsAsync();
+        await _host.CleanAllMartenDataAsync();
     }
 
     public async Task DisposeAsync() => await _host.DisposeAsync();
