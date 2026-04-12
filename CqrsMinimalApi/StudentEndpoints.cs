@@ -85,11 +85,11 @@ public static class StudentEndpoints
     // Try to be synchronous in all cases
     // Use [Entity(Required = true)] to declaratively deal with HTTP status code
     // 200 or 404 here
-    [WolverinePut("/student/update")]
+    [WolverinePut("/student/update/{id}")]
     public static Student Update(
-        UpdateStudentRequest request, 
-        [FromQuery] int id, 
-        [Entity(Required = true)] Student student, 
+        UpdateStudentRequest request,
+        int id,
+        [Entity(Required = true)] Student student,
         IDocumentSession session)
     {
         student.Name = request.Name;

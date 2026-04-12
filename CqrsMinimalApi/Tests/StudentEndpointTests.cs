@@ -1,7 +1,6 @@
 using Alba;
 using CqrsMinimalApi;
 using Marten;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace CqrsMinimalApi.Tests;
 
@@ -11,21 +10,8 @@ public class StudentEndpointTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        _host = await AlbaHost.For<Program>(builder =>
-        {
-            // Use a test-specific database to avoid colliding with dev data
-            builder.ConfigureServices(services =>
-            {
-                services.Configure<StoreOptions>(opts =>
-                {
-                    opts.Connection("Host=localhost;Database=cqrs_minimal_api_tests;Username=postgres;Password=postgres");
-                });
-            });
-        });
-
-        // Clean slate for each test run
-        var store = _host.Services.GetRequiredService<IDocumentStore>();
-        await store.Advanced.Clean.DeleteAllDocumentsAsync();
+        _host = await AlbaHost.For<Program>();
+        await _host.CleanAllMartenDataAsync();
     }
 
     public async Task DisposeAsync()
@@ -52,7 +38,7 @@ public class StudentEndpointTests : IAsyncLifetime
     public async Task Can_get_all_students()
     {
         // Arrange: seed two students
-        await using var session = _host.Services.GetRequiredService<IDocumentSession>();
+        using var session = _host.DocumentStore().LightweightSession();
         session.Store(new Student { Name = "Zara First" }, new Student { Name = "Amy Second" });
         await session.SaveChangesAsync();
 
@@ -83,16 +69,18 @@ public class StudentEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Can_update_a_student()
     {
-        // Arrange
-        await using var session = _host.Services.GetRequiredService<IDocumentSession>();
-        var student = new Student { Name = "Original Name", Email = "orig@test.com" };
-        session.Store(student);
-        await session.SaveChangesAsync();
+        // Arrange: create via the API so HiLo ID is assigned correctly
+        var createResult = await _host.Scenario(s =>
+        {
+            s.Post.Json(new CreateStudentRequest("Original Name", "123 St", "orig@test.com", null)).ToUrl("/student/create");
+            s.StatusCodeShouldBeOk();
+        });
+        var student = createResult.ReadAsJson<Student>();
 
         // Act
         var result = await _host.Scenario(s =>
         {
-            s.Put.Json(new UpdateStudentRequest("Updated Name", null, "updated@test.com", null)).ToUrl($"/student/update?id={student.Id}");
+            s.Put.Json(new UpdateStudentRequest("Updated Name", null, "updated@test.com", null)).ToUrl($"/student/update/{student!.Id}");
             s.StatusCodeShouldBeOk();
         });
 
@@ -104,16 +92,18 @@ public class StudentEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Can_delete_a_student()
     {
-        // Arrange
-        await using var session = _host.Services.GetRequiredService<IDocumentSession>();
-        var student = new Student { Name = "To Delete" };
-        session.Store(student);
-        await session.SaveChangesAsync();
+        // Arrange: create via the API
+        var createResult = await _host.Scenario(s =>
+        {
+            s.Post.Json(new CreateStudentRequest("To Delete", null, "del@test.com", null)).ToUrl("/student/create");
+            s.StatusCodeShouldBeOk();
+        });
+        var student = createResult.ReadAsJson<Student>();
 
         // Act
         await _host.Scenario(s =>
         {
-            s.Delete.Url($"/student/delete?id={student.Id}");
+            s.Delete.Url($"/student/delete?id={student!.Id}");
             s.StatusCodeShouldBe(204);
         });
 
