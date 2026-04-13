@@ -41,11 +41,9 @@ builder.Host.UseWolverine(opts =>
     // Wolverine's durable inbox/outbox with Marten persistence
     opts.Durability.Mode = DurabilityMode.Solo;
 
-    // CritterWatch monitoring
-    opts.UseRabbitMq(rabbit =>
-    {
-        rabbit.HostName = builder.Configuration["RabbitMQ:Host"] ?? "localhost";
-    }).DisableDeadLetterQueueing().AutoProvision();
+    // CritterWatch monitoring — Aspire injects RabbitMQ as ConnectionStrings:rabbitmq
+    opts.UseRabbitMq(new Uri(builder.Configuration.GetConnectionString("rabbitmq") ?? "amqp://localhost"))
+        .DisableDeadLetterQueueing().AutoProvision();
 
     opts.AddCritterWatchMonitoring(
         "rabbitmq://queue/critterwatch".ToUri(),
