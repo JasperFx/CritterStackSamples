@@ -5,7 +5,7 @@ var postgres = builder.AddPostgres("postgres");
 var rabbitmq = builder.AddRabbitMQ("rabbitmq");
 
 // Databases — one per service + CritterWatch
-var critterwatchDb = postgres.AddDatabase("critterwatch");
+var critterwatchDb = postgres.AddDatabase("critterwatchdb");
 var bankDb = postgres.AddDatabase("bankaccount");
 var speakersDb = postgres.AddDatabase("morespeakers");
 var outboxDb = postgres.AddDatabase("outboxdemo");
