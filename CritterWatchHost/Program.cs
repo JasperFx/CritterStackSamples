@@ -4,14 +4,15 @@ using Wolverine.RabbitMQ;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Aspire injects the connection string as "critterwatch" via WithReference(db, "critterwatch")
 var postgresConnection = builder.Configuration.GetConnectionString("critterwatch")
-    ?? "Host=localhost;Port=5433;Database=critterwatch;Username=postgres;Password=postgres";
+    ?? "Host=localhost;Port=5432;Database=critterwatch;Username=postgres;Password=postgres";
 
 builder.AddCritterWatch(postgresConnection, opts =>
 {
-    opts.UseRabbitMq(new Uri(
-        builder.Configuration.GetConnectionString("rabbitmq")
-        ?? "amqp://localhost"))
+    // Aspire injects RabbitMQ connection as "rabbitmq"
+    var rabbitUri = builder.Configuration.GetConnectionString("rabbitmq") ?? "amqp://localhost";
+    opts.UseRabbitMq(new Uri(rabbitUri))
         .DisableDeadLetterQueueing()
         .AutoProvision();
 
