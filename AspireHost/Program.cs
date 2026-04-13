@@ -12,7 +12,7 @@ var outboxDb = postgres.AddDatabase("outboxdemo");
 
 // CritterWatch monitoring console
 var critterwatch = builder.AddProject<Projects.CritterWatchHost>("critterwatch")
-    .WithReference(critterwatchDb)
+    .WithReference(critterwatchDb, "critterwatch")
     .WithReference(rabbitmq)
     .WaitFor(postgres)
     .WaitFor(rabbitmq)
