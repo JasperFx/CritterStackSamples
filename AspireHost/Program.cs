@@ -16,7 +16,8 @@ var critterwatch = builder.AddProject<Projects.CritterWatchHost>("critterwatch")
     .WithReference(rabbitmq)
     .WaitFor(postgres)
     .WaitFor(rabbitmq)
-    .WithExternalHttpEndpoints();
+    .WithExternalHttpEndpoints()
+    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Production");
 
 // Starter samples — each gets its own database + shared RabbitMQ
 // .WithReference(db, "Marten") injects the connection string as "Marten"
