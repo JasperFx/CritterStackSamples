@@ -1,7 +1,10 @@
 using BankAccountES;
 using JasperFx.Events.Projections;
+using JasperFx.Core;
 using Marten;
 using Marten.Events.Projections;
+using Wolverine.CritterWatch;
+using Wolverine.RabbitMQ;
 using Wolverine;
 using Wolverine.FluentValidation;
 using Wolverine.Http;
@@ -39,6 +42,16 @@ builder.Host.UseWolverine(opts =>
     opts.Policies.AutoApplyTransactions();
     opts.UseFluentValidation();
     opts.ServiceName = "BankAccount";
+
+    // CritterWatch monitoring
+    opts.UseRabbitMq(rabbit =>
+    {
+        rabbit.HostName = builder.Configuration["RabbitMQ:Host"] ?? "localhost";
+    }).DisableDeadLetterQueueing().AutoProvision();
+
+    opts.AddCritterWatchMonitoring(
+        "rabbitmq://queue/critterwatch".ToUri(),
+        "rabbitmq://queue/bank_account".ToUri());
 });
 
 var app = builder.Build();

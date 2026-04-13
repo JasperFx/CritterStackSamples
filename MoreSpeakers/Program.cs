@@ -1,5 +1,8 @@
+using JasperFx.Core;
 using Marten;
 using Wolverine;
+using Wolverine.CritterWatch;
+using Wolverine.RabbitMQ;
 using Wolverine.FluentValidation;
 using Wolverine.Http;
 using Wolverine.Http.FluentValidation;
@@ -35,6 +38,16 @@ builder.Host.UseWolverine(opts =>
     opts.Policies.AutoApplyTransactions();
     opts.UseFluentValidation();
     opts.ServiceName = "MoreSpeakers";
+
+    // CritterWatch monitoring
+    opts.UseRabbitMq(rabbit =>
+    {
+        rabbit.HostName = builder.Configuration["RabbitMQ:Host"] ?? "localhost";
+    }).DisableDeadLetterQueueing().AutoProvision();
+
+    opts.AddCritterWatchMonitoring(
+        "rabbitmq://queue/critterwatch".ToUri(),
+        "rabbitmq://queue/more_speakers".ToUri());
 });
 
 var app = builder.Build();

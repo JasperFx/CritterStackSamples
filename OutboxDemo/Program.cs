@@ -1,5 +1,8 @@
+using JasperFx.Core;
 using Marten;
 using Wolverine;
+using Wolverine.CritterWatch;
+using Wolverine.RabbitMQ;
 using Wolverine.Http;
 using Wolverine.Marten;
 
@@ -33,10 +36,20 @@ builder.Host.UseWolverine(opts =>
 {
     opts.Discovery.IncludeAssembly(typeof(Program).Assembly);
     opts.Policies.AutoApplyTransactions();
+    opts.ServiceName = "OutboxDemo";
 
     // Wolverine's durable inbox/outbox with Marten persistence
-    // replaces MassTransit's BusOutbox + InboxState + OutboxMessage tables
     opts.Durability.Mode = DurabilityMode.Solo;
+
+    // CritterWatch monitoring
+    opts.UseRabbitMq(rabbit =>
+    {
+        rabbit.HostName = builder.Configuration["RabbitMQ:Host"] ?? "localhost";
+    }).DisableDeadLetterQueueing().AutoProvision();
+
+    opts.AddCritterWatchMonitoring(
+        "rabbitmq://queue/critterwatch".ToUri(),
+        "rabbitmq://queue/outbox_demo".ToUri());
 });
 
 var app = builder.Build();

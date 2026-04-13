@@ -17,11 +17,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Wolverine.CritterWatch" Version="0.1.0" />
     <PackageReference Include="WolverineFx.FluentValidation" Version="5.30.0" />
     <PackageReference Include="WolverineFx.Http" Version="5.30.0" />
     <PackageReference Include="WolverineFx.Http.FluentValidation" Version="5.30.0" />
     <PackageReference Include="WolverineFx.Marten" Version="5.30.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
+    <PackageReference Include="WolverineFx.RabbitMQ" Version="5.30.0" />
   </ItemGroup>
 
 </Project>

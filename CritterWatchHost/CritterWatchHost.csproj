@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CritterWatch" Version="0.1.0" />
+    <PackageReference Include="WolverineFx.RabbitMQ" Version="5.30.0" />
+  </ItemGroup>
+
+</Project>
