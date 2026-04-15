@@ -5,11 +5,26 @@ using Wolverine.CritterWatch;
 using Wolverine.RabbitMQ;
 using Wolverine.Http;
 using Wolverine.Marten;
+using OpenTelemetry;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// OpenTelemetry — export traces to Jaeger via OTLP
+builder.Services.AddOpenTelemetry()
+    .WithMetrics(metrics =>
+    {
+        metrics.AddMeter("Wolverine:OutboxDemo");
+        metrics.AddMeter("Marten");
+    })
+    .WithTracing(tracing =>
+    {
+        tracing.AddSource("Wolverine");
+        tracing.AddSource("Marten");
+    })
+    .UseOtlpExporter();
 
 builder.Services.AddWolverineHttp();
 

@@ -18,6 +18,8 @@
 
   <ItemGroup>
     <PackageReference Include="Marten.AspNetCore" Version="8.29.2" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.2" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.15.2" />
     <PackageReference Include="Wolverine.CritterWatch" Version="0.1.0" />
     <PackageReference Include="WolverineFx.FluentValidation" Version="5.30.0" />
     <PackageReference Include="WolverineFx.Http" Version="5.30.0" />
