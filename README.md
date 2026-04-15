@@ -2,7 +2,20 @@
 
 Sample projects using the "Critter Stack" tools ([Marten](https://martendb.io) and [Wolverine](https://wolverinefx.net)) and related [JasperFx](https://github.com/jasperfx) projects.
 
-Most of these samples require PostgreSQL. Use [Docker Desktop](https://www.docker.com/products/docker-desktop/) or a local PostgreSQL instance.
+## Prerequisites
+
+All samples require PostgreSQL. Start it with Docker Compose:
+
+```bash
+docker compose up -d
+```
+
+This starts PostgreSQL on **port 5433** (mapped from container port 5432). Each sample creates its own database automatically via Marten's schema management.
+
+To stop:
+```bash
+docker compose down
+```
 
 ## Samples
 
