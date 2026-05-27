@@ -61,3 +61,38 @@ dotnet run
 ```
 
 Swagger UI available at `/swagger`.
+
+## Production code generation without Roslyn
+
+This sample also shows, end to end, how to run in production with **`TypeLoadMode.Static`** and
+**without** the `WolverineFx.RuntimeCompilation` package (and its Roslyn dependencies), while still
+using runtime compilation during local development — the workflow requested in
+[wolverine#2900](https://github.com/JasperFx/wolverine/issues/2900).
+
+| | Development | Production |
+|---|---|---|
+| Build configuration | `Debug` | `Release` |
+| `WolverineFx.RuntimeCompilation` (Roslyn) | **referenced** (Debug-only) | **excluded** |
+| Code generation | `Dynamic` — compiled at startup | `Static` — runs pre-generated code |
+
+The package reference is a **build-time** decision (keyed off `$(Configuration)`); the code-gen mode
+is a **runtime** decision (the `Production` environment profile). They line up: publish `Release`, run
+as `Production`.
+
+### Moving parts
+1. **`Program.cs`** — `CritterStackDefaults(x => { x.Production.GeneratedCodeMode = TypeLoadMode.Static; x.Production.AssertAllPreGeneratedTypesExist = true; })`, and `return await app.RunJasperFxCommands(args)` so `dotnet run -- codegen write` works.
+2. **`CqrsMinimalApi.csproj`** — `WolverineFx.RuntimeCompilation` is referenced inside `<ItemGroup Condition="'$(Configuration)' == 'Debug'">`. ⚠️ The parentheses in `$(Configuration)` matter — a malformed condition like `'$Configuration)'` silently never matches, so the assembly keeps shipping (the symptom in #2900).
+3. **`Internal/Generated/`** — pre-generated code from `codegen write` (committed so `Release` builds/tests without Roslyn). `codegen write` boots in metadata-only mode, so **no database** is needed.
+
+### Prove it
+```bash
+dotnet run -- codegen write          # (re)generate code — no DB required
+./verify-production-build.sh         # publish Release; assert NO Wolverine.RuntimeCompilation / Microsoft.CodeAnalysis* / JasperFx.RuntimeCompiler
+dotnet test Tests                    # ProductionStaticCodegenTests boots with ASPNETCORE_ENVIRONMENT=Production (Static)
+docker build -t cqrs-minimal-api -f Dockerfile .   # codegen write -> publish Release -> Roslyn-free image
+```
+
+### FAQ (from #2900)
+- **Is `AssertAllPreGeneratedTypesExist` the default?** No — it defaults to `false`; set it `true` so a missing/stale pre-generated type fails fast at startup.
+- **Why did my conditional `PackageReference` still ship the assembly?** Almost certainly a malformed condition (`$Configuration)` missing the leading `(`). Use the form above and confirm with `verify-production-build.sh`.
+- **Must I commit `Internal/Generated/`?** No — the `Dockerfile` regenerates it during the build; committing is just for convenience.

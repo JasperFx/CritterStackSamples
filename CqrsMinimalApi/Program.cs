@@ -1,3 +1,5 @@
+using JasperFx;
+using JasperFx.CodeGeneration;
 using Marten;
 using Wolverine;
 using Wolverine.Http;
@@ -7,6 +9,18 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// ── Production code-generation defaults (the point of this sample) ──────────────────────────
+// In the Production environment, run the *pre-generated* code via TypeLoadMode.Static and assert
+// that every expected generated type is present — so the app boots with NO runtime Roslyn
+// compilation. In Development, the default (Dynamic) mode compiles handlers on the fly using the
+// WolverineFx.RuntimeCompilation package, which is referenced ONLY in Debug builds (see the
+// .csproj). Production deployments publish in Release, which drops that package + Roslyn entirely.
+builder.Services.CritterStackDefaults(x =>
+{
+    x.Production.GeneratedCodeMode = TypeLoadMode.Static;
+    x.Production.AssertAllPreGeneratedTypesExist = true;
+});
 
 builder.Services.AddWolverineHttp();
 
@@ -41,10 +55,16 @@ if (app.Environment.IsDevelopment())
 
 app.MapWolverineEndpoints();
 
-// Seed initial data
-await SeedData(app);
+// Seed only for an actual server run. CLI commands (e.g. `codegen write`) boot the host in
+// metadata-only mode without a database, so skip seeding when arguments are present.
+if (args.Length == 0)
+{
+    await SeedData(app);
+}
 
-await app.RunAsync();
+// Route command-line args so `dotnet run -- codegen write` (and `codegen delete`, `check-env`,
+// `describe`, …) work; with no args this just runs the web host.
+return await app.RunJasperFxCommands(args);
 
 static async Task SeedData(WebApplication app)
 {
