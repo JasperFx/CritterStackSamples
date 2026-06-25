@@ -52,9 +52,10 @@ builder.AddCritterWatch(
         //                                  publisher side.
         // CritterWatch automatically pins this DB-queue listener to BufferedInMemory (a DB queue can't run
         // Inline, and Durable would couple it to the demoted ancillary store).
+        // No serializer call needed: AddCritterWatch registers the CritterWatch wire-format serializer
+        // globally (by a unique content-type), so the console decodes telemetry with zero per-endpoint config.
         opts.ListenToSqlServerQueue("critterwatch")
-            .ListenOnlyAtLeader()
-            .UseCritterWatchSerializer();
+            .ListenOnlyAtLeader();
     },
     // Single-node sample → no sharded external topology to wire, so cluster partitioning stays off.
     enableClusterPartitioning: false);

@@ -37,12 +37,11 @@ builder.AddCritterWatch(
         //   - ListenOnlyAtLeader()      : in a multi-node console cluster, exactly one node owns this
         //                                 shared queue (no split-brain). On this single-node sample the
         //                                 one node elects itself leader and owns it automatically.
-        //   - UseCritterWatchSerializer(): pins CritterWatch's wire-format (System.Text.Json with the
-        //                                 framework defaults) so the encode/decode contract matches what
-        //                                 AddCritterWatchMonitoring configures on the publisher side.
+        // No serializer call needed: AddCritterWatch registers the CritterWatch wire-format serializer
+        // globally (by a unique content-type), so the console decodes telemetry on any transport with
+        // zero per-endpoint serializer config.
         opts.ListenToRabbitQueue("critterwatch")
-            .ListenOnlyAtLeader()
-            .UseCritterWatchSerializer();
+            .ListenOnlyAtLeader();
     },
     // Single-node sample → no sharded external topology to wire, so cluster partitioning stays off.
     // Production multi-node consoles pass enableClusterPartitioning: true plus a

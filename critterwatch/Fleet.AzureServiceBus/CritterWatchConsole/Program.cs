@@ -49,9 +49,10 @@ builder.AddCritterWatch(
         //                                 AddCritterWatchMonitoring configures on the publisher side. (The
         //                                 brotli payload-shrink path keeps DDL-heavy ServiceUpdates under
         //                                 the ASB Standard tier's 256 KB body limit.)
+        // No serializer call needed: AddCritterWatch registers the CritterWatch wire-format serializer
+        // globally (by a unique content-type), so the console decodes telemetry with zero per-endpoint config.
         opts.ListenToAzureServiceBusQueue("critterwatch")
-            .ListenOnlyAtLeader()
-            .UseCritterWatchSerializer();
+            .ListenOnlyAtLeader();
     },
     // Single-node sample → no sharded external topology to wire, so cluster partitioning stays off.
     // Production multi-node consoles pass enableClusterPartitioning: true plus a
