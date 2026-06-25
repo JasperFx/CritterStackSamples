@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The .NET Aspire orchestration host — the F5 surface. This is the SIMPLEST AppHost of the whole
+       sample set: there is NO broker container. The Wolverine transport IS the database — the same
+       Postgres that backs the event stores also holds the Wolverine DB-backed queue tables. So Aspire
+       provisions exactly ONE container (Postgres) and launches the console + every monitored service as
+       project resources. The Aspire.AppHost.Sdk is what generates the Projects.* marker types (one per
+       ProjectReference below) that AddProject<T>() and the Tests' CritterWatchAppHostFixture<Projects.AppHost>
+       consume. -->
+
+  <Sdk Name="Aspire.AppHost.Sdk" Version="9.5.0" />
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsAspireHost>true</IsAspireHost>
+    <UserSecretsId>fleet-postgresqlqueues-apphost</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" />
+    <!-- ONLY Postgres — no broker resource. The DB IS the transport. -->
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" />
+  </ItemGroup>
+
+  <!-- One ProjectReference per launched resource. Aspire needs these so it can emit each Projects.* type
+       and locate the built assembly to run. -->
+  <ItemGroup>
+    <ProjectReference Include="..\CritterWatchConsole\CritterWatchConsole.csproj" />
+    <ProjectReference Include="..\TripService\TripService.csproj" />
+    <ProjectReference Include="..\TripPublisher\TripPublisher.csproj" />
+    <ProjectReference Include="..\RepairShop\RepairShop.csproj" />
+    <ProjectReference Include="..\Incidents.Service\Incidents.Service.csproj" />
+    <ProjectReference Include="..\Incidents.Publisher\Incidents.Publisher.csproj" />
+  </ItemGroup>
+
+</Project>

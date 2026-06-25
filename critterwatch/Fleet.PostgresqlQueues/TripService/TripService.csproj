@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- TripService — the event-sourced, Marten-backed monitored service. It owns the Trip aggregate +
+       three async projections, and reports itself to the CritterWatch console over a Wolverine PostgreSQL
+       DB-backed queue (NO broker) via AddCritterWatchMonitoring (see Program.cs). The transport tables and
+       the Marten event store both live in the same Postgres — the event store in its own `trips` schema,
+       the transport in the shared default `wolverine_queues` schema. -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TripMessages\TripMessages.csproj" />
+    <ProjectReference Include="..\Fleet.Common\Fleet.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The monitored-side CritterWatch integration: AddCritterWatchMonitoring + UseCritterWatchSerializer.
+         Consumed as the PACKED NuGet, never a project ref into the CritterWatch repo. -->
+    <PackageReference Include="Wolverine.CritterWatch" />
+
+    <!-- DB-backed queue transport (the control/telemetry channel) + event store. NO broker package. -->
+    <PackageReference Include="WolverineFx.Postgresql" />
+    <PackageReference Include="WolverineFx.Marten" />
+    <PackageReference Include="Marten" />
+
+    <!-- Wolverine + Marten generate handler/projection glue at runtime here (no committed generated code),
+         so the Roslyn-backed runtime compiler must be present. -->
+    <PackageReference Include="WolverineFx.RuntimeCompilation" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,27 @@
+<Project>
+
+  <!-- ============================================================================
+       CritterWatch samples island.
+
+       These samples live in their own subtree because they pin a much newer (and
+       partly unpublished) Critter Stack than the rest of CritterStackSamples:
+       Wolverine 6.14.x (incl. local -cw* pins), Marten 9.11.0-alpha, Polecat
+       4.6.0-alpha, and the CritterWatch 1.0.0-alpha.4 packages themselves. Keeping
+       a dedicated Directory.Build.props / Directory.Packages.props / nuget.config
+       here isolates that pin set from the repo's existing 6.0.0-rc samples.
+
+       Central Package Management is ON for this subtree (versions live in
+       Directory.Packages.props) so a release-cycle bump is a one-line change.
+       ============================================================================ -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- The alpha/-cw stack is restored from a local feed via the gitignored
+         nuget.config; suppress the audit noise that pre-release feeds generate. -->
+    <NuGetAudit>false</NuGetAudit>
+  </PropertyGroup>
+
+</Project>

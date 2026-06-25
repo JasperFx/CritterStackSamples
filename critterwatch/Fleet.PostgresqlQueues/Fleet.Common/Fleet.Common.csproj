@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Tiny shared helper library for the Fleet.PostgresqlQueues sample. Holds the one piece of glue every
+       project needs: resolving the Postgres connection string from either the Aspire-injected
+       ConnectionStrings__critterstore environment or a localhost docker-compose fallback (so each project
+       still F5-runs standalone). There is NO broker URI here — unlike the RabbitMq flagship, the transport
+       IS the database, so the single Postgres connection string doubles as the event store AND the
+       Wolverine DB-backed queue host. Kept store-agnostic and dependency-light on purpose. -->
+
+</Project>

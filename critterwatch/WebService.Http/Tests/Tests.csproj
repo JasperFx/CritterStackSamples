@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- WebService.Http smoke battery. Thin by design: references the shared harness (the boot/wait/route-
+       assertion machinery) plus this solution's AppHost (so Aspire generates the Projects.AppHost marker the
+       generic fixture is closed over). See ../../Shared/CritterWatch.Samples.Testing. -->
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The shared Aspire.Hosting.Testing harness: CritterWatchAppHostFixture<TAppHost>,
+         CritterWatchAboutOk(), WaitForServicesAsync(), the DockerRequired trait. -->
+    <ProjectReference Include="..\..\Shared\CritterWatch.Samples.Testing\CritterWatch.Samples.Testing.csproj" />
+    <!-- The AppHost — this reference is what makes Aspire emit Projects.AppHost for the fixture. -->
+    <ProjectReference Include="..\AppHost\AppHost.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Shouldly" />
+  </ItemGroup>
+
+</Project>

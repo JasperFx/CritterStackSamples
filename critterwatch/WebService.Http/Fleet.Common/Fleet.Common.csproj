@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Tiny shared helper library for the WebService.Http sample. Holds the one piece of glue every
+       project needs: resolving the Postgres connection string AND the CritterWatch console's base URL
+       from either the Aspire-injected environment (ConnectionStrings__* / services__*) or a localhost
+       fallback (so each project still F5-runs standalone). Kept store/transport-agnostic and
+       dependency-light on purpose. -->
+
+</Project>

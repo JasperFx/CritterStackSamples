@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- ============================================================================
+       Shared Aspire.Hosting.Testing harness for every CritterWatch sample solution.
+
+       This is a *library* (not a test project) consumed by each solution's Tests/
+       project. It is generic over the AppHost entry-point type, so it compiles
+       standalone with no concrete Projects.*AppHost reference — each solution's
+       Tests/ project supplies its own via CritterWatchAppHostFixture<Projects.XAppHost>.
+
+       CPM is on (see ../../Directory.Packages.props) — no Version= attributes here.
+       ============================================================================ -->
+
+  <PropertyGroup>
+    <!-- TargetFramework / Nullable / ImplicitUsings inherited from ../../Directory.Build.props -->
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Aspire test host: DistributedApplicationTestingBuilder, CreateHttpClient, ResourceNotifications. -->
+    <PackageReference Include="Aspire.Hosting.Testing" />
+
+    <!-- xUnit so the fixture can implement IAsyncLifetime and ship the [CollectionDefinition]. -->
+    <PackageReference Include="xunit" />
+
+    <!-- Fluent assertions used by the helper methods. -->
+    <PackageReference Include="Shouldly" />
+  </ItemGroup>
+
+</Project>

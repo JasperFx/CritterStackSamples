@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The .NET Aspire orchestration host — the F5 surface. Provisions the Postgres container and launches
+       the CritterWatch console + the monitored OrderService as project resources. The Aspire.AppHost.Sdk
+       generates the Projects.* marker types (one per ProjectReference below) that AddProject<T>() and the
+       Tests' CritterWatchAppHostFixture<Projects.AppHost> consume.
+
+       No broker resource here: the monitoring link rides Wolverine's HTTP transport, so the only
+       infrastructure container is Postgres. -->
+
+  <Sdk Name="Aspire.AppHost.Sdk" Version="9.5.0" />
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsAspireHost>true</IsAspireHost>
+    <UserSecretsId>webservice-http-apphost</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" />
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" />
+  </ItemGroup>
+
+  <!-- One ProjectReference per launched resource — Aspire needs these to emit each Projects.* type and
+       locate the built assembly to run. -->
+  <ItemGroup>
+    <ProjectReference Include="..\CritterWatchConsole\CritterWatchConsole.csproj" />
+    <ProjectReference Include="..\OrderService\OrderService.csproj" />
+  </ItemGroup>
+
+</Project>

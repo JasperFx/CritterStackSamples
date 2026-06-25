@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- The standalone CritterWatch console — the monitoring dashboard the order service reports to. It owns
+       its OWN Postgres store and RECEIVES the order service's telemetry over WOLVERINE'S HTTP TRANSPORT
+       (no broker). Consumes the PACKED `CritterWatch` NuGet exactly as an operator would (the package
+       bundles the SPA, endpoints, SignalR hub, and the AddCritterWatch/UseCritterWatch hosting extensions).
+
+       Because the monitoring link rides the HTTP transport, the console additionally:
+         - references WolverineFx.Http so it can MapWolverineHttpTransportEndpoints() (the inbound
+           /_wolverine/invoke + /_wolverine/batch/{queue} routes the order service POSTs to), and
+         - registers IWolverineHttpTransportClient + a named HttpClient so it can send operator commands
+           BACK to the order service over the same transport. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fleet.Common\Fleet.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CritterWatch" />
+    <!-- The HTTP transport (MapWolverineHttpTransportEndpoints / ToHttpEndpoint / the transport client)
+         ships in WolverineFx.Http. -->
+    <PackageReference Include="WolverineFx.Http" />
+    <PackageReference Include="WolverineFx.RuntimeCompilation" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- The standalone CritterWatch console — the monitoring dashboard the whole fleet reports to. It owns
+       its OWN Postgres store (the console's event/document storage) AND that same Postgres is the host for
+       the Wolverine DB-backed control queue the fleet publishes to. Consumes the PACKED `CritterWatch`
+       NuGet exactly as an operator would (the package bundles the SPA, endpoints, SignalR hub, and the
+       AddCritterWatch/UseCritterWatch hosting extensions). -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fleet.Common\Fleet.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CritterWatch" />
+    <!-- The console listens on the Wolverine PostgreSQL DB-backed queue itself, so it needs the Postgresql
+         transport package (NOT a broker package — there is no broker in this fleet). -->
+    <PackageReference Include="WolverineFx.Postgresql" />
+    <PackageReference Include="WolverineFx.RuntimeCompilation" />
+  </ItemGroup>
+
+</Project>

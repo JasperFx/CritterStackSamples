@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The .NET Aspire orchestration host — the F5 surface. Provisions the Azure Service Bus emulator
+       (plus the backing SQL container Aspire wires automatically) + a Postgres container, and launches the
+       console + every monitored service as project resources. The Aspire.AppHost.Sdk is what generates the
+       Projects.* marker types (one per ProjectReference below) that AddProject<T>() and the Tests'
+       CritterWatchAppHostFixture<Projects.AppHost> consume. -->
+
+  <Sdk Name="Aspire.AppHost.Sdk" Version="9.5.0" />
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsAspireHost>true</IsAspireHost>
+    <!-- Aspire generates the strongly-typed Projects.* metadata into this default namespace. -->
+    <UserSecretsId>fleet-asb-apphost</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" />
+    <!-- The ASB emulator resource (RunAsEmulator) lives in Aspire.Hosting.Azure.ServiceBus; it pulls in
+         the backing SQL container automatically. Postgres is a separate first-class Aspire resource. -->
+    <PackageReference Include="Aspire.Hosting.Azure.ServiceBus" />
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" />
+  </ItemGroup>
+
+  <!-- One ProjectReference per launched resource. Aspire needs these so it can emit each Projects.* type
+       and locate the built assembly to run. -->
+  <ItemGroup>
+    <ProjectReference Include="..\CritterWatchConsole\CritterWatchConsole.csproj" />
+    <ProjectReference Include="..\TripService\TripService.csproj" />
+    <ProjectReference Include="..\TripPublisher\TripPublisher.csproj" />
+    <ProjectReference Include="..\RepairShop\RepairShop.csproj" />
+  </ItemGroup>
+
+</Project>

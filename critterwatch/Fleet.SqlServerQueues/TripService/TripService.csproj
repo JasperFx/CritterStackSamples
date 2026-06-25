@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- TripService — the event-sourced, Polecat / SQL Server-backed monitored service. It owns the Trip
+       aggregate + three async projections, and reports itself to the CritterWatch console over the SQL
+       Server database-QUEUE control channel (no broker) via AddCritterWatchMonitoring (see Program.cs). -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TripMessages\TripMessages.csproj" />
+    <ProjectReference Include="..\Fleet.Common\Fleet.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The monitored-side CritterWatch integration: AddCritterWatchMonitoring + UseCritterWatchSerializer.
+         Consumed as the PACKED NuGet, never a project ref into the CritterWatch repo. -->
+    <PackageReference Include="Wolverine.CritterWatch" />
+
+    <!-- Transport (SQL Server DB-backed queues) + event store (Polecat on SQL Server). The Polecat package
+         bundles the JasperFx.Events.SourceGenerator analyzer (which emits the partial projections' apply
+         dispatchers) via its direct PackageReference — no explicit analyzer ref needed. -->
+    <PackageReference Include="WolverineFx.SqlServer" />
+    <PackageReference Include="WolverineFx.Polecat" />
+    <PackageReference Include="Polecat" />
+
+    <!-- Wolverine + Polecat generate handler/projection glue at runtime here (no committed generated code),
+         so the Roslyn-backed runtime compiler must be present. -->
+    <PackageReference Include="WolverineFx.RuntimeCompilation" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Incidents.Domain — shared aggregates, events, commands, and the IncidentsByCategory multi-stream
+       projection. Split into its own library so a future MultiStoreHost sample can compose the domain
+       alongside Trips without dragging in the Incidents.Service web/worker wiring. -->
+
+  <PropertyGroup>
+    <RootNamespace>Incidents.Domain</RootNamespace>
+    <AssemblyName>Incidents.Domain</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="JasperFx" />
+    <!-- Marten so the multi-stream projection type compiles here AND so Marten's bundled
+         JasperFx.Events.SourceGenerator analyzer runs in this assembly to emit the partial projection's
+         source-generated apply dispatcher. (Transitive package refs don't propagate analyzers, so the
+         Marten ref must be direct on the assembly that declares the partial projection.) -->
+    <PackageReference Include="Marten" />
+  </ItemGroup>
+
+</Project>

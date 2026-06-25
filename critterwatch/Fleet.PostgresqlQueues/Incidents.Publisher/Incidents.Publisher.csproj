@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Incidents.Publisher — console driver that walks ~50 in-flight incidents through their lifecycle
+       over the Wolverine PostgreSQL queue transport (no broker), mirroring TripPublisher. Monitored by
+       CritterWatch like the rest of the fleet. Carries WolverineFx.Postgresql because the DB transport
+       doubles as its message store. -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Incidents.Publisher</RootNamespace>
+    <AssemblyName>Incidents.Publisher</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Incidents.Domain\Incidents.Domain.csproj" />
+    <ProjectReference Include="..\Fleet.Common\Fleet.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Wolverine.CritterWatch" />
+    <PackageReference Include="WolverineFx.Postgresql" />
+    <PackageReference Include="WolverineFx.RuntimeCompilation" />
+  </ItemGroup>
+
+</Project>

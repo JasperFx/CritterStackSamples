@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Incidents.Service — Polecat / SQL Server + Wolverine + CritterWatch monitoring over the SQL Server
+       DB-queue transport. Snapshots the Incident aggregate inline and runs the IncidentsByCategory
+       multi-stream projection async, so the CritterWatch projection/rebuild UI has a non-trivial target. -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Incidents.Service</RootNamespace>
+    <AssemblyName>Incidents.Service</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Incidents.Domain\Incidents.Domain.csproj" />
+    <ProjectReference Include="..\Fleet.Common\Fleet.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Wolverine.CritterWatch" />
+    <PackageReference Include="WolverineFx.SqlServer" />
+    <PackageReference Include="WolverineFx.Polecat" />
+    <!-- Direct Polecat ref so the source-generator analyzer runs in this assembly too (handlers/aggregate
+         snapshot glue declared here get their generated dispatchers). -->
+    <PackageReference Include="Polecat" />
+    <PackageReference Include="WolverineFx.RuntimeCompilation" />
+  </ItemGroup>
+
+</Project>

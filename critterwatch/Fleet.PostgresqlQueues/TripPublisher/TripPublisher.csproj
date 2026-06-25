@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- TripPublisher — the console driver that synthesizes trip traffic. It has no event store; it just
+       publishes commands over the Wolverine PostgreSQL queue transport and handles the ContinueTrip
+       callback to keep each trip advancing. Still a monitored service (AddCritterWatchMonitoring), so it
+       appears in the console too. Because a DB-backed transport needs SOME database-backed store to run,
+       it carries WolverineFx.Postgresql (the transport doubles as its message store). -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TripMessages\TripMessages.csproj" />
+    <ProjectReference Include="..\Fleet.Common\Fleet.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Wolverine.CritterWatch" />
+    <PackageReference Include="WolverineFx.Postgresql" />
+    <PackageReference Include="WolverineFx.RuntimeCompilation" />
+  </ItemGroup>
+
+</Project>

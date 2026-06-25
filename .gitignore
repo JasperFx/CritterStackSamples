@@ -401,3 +401,6 @@ FodyWeavers.xsd
 *.sln.iml
 .idea
 
+
+# CritterWatch samples: machine-specific local-feed config (see critterwatch/README.md)
+critterwatch/nuget.config

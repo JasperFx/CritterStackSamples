@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Shared message + event contracts for the Trip trio (TripService /
+       TripPublisher / RepairShop). Pure POCOs + records, no transport or store
+       dependency — every monitored service references this so they agree on the
+       wire shape of every command and event. JasperFx is pulled only for the
+       CombGuid id generator used to mint sequential, index-friendly stream keys. -->
+
+  <PropertyGroup>
+    <!-- TargetFramework / Nullable / ImplicitUsings inherited from ../../Directory.Build.props (net10.0). -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="JasperFx" />
+  </ItemGroup>
+
+</Project>

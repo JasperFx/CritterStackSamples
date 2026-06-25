@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Tiny shared helper library for the Fleet.SqlServerQueues sample. Holds the one piece of glue every
+       project needs: resolving the SQL Server connection string from either the Aspire-injected
+       ConnectionStrings__* environment or a localhost docker-compose fallback (so each project still
+       F5-runs standalone). Kept transport/store-agnostic and dependency-light on purpose.
+
+       NOTE on transport: unlike the RabbitMQ flagship there is NO broker connection here — the transport
+       IS the database. A single SQL Server provides both the Polecat event store AND the Wolverine
+       database-backed queues used as the CritterWatch control channel. So Fleet.Common resolves exactly
+       one connection string. -->
+
+</Project>

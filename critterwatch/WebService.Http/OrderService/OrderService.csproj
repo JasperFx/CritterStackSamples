@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- OrderService — the MONITORED Wolverine HTTP web service. A small event-sourced Orders API built on
+       WolverineFx.Http + Marten. It reports itself to the CritterWatch console over WOLVERINE'S HTTP
+       TRANSPORT (no broker) via AddCritterWatchMonitoring (see Program.cs), and opts its non-Wolverine
+       ASP.NET endpoints into the CritterWatch HTTP tab via AddCritterWatchHttp() (#538).
+
+       This is the teaching point of the whole solution: monitor an HTTP service where the monitoring link
+       itself rides HTTP. -->
+
+  <PropertyGroup>
+    <!-- Web SDK default output is a library-style web app; it's an exe at runtime. No OutputType needed. -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fleet.Common\Fleet.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Monitored-side CritterWatch integration: AddCritterWatchMonitoring (Wolverine.CritterWatch) +
+         AddCritterWatchHttp (Wolverine.CritterWatch.Http — the #538 ASP.NET endpoint discovery). Both are
+         the PACKED NuGets, never a project ref into the CritterWatch repo. -->
+    <PackageReference Include="Wolverine.CritterWatch" />
+    <PackageReference Include="Wolverine.CritterWatch.Http" />
+
+    <!-- HTTP endpoints (the Orders API) AND the HTTP transport (ToHttpEndpoint / the transport client /
+         MapWolverineHttpTransportEndpoints) both ship in WolverineFx.Http. WolverineFx.Http.Marten adds the
+         [Aggregate]/event-sourced HTTP handler conveniences. -->
+    <PackageReference Include="WolverineFx.Http" />
+    <PackageReference Include="WolverineFx.Http.Marten" />
+    <PackageReference Include="WolverineFx.Marten" />
+    <PackageReference Include="Marten" />
+
+    <!-- Wolverine + Marten generate handler/projection glue at runtime here (no committed generated code),
+         so the Roslyn-backed runtime compiler must be present. -->
+    <PackageReference Include="WolverineFx.RuntimeCompilation" />
+  </ItemGroup>
+
+</Project>

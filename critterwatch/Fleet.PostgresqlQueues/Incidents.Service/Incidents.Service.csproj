@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Incidents.Service — Marten + Wolverine + CritterWatch monitoring over the Wolverine PostgreSQL
+       queue transport (no broker). Snapshots the Incident aggregate inline and runs the
+       IncidentsByCategory multi-stream projection async, so the CritterWatch projection/rebuild UI has a
+       non-trivial target. -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Incidents.Service</RootNamespace>
+    <AssemblyName>Incidents.Service</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Incidents.Domain\Incidents.Domain.csproj" />
+    <ProjectReference Include="..\Fleet.Common\Fleet.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Wolverine.CritterWatch" />
+    <PackageReference Include="WolverineFx.Postgresql" />
+    <PackageReference Include="WolverineFx.Marten" />
+    <!-- Direct Marten ref so the source-generator analyzer runs in this assembly too (handlers/projections
+         declared here get their generated glue). -->
+    <PackageReference Include="Marten" />
+    <PackageReference Include="WolverineFx.RuntimeCompilation" />
+  </ItemGroup>
+
+</Project>
