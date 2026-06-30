@@ -1,6 +1,8 @@
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Xunit;
 
 namespace CritterWatch.Samples.Testing;
@@ -33,6 +35,7 @@ public class CritterWatchAppHostFixture<TAppHost> : IAsyncLifetime
     public static readonly TimeSpan StartupTimeout = TimeSpan.FromMinutes(5);
 
     private DistributedApplication? _app;
+    private readonly ResourceLogCapture _logCapture = new();
 
     /// <summary>The running distributed application. Valid only after <see cref="InitializeAsync"/> completes.</summary>
     public DistributedApplication App =>
@@ -40,14 +43,31 @@ public class CritterWatchAppHostFixture<TAppHost> : IAsyncLifetime
 
     /// <summary>
     /// Boots the AppHost: <c>DistributedApplicationTestingBuilder.CreateAsync&lt;TAppHost&gt;()</c> →
-    /// <c>BuildAsync()</c> → <c>StartAsync()</c>, then blocks until the <c>critterwatch</c> resource
-    /// reports <see cref="KnownResourceStates.Running"/>.
+    /// <c>BuildAsync()</c> → <c>StartAsync()</c>, registers the resource-log capture (the backlog is pulled
+    /// on demand on failure — see <see cref="ResourceLogCapture"/>), then blocks until the
+    /// <c>critterwatch</c> resource reports <see cref="KnownResourceStates.Running"/>.
     /// </summary>
     public async Task InitializeAsync()
     {
         var builder = await DistributedApplicationTestingBuilder.CreateAsync<TAppHost>();
 
+        // Ensure the host re-emits each resource's console output through the .NET logging pipeline (the
+        // dashboard is off in tests, so this is the only path that carries child stdout), then register our
+        // capture provider to collect it. See ResourceLogCapture for the full rationale.
+        EnableResourceLogging(builder.Services);
+        builder.Services.AddLogging(logging =>
+        {
+            logging.AddProvider(_logCapture);
+            // Resource console output is re-emitted under "AppHost.Resources.*"; make sure nothing filters it
+            // below the levels services log their startup/failure detail at.
+            logging.AddFilter(ResourceLogCapture.ResourceCategoryPrefix.TrimEnd('.'), LogLevel.Trace);
+        });
+
         _app = await builder.BuildAsync();
+
+        // Record the resource set so the failure dump lists every resource in a stable order.
+        _logCapture.Start(_app);
+
         await _app.StartAsync();
 
         await _app.ResourceNotifications
@@ -56,10 +76,67 @@ public class CritterWatchAppHostFixture<TAppHost> : IAsyncLifetime
     }
 
     /// <summary>
+    /// Flips <c>DistributedApplicationOptions.EnableResourceLogging</c> to <c>true</c> on the options instance
+    /// the testing builder registered, so the orchestrator streams every resource's console output into
+    /// <c>ResourceLoggerService</c> (which <see cref="ResourceLogCapture"/> later drains on failure). Best
+    /// effort: if Aspire ever stops registering the options as a resolvable singleton, log capture simply
+    /// stays empty rather than breaking the boot.
+    /// </summary>
+    private static void EnableResourceLogging(IServiceCollection services)
+    {
+        var options = services
+            .FirstOrDefault(d => d.ServiceType == typeof(DistributedApplicationOptions))?
+            .ImplementationInstance as DistributedApplicationOptions;
+        if (options is not null)
+        {
+            options.EnableResourceLogging = true;
+        }
+    }
+
+    /// <summary>
     /// Creates a fresh <see cref="HttpClient"/> pointed at the <c>critterwatch</c> resource's endpoint.
     /// Each call returns a new client — dispose it (or wrap in <c>using</c>) at the call site.
     /// </summary>
     public HttpClient CreateCritterWatchClient() => App.CreateHttpClient(CritterWatchResourceName, "http");
+
+    /// <summary>
+    /// Polls <c>GET /api/critterwatch/services</c> (via <see cref="CritterWatchAssertions.WaitForServicesAsync"/>)
+    /// until every name in <paramref name="expectedNames"/> registers, and — crucially — on timeout re-throws
+    /// the <see cref="TimeoutException"/> with the captured tail of <b>every resource's logs</b> appended to
+    /// its message. Use this from a sample's battery instead of the bare <see cref="HttpClient"/> extension
+    /// whenever you want the console/service logs in the failure output (i.e. when debugging why a fleet
+    /// doesn't register). On success it just returns the parsed list.
+    /// </summary>
+    public async Task<IReadOnlyList<ServiceSummaryDto>> WaitForServicesAsync(
+        HttpClient client,
+        IEnumerable<string> expectedNames,
+        TimeSpan? timeout = null,
+        TimeSpan? pollInterval = null)
+    {
+        try
+        {
+            return await client.WaitForServicesAsync(expectedNames, timeout, pollInterval);
+        }
+        catch (Exception ex)
+        {
+            // Any failure during the wait — the expected TimeoutException, but also e.g. a TaskCanceledException
+            // when the console never starts serving and the /services GET hits HttpClient.Timeout — should
+            // surface the resource logs so the cause is visible. Rethrow the same exception type where it's the
+            // common TimeoutException; otherwise wrap so the logs ride along.
+            var enriched = $"{ex.Message}{Environment.NewLine}{Environment.NewLine}{_logCapture.Dump()}";
+            if (ex is TimeoutException)
+            {
+                throw new TimeoutException(enriched, ex);
+            }
+            throw new InvalidOperationException(enriched, ex);
+        }
+    }
+
+    /// <summary>
+    /// Returns the captured tail of the named resources' logs (or all resources when none are named) — handy
+    /// for ad-hoc dumping from a test even when nothing timed out.
+    /// </summary>
+    public string DumpResourceLogs(params string[] resourceNames) => _logCapture.Dump(resourceNames);
 
     public async Task DisposeAsync()
     {
