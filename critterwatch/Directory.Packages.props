@@ -18,30 +18,36 @@
     <PackageVersion Include="Wolverine.CritterWatch.Http" Version="$(CritterWatchVersion)" />
   </ItemGroup>
 
-  <ItemGroup Label="Wolverine (6.14.x; core + DB transports are local -cw pins)">
-    <PackageVersion Include="WolverineFx" Version="6.14.1-cw533" />
-    <PackageVersion Include="WolverineFx.RuntimeCompilation" Version="6.14.0-alpha.1" />
-    <PackageVersion Include="WolverineFx.Http" Version="6.14.0-alpha.1" />
-    <PackageVersion Include="WolverineFx.Marten" Version="6.14.0-alpha.1" />
-    <PackageVersion Include="WolverineFx.Http.Marten" Version="6.14.0-alpha.1" />
-    <PackageVersion Include="WolverineFx.Polecat" Version="6.14.0-alpha.1" />
-    <PackageVersion Include="WolverineFx.Http.Polecat" Version="6.14.0-alpha.1" />
-    <PackageVersion Include="WolverineFx.Postgresql" Version="6.14.1-cw3252" />
-    <PackageVersion Include="WolverineFx.SqlServer" Version="6.14.1-cw3252" />
-    <PackageVersion Include="WolverineFx.RabbitMQ" Version="6.14.0-alpha.1" />
-    <PackageVersion Include="WolverineFx.AmazonSqs" Version="6.14.0-alpha.1" />
-    <PackageVersion Include="WolverineFx.AzureServiceBus" Version="6.14.0-alpha.1" />
-    <PackageVersion Include="WolverineFx.Kafka" Version="6.14.0-alpha.1" />
-    <PackageVersion Include="WolverineFx.Redis" Version="6.14.0-alpha.1" />
-    <PackageVersion Include="WolverineFx.Pubsub" Version="6.14.0-alpha.1" />
+  <ItemGroup Label="Wolverine (6.16.0 GA — matches CritterWatch main's closure; custom -cw pins dropped)">
+    <!-- All on the published 6.16.0 stable release. The previous custom local-build pins are no longer
+         needed: WolverineFx.Pubsub#3258 (leader-pinned shared subscription), and the -cw533/-cw3252 core +
+         DB-transport fixes have all shipped in 6.16.0. CritterWatch main depends on >= 6.16.0-alpha.2, which
+         6.16.0 satisfies (no downgrade). -->
+    <PackageVersion Include="WolverineFx" Version="6.16.0" />
+    <PackageVersion Include="WolverineFx.RuntimeCompilation" Version="6.16.0" />
+    <PackageVersion Include="WolverineFx.Http" Version="6.16.0" />
+    <PackageVersion Include="WolverineFx.Marten" Version="6.16.0" />
+    <PackageVersion Include="WolverineFx.Http.Marten" Version="6.16.0" />
+    <PackageVersion Include="WolverineFx.Polecat" Version="6.16.0" />
+    <PackageVersion Include="WolverineFx.Http.Polecat" Version="6.16.0" />
+    <PackageVersion Include="WolverineFx.Postgresql" Version="6.16.0" />
+    <PackageVersion Include="WolverineFx.SqlServer" Version="6.16.0" />
+    <PackageVersion Include="WolverineFx.RabbitMQ" Version="6.16.0" />
+    <PackageVersion Include="WolverineFx.AmazonSqs" Version="6.16.0" />
+    <PackageVersion Include="WolverineFx.AzureServiceBus" Version="6.16.0" />
+    <PackageVersion Include="WolverineFx.Kafka" Version="6.16.0" />
+    <PackageVersion Include="WolverineFx.Redis" Version="6.16.0" />
+    <PackageVersion Include="WolverineFx.Pubsub" Version="6.16.0" />
   </ItemGroup>
 
-  <ItemGroup Label="Event stores">
-    <PackageVersion Include="Marten" Version="9.11.0-alpha.2" />
-    <PackageVersion Include="Polecat" Version="4.6.0-alpha.1" />
-    <PackageVersion Include="JasperFx" Version="2.14.2" />
-    <PackageVersion Include="JasperFx.Events" Version="2.14.2" />
-    <PackageVersion Include="JasperFx.Events.SourceGenerator" Version="2.14.2" />
+  <ItemGroup Label="Event stores (latest GA stable — matches CritterWatch main's post-GA-bump closure)">
+    <!-- CritterWatch main has moved to the GA stable event stores (Marten 9.12.0, Polecat 4.7.0,
+         JasperFx 2.18.1), so the samples track the same latest-stable releases. -->
+    <PackageVersion Include="Marten" Version="9.12.0" />
+    <PackageVersion Include="Polecat" Version="4.7.0" />
+    <PackageVersion Include="JasperFx" Version="2.18.1" />
+    <PackageVersion Include="JasperFx.Events" Version="2.18.1" />
+    <PackageVersion Include="JasperFx.Events.SourceGenerator" Version="2.18.1" />
     <PackageVersion Include="Npgsql" Version="9.0.4" />
   </ItemGroup>
 
