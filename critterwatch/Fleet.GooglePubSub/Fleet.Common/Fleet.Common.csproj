@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Tiny shared helper library for the Fleet.AzureServiceBus sample. Holds the one piece of glue every
+       project needs: resolving the Azure Service Bus connection string and Postgres connection string from
+       either the Aspire-injected ConnectionStrings__* environment or a localhost / emulator fallback (so
+       each project still F5-runs standalone). Kept transport/store-agnostic and dependency-light on purpose. -->
+
+</Project>

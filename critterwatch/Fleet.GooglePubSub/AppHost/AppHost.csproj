@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The .NET Aspire orchestration host — the F5 surface. Provisions the Google Cloud Pub/Sub emulator
+       (as a plain container — Aspire has no first-class Pub/Sub resource) + a Postgres container, and
+       launches the console + every monitored service as project resources. The Aspire.AppHost.Sdk is what
+       generates the Projects.* marker types (one per ProjectReference below) that AddProject<T>() and the
+       Tests' CritterWatchAppHostFixture<Projects.AppHost> consume. -->
+
+  <Sdk Name="Aspire.AppHost.Sdk" Version="9.5.0" />
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsAspireHost>true</IsAspireHost>
+    <!-- Aspire generates the strongly-typed Projects.* metadata into this default namespace. -->
+    <UserSecretsId>fleet-pubsub-apphost</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- AddContainer (for the Pub/Sub emulator) lives in the Aspire.Hosting.AppHost core — GCP Pub/Sub has
+         no first-class Aspire resource, so no transport-specific Aspire package is needed. Postgres is a
+         separate first-class Aspire resource. -->
+    <PackageReference Include="Aspire.Hosting.AppHost" />
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" />
+  </ItemGroup>
+
+  <!-- One ProjectReference per launched resource. Aspire needs these so it can emit each Projects.* type
+       and locate the built assembly to run. -->
+  <ItemGroup>
+    <ProjectReference Include="..\CritterWatchConsole\CritterWatchConsole.csproj" />
+    <ProjectReference Include="..\TripService\TripService.csproj" />
+    <ProjectReference Include="..\TripPublisher\TripPublisher.csproj" />
+    <ProjectReference Include="..\RepairShop\RepairShop.csproj" />
+  </ItemGroup>
+
+</Project>

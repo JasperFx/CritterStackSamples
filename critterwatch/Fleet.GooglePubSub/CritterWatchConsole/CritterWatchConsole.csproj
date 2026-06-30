@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- The standalone CritterWatch console — the monitoring dashboard the whole fleet reports to. It owns
+       its OWN Postgres store (the console's event/document storage) and listens for monitored services on
+       the Azure Service Bus control channel. Consumes the PACKED `CritterWatch` NuGet exactly as an operator
+       would (the package bundles the SPA, endpoints, SignalR hub, and the AddCritterWatch/UseCritterWatch
+       hosting extensions). -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fleet.Common\Fleet.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CritterWatch" />
+    <!-- The console wires the ASB control queue itself, so it needs the Azure Service Bus transport package. -->
+    <PackageReference Include="WolverineFx.Pubsub" />
+    <PackageReference Include="WolverineFx.RuntimeCompilation" />
+  </ItemGroup>
+
+</Project>
