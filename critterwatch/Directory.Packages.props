@@ -1,13 +1,14 @@
 <Project>
 
   <!-- Central pin set for the CritterWatch samples island. Aligned to CritterWatch
-       1.0.0-alpha.4's actual dependency closure (see CritterWatch's own
-       Directory.Packages.props). Bump these together at release time, then re-run
-       the per-solution Aspire test battery against the new local-feed packages. -->
+       1.0.0-beta.1's actual dependency closure (see CritterWatch's own
+       Directory.Packages.props). CritterWatch 1.0.0-beta.1 is published to nuget.org,
+       so the samples now resolve everything from nuget.org — no local feed needed.
+       Bump these together at release time, then re-run the per-solution Aspire battery. -->
 
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <CritterWatchVersion>1.0.0-alpha.4</CritterWatchVersion>
+    <CritterWatchVersion>1.0.0-beta.1</CritterWatchVersion>
   </PropertyGroup>
 
   <ItemGroup Label="CritterWatch (local feed)">
