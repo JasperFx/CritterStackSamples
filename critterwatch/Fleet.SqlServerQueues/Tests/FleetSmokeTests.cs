@@ -54,7 +54,10 @@ public class FleetSmokeTests
         // console is up, so we poll /services rather than asserting immediately. The names are each
         // service's ServiceName. Incidents.Service is asserted alongside the Trip trio because this fleet
         // (per the locked decision) carries the Incidents group.
-        var services = await client.WaitForServicesAsync(
+        // Route through the fixture (not the bare HttpClient extension) so a timeout dumps every resource's
+        // captured logs into the failure message — essential for diagnosing why the fleet doesn't register.
+        var services = await _fixture.WaitForServicesAsync(
+            client,
             ["TripService", "RepairShop", "IncidentService"],
             timeout: TimeSpan.FromMinutes(3));
 

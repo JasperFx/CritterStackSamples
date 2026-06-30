@@ -1,5 +1,6 @@
 using CritterWatch.Services.Hosting;
 using Fleet.Common;
+using JasperFx.Resources;
 using Wolverine.CritterWatch;
 using Wolverine.SqlServer;
 
@@ -56,6 +57,17 @@ builder.AddCritterWatch(
         // globally (by a unique content-type), so the console decodes telemetry with zero per-endpoint config.
         opts.ListenToSqlServerQueue("critterwatch")
             .ListenOnlyAtLeader();
+
+        // Provision EVERY registered IStatefulResource at startup — here that's the console's two Polecat
+        // stores (the primary "critterwatch_wolverine" durability/machinery store AND the ancillary
+        // ICritterWatchStore in the "critterwatch" schema, where CritterWatch's own events + ServiceSummary
+        // projection live) plus the SQL Server queue transport tables. Unlike Marten, Polecat does NOT yet
+        // create event-store schema lazily on first use, so without this the ancillary store's pc_events /
+        // pc_streams tables never exist and the FIRST telemetry the console receives dead-letters with
+        // SqlException 208 "Invalid object name 'critterwatch.pc_events'" — so no service ever registers.
+        // Polecat now contributes its stores to JasperFx's resource model (polecat#187), so the idiomatic
+        // AddResourceSetupOnStartup() discovers and builds them; the monitored services already do the same.
+        opts.Services.AddResourceSetupOnStartup();
     },
     // Single-node sample → no sharded external topology to wire, so cluster partitioning stays off.
     enableClusterPartitioning: false);
