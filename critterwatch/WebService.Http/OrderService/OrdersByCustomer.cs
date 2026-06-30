@@ -15,7 +15,13 @@ public class CustomerOrders
     public int OrdersPlaced { get; set; }
 }
 
-public class OrdersByCustomerProjection : MultiStreamProjection<CustomerOrders, string>
+// MUST be `partial`: this projection dispatches by CONVENTION methods (the Apply below), and JasperFx's
+// compile-time source generator (JasperFx.Events.SourceGenerator, shipped inside the Marten NuGet) emits the
+// dispatcher into a generated partial of this class. There is NO runtime fallback — a non-partial convention
+// projection throws InvalidProjectionException at startup ("No source-generated dispatcher found …"), which
+// would crash OrderService before it ever registers with the console. (A self-aggregating Snapshot<T> like
+// Order does not need this; a convention-method projection subclass like this one does.)
+public partial class OrdersByCustomerProjection : MultiStreamProjection<CustomerOrders, string>
 {
     public OrdersByCustomerProjection()
     {

@@ -28,14 +28,21 @@ var builder = WebApplication.CreateBuilder(args);
 // monitoring telemetry is POSTed to this host's Wolverine HTTP-transport invoke route.
 var consoleBaseUrl = SampleConnections.ConsoleBaseUrl();
 
-// The two HTTP-transport URIs the monitoring link uses:
-//   telemetryUri  — where THIS service sends telemetry  → the console's inline-invoke route.
+// Wolverine's HTTP transport is registered under the "https" SCHEME (HttpTransport.Protocol == "https"; the
+// "http" string the transport also carries is a descriptive TAG, not an alias scheme). Wolverine resolves a
+// URI to a transport by scheme, so these monitoring URIs MUST be https:// — with http:// the monitoring call
+// throws "Unknown Transport scheme 'http'" and the whole service fails to boot. The scheme is used ONLY for
+// (a) transport resolution and (b) as the named-HttpClient KEY; the ACTUAL network address is that named
+// client's BaseAddress, which we point at the console's real (plain-http, in local Aspire) invoke route
+// below. So https here + an http BaseAddress is correct, not a mismatch.
+//   telemetryUri  — where THIS service sends telemetry  → the console's inline-invoke route (same authority as
+//                   the discovered console URL, but https scheme so the transport resolves).
 //   controlUri    — where THIS service RECEIVES operator commands → its own inline-invoke route. The host is
 //                   "localhost" because AddCritterWatchMonitoring only needs a stable local listener URI; the
 //                   actual receive happens via MapWolverineHttpTransportEndpoints below. (The console learns
 //                   the externally-reachable address from Aspire service discovery when it sends back.)
-var telemetryUri = new Uri($"{consoleBaseUrl}/_wolverine/invoke");
-var controlUri = new Uri("http://localhost/_wolverine/invoke");
+var telemetryUri = new Uri($"https://{new Uri(consoleBaseUrl).Authority}/_wolverine/invoke");
+var controlUri = new Uri("https://localhost/_wolverine/invoke");
 
 builder.Host.UseWolverine(opts =>
 {
@@ -71,6 +78,16 @@ builder.Host.UseWolverine(opts =>
 
     opts.Policies.AutoApplyTransactions();
 
+    // Register Wolverine's HTTP transport in the options BEFORE AddCritterWatchMonitoring. The monitoring
+    // call eagerly does ListenForMessagesFrom(controlUri) for the http:// control URI, and Wolverine resolves
+    // a URI to a transport by SCHEME — with no http/https transport registered yet it throws
+    // "Unknown Transport scheme 'http'" and the whole service fails to boot. Unlike a broker (where
+    // UseRabbitMq()/UseAmazonSqs() registers the transport first), the HTTP transport otherwise only
+    // materializes lazily via ToHttpEndpoint()/the receive routes — too late for the monitoring listener — so
+    // add it explicitly here. (This is the documented opts.Transports.Add(new HttpTransport()) pattern from
+    // Wolverine's own external-HTTP-server sample; GetOrCreate<HttpTransport> later returns this same instance.)
+    opts.Transports.Add(new HttpTransport());
+
     // begin-snippet: orderservice-http-transport-monitoring
     // ---- CritterWatch monitoring over the HTTP transport -----------------------------------------
     // First URI  = the console's HTTP-transport invoke route — where telemetry/heartbeats are POSTed.
@@ -94,9 +111,14 @@ builder.Services.AddCritterWatchHttp();
 // begin-snippet: orderservice-http-transport-client
 // The HTTP transport's SENDER needs IWolverineHttpTransportClient plus a named HttpClient. The client name
 // MUST equal the telemetry endpoint's outbound URI string (the transport does
-// IHttpClientFactory.CreateClient(outboundUri)), and that client's BaseAddress is where it actually POSTs.
+// IHttpClientFactory.CreateClient(outboundUri) == telemetryUri.ToString()), and that client's BaseAddress is
+// where it actually POSTs. BaseAddress is the console's REAL invoke route (plain http in local Aspire) — NOT
+// the https telemetryUri, whose https scheme exists only so Wolverine resolves the HTTP transport (see the
+// telemetryUri comment above). So the client is keyed by the https URI but posts to the http console.
 builder.Services.AddScoped<IWolverineHttpTransportClient, WolverineHttpTransportClient>();
-builder.Services.AddHttpClient(telemetryUri.ToString(), c => c.BaseAddress = telemetryUri);
+builder.Services.AddHttpClient(
+    telemetryUri.ToString(),
+    c => c.BaseAddress = new Uri($"{consoleBaseUrl}/_wolverine/invoke"));
 // end-snippet
 
 var app = builder.Build();

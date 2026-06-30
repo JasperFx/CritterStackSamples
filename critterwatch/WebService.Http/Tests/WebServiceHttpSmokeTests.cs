@@ -67,7 +67,10 @@ public class WebServiceHttpSmokeTests
         // The OrderService self-registers ASYNCHRONOUSLY — it POSTs its registration/heartbeat over the HTTP
         // transport to the console's /_wolverine/invoke route after the console is up — so we poll /services
         // rather than asserting immediately.
-        var services = await client.WaitForServicesAsync(
+        // Route through the fixture (not the bare HttpClient extension) so a timeout dumps every resource's
+        // captured logs into the failure message — essential for diagnosing why OrderService doesn't register.
+        var services = await _fixture.WaitForServicesAsync(
+            client,
             ["OrderService"],
             timeout: TimeSpan.FromMinutes(2));
 
