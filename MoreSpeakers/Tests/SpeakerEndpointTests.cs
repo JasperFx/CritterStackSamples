@@ -5,6 +5,7 @@ using Speakers;
 
 namespace MoreSpeakers.Tests;
 
+[Collection(DatabaseCollection.Name)]
 public class SpeakerEndpointTests : IAsyncLifetime
 {
     private IAlbaHost _host = null!;

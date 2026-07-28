@@ -1,4 +1,5 @@
 using JasperFx;
+using JasperFx.Resources;
 using JasperFx.CodeGeneration.Frames;
 using JasperFx.CodeGeneration.Model;
 using Marten;
@@ -19,13 +20,27 @@ builder.Services.AddMarten(opts =>
     // being lazy this morning
     opts.Connection("Host=localhost;Port=5433;Database=postgres;Username=postgres;password=postgres");
     opts.DatabaseSchemaName = "reports";
+
+    // ReportId is a strong-typed id wrapping an int; Marten needs it registered as a value type
+    // before it can use one as a document identity.
+    opts.RegisterValueType(typeof(ReportId));
     
     
-    // Create a sequence to generate unique ids for documents
-    var sequence = new Sequence("report_sequence");
+    // Create a sequence to generate unique ids for documents.
+    // NOTE the schema has to be spelled out here: the string overload of Sequence puts the
+    // sequence in "public", NOT in DatabaseSchemaName, so an unqualified name would be created
+    // as public.report_sequence while GetNextReportId() below asks for reports.report_sequence.
+    var sequence = new Sequence(new PostgresqlObjectName("reports", "report_sequence"));
 
     opts.Storage.ExtendedSchemaObjects.Add(sequence);
 }).IntegrateWithWolverine();
+
+// ExtendedSchemaObjects are only provisioned when Marten actually runs a schema migration, and
+// GetNextReportId() below hits the sequence with raw SQL without touching a document type first —
+// so nothing would trigger that migration and the very first POST /report would fail with
+// 42P01 "relation reports.report_sequence does not exist". This builds all configured
+// storage at startup so the sample works on a clean database with no manual `db-apply`.
+builder.Services.AddResourceSetupOnStartup();
 
 builder.Host.UseWolverine(opts =>
 {
@@ -54,6 +69,11 @@ public record ReportStarted(string Name, ReportId Id);
 
 public class Report(ReportId Id)
 {
+    // This has to be a real property, not just the primary-constructor parameter: a primary
+    // constructor param is only captured state, so without this Marten sees no Id member at all
+    // and fails with "No closed-shape id strategy is registered for Report (id type , strategy )".
+    public ReportId Id { get; set; } = Id;
+
     public string Name { get; set; }
 }
 
@@ -76,8 +96,11 @@ public static class StartReportEndpoint
 
 // You'd probably use something like Vogen
 // on this too, but I didn't need that just
-// for the demo here
-public record ReportId(int Number);
+// for the demo here.
+// NOTE this must be a record *struct*: Marten only recognises value-type (struct) wrappers as
+// document identities. As a plain `record` (a reference type) Marten finds no Id member at all
+// and blows up with "No closed-shape id strategy is registered for Report (id type , strategy )".
+public record struct ReportId(int Number);
 
 // Variable source is part of JasperFx's code generation
 // subsystem. This just tells the code generation how

@@ -6,6 +6,7 @@ using Speakers;
 
 namespace MoreSpeakers.Tests;
 
+[Collection(DatabaseCollection.Name)]
 public class MentorshipEndpointTests : IAsyncLifetime
 {
     private IAlbaHost _host = null!;

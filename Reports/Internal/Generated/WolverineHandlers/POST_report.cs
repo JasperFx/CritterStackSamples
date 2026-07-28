@@ -14,14 +14,14 @@ namespace Internal.Generated.WolverineHandlers
     public sealed class POST_report : Wolverine.Http.HttpHandler
     {
         private readonly Wolverine.Http.WolverineHttpOptions _wolverineHttpOptions;
-        private readonly Wolverine.Runtime.IWolverineRuntime _wolverineRuntime;
         private readonly Wolverine.Marten.Publishing.OutboxedSessionFactory _outboxedSessionFactory;
+        private readonly Wolverine.Runtime.IWolverineRuntime _wolverineRuntime;
 
-        public POST_report(Wolverine.Http.WolverineHttpOptions wolverineHttpOptions, Wolverine.Runtime.IWolverineRuntime wolverineRuntime, Wolverine.Marten.Publishing.OutboxedSessionFactory outboxedSessionFactory) : base(wolverineHttpOptions)
+        public POST_report(Wolverine.Http.WolverineHttpOptions wolverineHttpOptions, Wolverine.Marten.Publishing.OutboxedSessionFactory outboxedSessionFactory, Wolverine.Runtime.IWolverineRuntime wolverineRuntime) : base(wolverineHttpOptions)
         {
             _wolverineHttpOptions = wolverineHttpOptions;
-            _wolverineRuntime = wolverineRuntime;
             _outboxedSessionFactory = outboxedSessionFactory;
+            _wolverineRuntime = wolverineRuntime;
         }
 
 
@@ -50,6 +50,14 @@ namespace Internal.Generated.WolverineHandlers
                 martenOp.Execute(documentSession);
 
             }
+
+            
+            // Save all pending changes to this Marten session
+            await documentSession.SaveChangesAsync(httpContext.RequestAborted).ConfigureAwait(false);
+
+            
+            // Have to flush outgoing messages just in case Marten did nothing because of https://github.com/JasperFx/wolverine/issues/536
+            await messageContext.FlushOutgoingMessagesAsync().ConfigureAwait(false);
 
             // Writing the response body to JSON because this was the first 'return variable' in the method signature
             await WriteJsonAsync(httpContext, reportStarted_response);

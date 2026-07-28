@@ -31,13 +31,11 @@ public class Transaction
 /// Single-stream projection: one AccountTransactions document per account stream.
 /// Registered as Inline so the read model is always up-to-date.
 /// </summary>
-public class AccountTransactionsProjection : SingleStreamProjection<AccountTransactions, Guid>
+public partial class AccountTransactionsProjection : SingleStreamProjection<AccountTransactions, Guid>
 {
-    public AccountTransactionsProjection()
-    {
-        // Tells Marten to create the document on the first event
-        CreateEvent<AccountOpened>(e => new AccountTransactions { Id = e.AccountId });
-    }
+    // Tells Marten to create the document on the first event. The fluent CreateEvent()
+    // registration was dropped in Marten 9; the `Create` convention method replaces it.
+    public static AccountTransactions Create(AccountOpened e) => new() { Id = e.AccountId };
 
     public void Apply(FundsDeposited e, AccountTransactions view)
     {

@@ -1,5 +1,6 @@
 using Marten;
-using Oakton;
+using JasperFx;
+using JasperFx.CommandLine;
 using ProjectManagement.Api;
 using Wolverine;
 using Wolverine.Http;
@@ -48,15 +49,16 @@ app.MapPost("/api/project/create", async (CreateProject command, IDocumentSessio
 
     await session.SaveChangesAsync();
 
-    // New Stream Id for the project we just created
-    return Results.Ok(id);
+    // New Stream Id for the project we just created. 201 Created (not 200) because this
+    // endpoint creates a resource, and the Location header points at the new project.
+    return Results.Created($"/api/project/{id}", id);
 });
 
 app.MapWolverineEndpoints();
 
 // Replaced the standard command line runner with the 
 // Critter Stack's expanded options
-return await app.RunOaktonCommands(args);
+return await app.RunJasperFxCommands(args);
 
 // Just to make testing a little easier
 public partial class Program {}

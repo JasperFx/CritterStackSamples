@@ -1,4 +1,5 @@
 ﻿using EventPublisher;
+using JasperFx.OpenTelemetry;
 using Marten;
 using Marten.Services;
 using Microsoft.Extensions.DependencyInjection;

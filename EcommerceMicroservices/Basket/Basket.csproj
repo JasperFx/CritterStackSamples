@@ -11,10 +11,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="WolverineFx.Http" Version="5.30.0" />
-    <PackageReference Include="WolverineFx.Marten" Version="5.30.0" />
+    <!-- Wolverine 6 moved Roslyn runtime compilation out of core into this package;
+         the Dynamic TypeLoadMode used in dev/test needs it to compile handlers. -->
+    <PackageReference Include="WolverineFx.RuntimeCompilation" Version="6.23.1" />
+    <PackageReference Include="WolverineFx.Http" Version="6.23.1" />
+    <PackageReference Include="WolverineFx.Marten" Version="6.23.1" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
-    <PackageReference Include="WolverineFx.RabbitMQ" Version="5.30.0" />
+    <PackageReference Include="WolverineFx.RabbitMQ" Version="6.23.1" />
   </ItemGroup>
 
 </Project>

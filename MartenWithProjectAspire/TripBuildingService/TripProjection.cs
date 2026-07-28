@@ -1,16 +1,19 @@
 using Marten.Events.Aggregation;
 using TripDomain;
 
-public class TripProjection: SingleStreamProjection<Trip, Guid>
+public partial class TripProjection: SingleStreamProjection<Trip, Guid>
 {
     public TripProjection()
     {
         DeleteEvent<TripAborted>();
-
-        DeleteEvent<Breakdown>(x => x.IsCritical);
-
-        DeleteEvent<VacationOver>((trip, _) => trip.Traveled > 1000);
     }
+
+    // Marten 9 dropped the predicate overloads of DeleteEvent(); conditional deletes are
+    // now expressed with the `ShouldDelete` convention — on the event alone, or on the
+    // aggregate plus the event.
+    public bool ShouldDelete(Breakdown e) => e.IsCritical;
+
+    public bool ShouldDelete(Trip trip, VacationOver e) => trip.Traveled > 1000;
 
     // These methods can be either public, internal, or private but there's
     // a small performance gain to making them public
