@@ -76,4 +76,42 @@ public class WebServiceHttpSmokeTests
 
         services.Select(s => s.Id).ShouldContain("OrderService");
     }
+
+    /// <summary>
+    /// The CONTROL direction of the monitoring link — console → service — which this battery never
+    /// covered. Everything above exercises telemetry (service → console), which is why ProductSupport#34
+    /// shipped: the console's send side throws on every attempt, and nothing here noticed.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Asserted through the console's logs rather than by driving an operator command, because operator
+    /// commands travel CritterWatch's SignalR hub and this harness has no SignalR client. It still pins
+    /// the defect: the console pushes to a registered service on its own, so a broken send surfaces as
+    /// <c>BufferedSendingAgent</c> failures in the console log with no operator action at all — exactly
+    /// how the reporter found it.
+    /// </para>
+    /// <para>
+    /// SKIPPED until this sample bumps past wolverine#3681 (GH-3690). It fails on the pinned WolverineFx
+    /// 6.23.1 — legitimately, because the control channel really is broken there. Un-skip with the bump;
+    /// see the warning in README.md.
+    /// </para>
+    /// </remarks>
+    [Fact(Skip = "Control channel is broken on WolverineFx 6.23.1 — un-skip when this sample bumps past wolverine#3681 (GH-3690).")]
+    public async Task console_control_channel_sends_without_transport_errors()
+    {
+        using var client = _fixture.CreateCritterWatchClient();
+
+        // Registration first: the console has nothing to send to until OrderService reports its control URI.
+        await _fixture.WaitForServicesAsync(client, ["OrderService"], timeout: TimeSpan.FromMinutes(2));
+
+        // Give the console a window to actually push to the freshly-registered service.
+        await Task.Delay(TimeSpan.FromSeconds(20));
+
+        var consoleLogs = _fixture.DumpResourceLogs(CritterWatchAppHostFixture<Projects.AppHost>.CritterWatchResourceName);
+
+        // The GH-3690 signature. Matched on the exception text rather than the sender type so the assertion
+        // survives Wolverine renaming BufferedSendingAgent.
+        consoleLogs.ShouldNotContain("An invalid request URI was provided");
+        consoleLogs.ShouldNotContain("Failed to send outgoing envelopes batch");
+    }
 }

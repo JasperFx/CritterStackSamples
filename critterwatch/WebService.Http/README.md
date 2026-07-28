@@ -44,6 +44,19 @@ receiver's HTTP endpoint.)
   `IHttpClientFactory.CreateClient(outboundUri)` and POSTs to `client.BaseAddress`).
 - `MapWolverineHttpTransportEndpoints()` so the console can POST operator commands **back** to this service.
 
+> ⚠️ **The control channel (console → service) does not work on WolverineFx 6.23.1.** Telemetry
+> (service → console) is fine. The send side resolves its `HttpClient` by using the outbound URI as an
+> `IHttpClientFactory` client *name* and then posts to that client's `BaseAddress`; for a name nobody
+> registered, `CreateClient` returns a default client whose `BaseAddress` is `null`, and the send throws
+> `"An invalid request URI was provided. Either the request URI must be an absolute URI or BaseAddress
+> must be set."` The console **cannot** work around it — it only learns a service's control URL at runtime
+> from that service's own registration, so there is no point at which it could register a named client.
+>
+> Reported as ProductSupport#34, fixed in wolverine#3681 (GH-3690). When this sample bumps past that
+> release: delete the two manual registration lines in `CritterWatchConsole/Program.cs`
+> (`AddWolverineHttp()` registers them), and un-skip
+> `WebServiceHttpSmokeTests.console_control_channel_sends_without_transport_errors`.
+
 **CritterWatchConsole (receiver)** — `CritterWatchConsole/Program.cs`:
 - `AddCritterWatch(...)` for the dashboard/store, then `app.MapWolverineHttpTransportEndpoints()` to receive
   envelopes at `/_wolverine/invoke`, executed inline against the console's CritterWatch handlers.

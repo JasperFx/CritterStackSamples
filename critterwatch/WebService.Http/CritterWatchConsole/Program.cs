@@ -52,9 +52,18 @@ builder.AddCritterWatch(
 builder.Services.AddWolverineHttp();
 
 // The console can also push operator commands (PauseProjection / RebuildProjection / DLQ ops / …) BACK to
-// the OrderService over the same HTTP transport. Sending over the transport needs the transport client;
-// register it so those sends work when an operator triggers them. (The named HttpClient that targets a
-// specific service's control URL is created on demand from the service's reported control URI.)
+// the OrderService over the same HTTP transport. Sending over the transport needs the transport client.
+//
+// ⚠️ On WolverineFx 6.23.1 (the pin below) this registration is NOT sufficient, and the control channel
+// does not work. An earlier version of this comment claimed the named HttpClient for a service's control
+// URL is "created on demand from the service's reported control URI" — it is not, and nothing creates it.
+// WolverineHttpTransportClient uses the outbound URI purely as an IHttpClientFactory client NAME and then
+// posts to that client's BaseAddress; CreateClient returns a default client with a null BaseAddress for an
+// unknown name, so the send throws "An invalid request URI was provided…". The console cannot pre-register
+// a named client either, because it only learns a service's control URL at runtime from that service's own
+// registration. Reported as ProductSupport#34, fixed in wolverine#3681 (GH-3690): the transport falls back
+// to its own isolated client and posts to the absolute outbound URI, and AddWolverineHttp() registers both
+// of these lines for you. DELETE THEM when this sample bumps past that Wolverine release.
 builder.Services.AddScoped<IWolverineHttpTransportClient, WolverineHttpTransportClient>();
 builder.Services.AddHttpClient();
 
