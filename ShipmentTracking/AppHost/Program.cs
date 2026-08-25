@@ -71,7 +71,13 @@ builder.AddProject<Projects.ShipmentTracking>("shipment-tracking")
 // RebuildProjection, the DLQ actions) execute ON the monitored services. Without
 // this those actions silently no-op; the fleet still boots and registers.
 // ---------------------------------------------------------------------------
-var licenseKey = builder.Configuration["JASPERFX__LICENSEKEY"];
+// NOT Configuration["JASPERFX__LICENSEKEY"] — that is ALWAYS null. .NET's
+// environment-variable configuration provider translates "__" into ":", so the
+// variable JASPERFX__LICENSEKEY arrives as the configuration key JasperFx:LicenseKey.
+// Reading it back with the double underscore silently finds nothing, and the
+// propagation below never runs — the exact failure this block exists to prevent.
+// CritterWatch itself reads config["JasperFx:LicenseKey"].
+var licenseKey = builder.Configuration["JasperFx:LicenseKey"];
 if (!string.IsNullOrWhiteSpace(licenseKey))
 {
     foreach (var project in builder.Resources.OfType<ProjectResource>().ToList())

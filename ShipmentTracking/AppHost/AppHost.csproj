@@ -8,6 +8,14 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <IsAspireHost>true</IsAspireHost>
+
+        <!-- ASPIRE010 warns that some Aspire features need the Aspire CLI bundle.
+             Deliberately not taking it: with AspireUseCliBundle=true,
+             running this AppHost routes through the `aspire` CLI, which tries
+             to trust dev certificates, writes an aspire.config.json into the repo, and
+             then stops WITHOUT starting the application. This sample should run for
+             anyone with just the .NET SDK, so the warning is the better trade. -->
+        <NoWarn>$(NoWarn);ASPIRE010</NoWarn>
         <UserSecretsId>b0d8f6e2-1a4c-4f7b-9c3e-5a2d8e7f1b40</UserSecretsId>
     </PropertyGroup>
 

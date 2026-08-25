@@ -261,7 +261,7 @@ folds state from. Polecat would host that happily; it is just not what phase 3 a
 ## Phase 4 — integration tests over every handler and endpoint
 
 `Tests/` covers all five HTTP endpoints, all five message handlers and every saga
-transition: **29 tests in about two seconds**, against a real SQL Server 2025, a real
+transition: **33 tests in about two seconds**, against a real SQL Server 2025, a real
 RabbitMQ, real Wolverine code generation and the application's own `Program.cs`.
 Nothing sleeps.
 
@@ -397,7 +397,7 @@ to the fallback for people who would rather not run Aspire.
 ShipmentTracking/
 ├── AppHost/            .NET Aspire — provisions SQL Server 2025 + RabbitMQ, orders start-up
 ├── CritterWatchHost/   the monitoring console (its own database, deliberately)
-├── Tests/              29 integration tests
+├── Tests/              33 integration tests
 └── …                   the service itself
 ```
 
@@ -545,6 +545,84 @@ Thirty-nine events on a `ServiceSummary` stream keyed by service name — capabi
 endpoint health, broker health, leadership, node lifecycle, message causation — plus real
 metrics samples, after booking a shipment and posting a carrier scan through the
 Aspire-assigned ports.
+
+## Code review — what a second pass found
+
+The five phases were reviewed after the fact, adversarially. Three things came out of it,
+and the first two are the interesting ones because **the phase 4 test suite had already
+covered the neighbouring case and still missed them.**
+
+### 1. Three saga messages that dead-lettered when the saga was already gone
+
+Wolverine throws `UnknownSagaException` for a saga message whose saga cannot be loaded,
+unless the saga declares a `NotFound` method for that message type. `ShipmentDeliverySaga`
+declared none, and three of its four messages are reachable after it has completed itself:
+
+| Message | How it happens |
+|---|---|
+| `LabelGenerated` | Cancel a shipment while the 30–90 second carrier call is in flight |
+| `ShipmentDelivered` | A carrier sends a second `DELIVERED` scan with a newer timestamp |
+| `ShipmentCancelled` | Cancel twice — the handler only refuses a *delivered* shipment |
+
+Each one is now a `NotFound` method, and each has a test that was verified to go red without
+it. `NotFound` may be `static` — only `Start` and `NotFound` may be, since both assume the
+saga does not exist yet.
+
+**Why phase 4 missed it:** `a_late_label_does_not_resurrect_a_cancelled_shipment` tested
+exactly this race — and asserted on the *document*, by invoking `RecordTrackingNumber`
+directly. The saga-bound `LabelGenerated` was never delivered, so the half of the race that
+throws was never exercised. Testing a scenario is not the same as testing every consumer in it.
+
+### 2. `DeliverySlaExpired` needs no `NotFound`, and that took the generated code to settle
+
+The five-day SLA timeout lands on a completed saga for **every** delivered or cancelled
+shipment — the most common not-found case in the system. It does not throw, and the
+documentation's example of when you need `NotFound` is precisely this case.
+
+`codegen-preview` settles it in one command:
+
+```bash
+dotnet run --project ShipmentTracking -- wolverine-diagnostics codegen-preview --handler DeliverySlaExpired
+dotnet run --project ShipmentTracking -- wolverine-diagnostics codegen-preview --handler LabelGenerated
+```
+
+```csharp
+// DeliverySlaExpired : TimeoutMessage
+if (shipmentDeliverySaga_sagaId == null) { return; }
+
+// LabelGenerated — a plain record
+if (shipmentDeliverySaga_sagaId == null)
+{
+    throw new Wolverine.Persistence.Sagas.UnknownSagaException(typeof(ShipmentDeliverySaga), sagaId);
+}
+```
+
+**Wolverine special-cases `TimeoutMessage`** — `SagaChain` checks
+`MessageType.CanBeCastTo<TimeoutMessage>()` and emits a silent `return` instead of the throw.
+So a timeout subclassing `TimeoutMessage` is already safe; a plain message you scheduled
+yourself as a timeout is not. That distinction is not in the prose anywhere, and reading the
+generated code is how you get it.
+
+### 3. A license key lookup that could never succeed
+
+The AppHost read `builder.Configuration["JASPERFX__LICENSEKEY"]`. **That is always `null`.**
+.NET's environment-variable configuration provider translates `__` into `:`, so the variable
+`JASPERFX__LICENSEKEY` arrives as the configuration *key* `JasperFx:LicenseKey` — which is
+what CritterWatch itself reads.
+
+The failure is silent and it inverts the block's own purpose: the propagation exists so that
+license-gated operator actions work on the monitored services, and instead it never ran.
+
+### Deliberate, not oversights
+
+- **`version` appears in every API response.** That is Polecat's revision, and it is left
+  visible on purpose — the README uses it as evidence above, and a client doing conditional
+  updates would want it.
+- **Credentials are hard-coded** in `appsettings.json`, `docker-compose.yml` and the test
+  fixture. Fine for a sample with a throwaway container; under Aspire they are generated and
+  injected instead, which is the better story and the one to copy.
+- **The test suite targets `localhost,1433`**, so it needs `docker compose up -d` rather than
+  the AppHost — Aspire assigns random host ports by design.
 
 ## Running it
 

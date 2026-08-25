@@ -106,6 +106,79 @@ public class the_delivery_saga(AppFixture fixture) : IntegrationContext(fixture)
         (await LoadSaga(id)).ShouldBeNull();
     }
 
+    // =======================================================================
+    // Messages that arrive after the saga has completed itself.
+    //
+    // Every one of these threw UnknownSagaException before the NotFound methods were
+    // added, and every one of them is reachable in production. The phase 4 suite missed
+    // all three because it tested the DOCUMENT side of these races and never delivered
+    // the saga-bound event.
+    // =======================================================================
+
+    [Fact]
+    public async Task a_label_landing_after_cancellation_does_not_blow_up_the_saga()
+    {
+        var id = await BookShipment();
+        await Track().InvokeMessageAndWaitAsync(new CancelShipment(id, "changed my mind"));
+        (await LoadSaga(id)).ShouldBeNull();
+
+        // The carrier call was in flight when the cancellation landed.
+        var tracked = await Track().InvokeMessageAndWaitAsync(new LabelGenerated(id, "ACME-LATE12345"));
+
+        tracked.Status.ShouldBe(TrackingStatus.Completed);
+        tracked.AllExceptions().ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task a_duplicate_delivery_notification_does_not_blow_up_the_saga()
+    {
+        var id = await BookShipment();
+        var first = new DateTimeOffset(2026, 8, 25, 10, 0, 0, TimeSpan.Zero);
+
+        await Track().InvokeMessageAndWaitAsync(new RecordCarrierScan(id, "Austin TX", "DELIVERED", first));
+        (await LoadSaga(id)).ShouldBeNull();
+
+        // A newer DELIVERED scan passes the staleness guard and publishes the event again.
+        var tracked = await Track().InvokeMessageAndWaitAsync(
+            new RecordCarrierScan(id, "Austin TX", "DELIVERED", first.AddHours(1)));
+
+        tracked.Status.ShouldBe(TrackingStatus.Completed);
+        tracked.AllExceptions().ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task cancelling_twice_does_not_blow_up_the_saga()
+    {
+        var id = await BookShipment();
+        await Track().InvokeMessageAndWaitAsync(new CancelShipment(id, "first"));
+
+        // CancelShipmentHandler only refuses a DELIVERED shipment, so a second cancel of
+        // an already-cancelled one goes through and publishes ShipmentCancelled again.
+        var tracked = await Track().InvokeMessageAndWaitAsync(new CancelShipment(id, "second"));
+
+        tracked.Status.ShouldBe(TrackingStatus.Completed);
+        tracked.AllExceptions().ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task the_sla_timeout_needs_no_NotFound_because_it_is_a_TimeoutMessage()
+    {
+        var id = await BookShipment();
+        await Track().InvokeMessageAndWaitAsync(
+            new RecordCarrierScan(id, "Austin TX", "DELIVERED", DateTimeOffset.UtcNow));
+        (await LoadSaga(id)).ShouldBeNull();
+
+        // DeliverySlaExpired subclasses TimeoutMessage, and Wolverine emits
+        //     if (saga == null) return;
+        // for those instead of the throw it emits for every other saga message.
+        // ShipmentDeliverySaga deliberately declares no NotFound(DeliverySlaExpired).
+        var tracked = await Track().InvokeMessageAndWaitAsync(new DeliverySlaExpired(id));
+
+        tracked.Status.ShouldBe(TrackingStatus.Completed);
+        tracked.AllExceptions().ShouldBeEmpty();
+        tracked.Sent.MessagesOf<EscalateLateShipment>().ShouldBeEmpty();
+    }
+
     private async Task<ShipmentDeliverySaga?> LoadSaga(Guid id)
     {
         await using var session = Store.QuerySession();
