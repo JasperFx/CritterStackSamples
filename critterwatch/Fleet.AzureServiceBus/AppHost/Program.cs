@@ -48,9 +48,12 @@ foreach (var (resourceName, queueName) in new[]
 // ---- Infrastructure: Postgres -----------------------------------------------------------------
 // The postgres image defaults to max_connections=100. Every monitored service here runs Marten + a
 // Wolverine durability store (and, for the DB-queue flavors, the transport store too), each with its own
-// Npgsql pool — a whole fleet plus the console holds ~100 pooled connections at idle, which exhausts the
-// default and silently starves the CritterWatch telemetry writes ("sorry, too many clients already").
-// Raise the ceiling for the sample fleet.
+// Npgsql pool, and Wolverine's durable inbox/outbox work fans out across that pool: under this sample's
+// steady trip-simulation traffic a DB-queue host settles at ~20 pooled connections and the whole fleet at
+// ~70-90 (measured on both the July 2026 and August 2026 stacks — it is not a regression). That leaves no
+// headroom: anything that makes a host retry (e.g. an undrained telemetry queue) tips it past 100, and
+// the only symptom is "FATAL: sorry, too many clients already" in the Postgres log while telemetry
+// silently stops. Raise the ceiling for the sample fleet.
 var postgres = builder.AddPostgres("postgres")
     .WithArgs("-c", "max_connections=300");
 // Resource name "critterstore" (NOT "critterwatch" — Aspire resource names are unique case-insensitive
