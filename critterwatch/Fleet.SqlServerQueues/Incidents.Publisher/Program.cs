@@ -34,7 +34,7 @@ public static class IncidentPublisherProgram
 
                 var sqlServer = SampleConnections.SqlServer();
 
-                opts.UseSqlServerPersistenceAndTransport(sqlServer, role: MessageStoreRole.Ancillary)
+                opts.UseSqlServerPersistenceAndTransport(sqlServer, transportSchema: "critterwatch_wolverine", role: MessageStoreRole.Ancillary)
                     .AutoProvision();
 
                 // Explicit routing for every incident command type → IncidentService's command queue.

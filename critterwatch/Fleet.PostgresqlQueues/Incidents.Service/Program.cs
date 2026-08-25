@@ -21,7 +21,7 @@ return await IncidentServiceProgram.CreateHostBuilder(args).RunJasperFxCommands(
 /// Bootstraps the Incidents service — Wolverine PostgreSQL queue transport + Marten + CritterWatch
 /// monitoring, mirroring <c>TripServiceProgram</c>. Stays in a dedicated <c>incidents</c> Marten schema so
 /// its event data doesn't collide with the Trip-side schemas; the transport/queue tables live in the
-/// shared default <c>wolverine_queues</c> schema like every other participant.
+/// shared <c>critterwatch_wolverine</c> transport schema like every other participant.
 /// </summary>
 public static class IncidentServiceProgram
 {
@@ -43,9 +43,9 @@ public static class IncidentServiceProgram
         var connectionString = SampleConnections.Postgres();
 
         // Wolverine PostgreSQL DB-backed queue transport (no broker). Ancillary so the Marten event store
-        // stays Main; default transport schema (wolverine_queues) shared with the whole fleet, so
+        // stays Main; transport schema "critterwatch_wolverine" (the console's) shared with the whole fleet, so
         // "postgresql://critterwatch" resolves to the one console control queue.
-        opts.UsePostgresqlPersistenceAndTransport(connectionString, role: MessageStoreRole.Ancillary)
+        opts.UsePostgresqlPersistenceAndTransport(connectionString, transportSchema: "critterwatch_wolverine", role: MessageStoreRole.Ancillary)
             .AutoProvision();
 
         opts.Policies.UseDurableInboxOnAllListeners();

@@ -52,7 +52,11 @@ builder.AddCritterWatch(
         // No serializer call needed: AddCritterWatch registers the CritterWatch wire-format serializer
         // globally (by a unique content-type), so the console decodes telemetry with zero per-endpoint config.
         opts.ListenToAzureServiceBusQueue("critterwatch")
-            .ListenOnlyAtLeader();
+            .ListenOnlyAtLeader()
+            // CritterWatch 1.0 applies PartitionProcessingByGroupId() to its ingest listener (CritterWatch#1127), and Wolverine
+            // (>= 6.24, GH-3708) refuses that on an Inline endpoint — the broker default. Native acks +
+            // parallel processing is the mode that exists for exactly this combination.
+            .ProcessInParallelWithNativeAcks();
     },
     // Single-node sample → no sharded external topology to wire, so cluster partitioning stays off.
     // Production multi-node consoles pass enableClusterPartitioning: true plus a

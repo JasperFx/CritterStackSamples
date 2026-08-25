@@ -35,13 +35,18 @@ var consoleBaseUrl = SampleConnections.ConsoleBaseUrl();
 // (a) transport resolution and (b) as the named-HttpClient KEY; the ACTUAL network address is that named
 // client's BaseAddress, which we point at the console's real (plain-http, in local Aspire) invoke route
 // below. So https here + an http BaseAddress is correct, not a mismatch.
-//   telemetryUri  — where THIS service sends telemetry  → the console's inline-invoke route (same authority as
-//                   the discovered console URL, but https scheme so the transport resolves).
+//   telemetryUri  — where THIS service sends telemetry  → the console's BATCH route (same authority as the
+//                   discovered console URL, but https scheme so the transport resolves). It has to be the
+//                   batch route: CritterWatch 1.0 (#958; tracked as CritterWatch#1129) pins every telemetry route to BufferedInMemory, and
+//                   for Wolverine's HTTP transport that means a BatchedSender POSTing "binary/wolverine-envelopes"
+//                   — which /_wolverine/invoke (single envelope only) rejects with 415. The batch route hands
+//                   the envelopes to the console's local queue named in the path, where CritterWatch's handlers
+//                   run. (On rc.1 the http route still sent inline, so /_wolverine/invoke worked.)
 //   controlUri    — where THIS service RECEIVES operator commands → its own inline-invoke route. The host is
 //                   "localhost" because AddCritterWatchMonitoring only needs a stable local listener URI; the
 //                   actual receive happens via MapWolverineHttpTransportEndpoints below. (The console learns
 //                   the externally-reachable address from Aspire service discovery when it sends back.)
-var telemetryUri = new Uri($"https://{new Uri(consoleBaseUrl).Authority}/_wolverine/invoke");
+var telemetryUri = new Uri($"https://{new Uri(consoleBaseUrl).Authority}/_wolverine/batch/critterwatch");
 var controlUri = new Uri("https://localhost/_wolverine/invoke");
 
 builder.Host.UseWolverine(opts =>
@@ -112,13 +117,13 @@ builder.Services.AddCritterWatchHttp();
 // The HTTP transport's SENDER needs IWolverineHttpTransportClient plus a named HttpClient. The client name
 // MUST equal the telemetry endpoint's outbound URI string (the transport does
 // IHttpClientFactory.CreateClient(outboundUri) == telemetryUri.ToString()), and that client's BaseAddress is
-// where it actually POSTs. BaseAddress is the console's REAL invoke route (plain http in local Aspire) — NOT
+// where it actually POSTs. BaseAddress is the console's REAL batch route (plain http in local Aspire) — NOT
 // the https telemetryUri, whose https scheme exists only so Wolverine resolves the HTTP transport (see the
 // telemetryUri comment above). So the client is keyed by the https URI but posts to the http console.
 builder.Services.AddScoped<IWolverineHttpTransportClient, WolverineHttpTransportClient>();
 builder.Services.AddHttpClient(
     telemetryUri.ToString(),
-    c => c.BaseAddress = new Uri($"{consoleBaseUrl}/_wolverine/invoke"));
+    c => c.BaseAddress = new Uri($"{consoleBaseUrl}/_wolverine/batch/critterwatch"));
 // end-snippet
 
 var app = builder.Build();

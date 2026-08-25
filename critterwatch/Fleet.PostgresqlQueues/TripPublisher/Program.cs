@@ -31,9 +31,9 @@ public static class TripPublisherProgram
                 // ---- Wolverine PostgreSQL DB-backed queue transport (no broker) ----------------------
                 // This publisher has NO event store, so the DB transport itself is its (Main) message
                 // store — no role override needed and nothing to reconcile. It still uses the SAME default
-                // transport schema (wolverine_queues) as everyone else, so "postgresql://critterwatch"
+                // transport schema ("critterwatch_wolverine", the console's) as everyone else, so "postgresql://critterwatch"
                 // resolves to the one shared control queue table the console drains.
-                opts.UsePostgresqlPersistenceAndTransport(SampleConnections.Postgres())
+                opts.UsePostgresqlPersistenceAndTransport(SampleConnections.Postgres(), transportSchema: "critterwatch_wolverine")
                     .AutoProvision();
 
                 opts.Policies.UseDurableInboxOnAllListeners();

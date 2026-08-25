@@ -34,8 +34,8 @@ public static class IncidentPublisherProgram
 
                 // Wolverine PostgreSQL DB-backed queue transport (no broker). No event store here, so the
                 // DB transport is this publisher's (Main) message store — nothing to reconcile. Shared
-                // default transport schema (wolverine_queues) so postgresql://critterwatch is the one queue.
-                opts.UsePostgresqlPersistenceAndTransport(SampleConnections.Postgres())
+                // shared "critterwatch_wolverine" transport schema so postgresql://critterwatch is the one queue.
+                opts.UsePostgresqlPersistenceAndTransport(SampleConnections.Postgres(), transportSchema: "critterwatch_wolverine")
                     .AutoProvision();
 
                 opts.Policies.UseDurableInboxOnAllListeners();

@@ -41,7 +41,11 @@ builder.AddCritterWatch(
         // globally (by a unique content-type), so the console decodes telemetry on any transport with
         // zero per-endpoint serializer config.
         opts.ListenToRabbitQueue("critterwatch")
-            .ListenOnlyAtLeader();
+            .ListenOnlyAtLeader()
+            // CritterWatch 1.0 applies PartitionProcessingByGroupId() to its ingest listener (CritterWatch#1127), and Wolverine
+            // (>= 6.24, GH-3708) refuses that on an Inline endpoint — the broker default. Native acks +
+            // parallel processing is the mode that exists for exactly this combination.
+            .ProcessInParallelWithNativeAcks();
     },
     // Single-node sample → no sharded external topology to wire, so cluster partitioning stays off.
     // Production multi-node consoles pass enableClusterPartitioning: true plus a

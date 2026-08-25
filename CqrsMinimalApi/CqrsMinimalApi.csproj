@@ -17,8 +17,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="WolverineFx.Http" Version="6.23.1" />
-    <PackageReference Include="WolverineFx.Marten" Version="6.23.1" />
+    <PackageReference Include="WolverineFx.Http" Version="6.30.0" />
+    <PackageReference Include="WolverineFx.Marten" Version="6.30.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
   </ItemGroup>
 
@@ -33,7 +33,7 @@
        to "still ship the assembly" (see GH-2900). The committed Internal/Generated code lets Release
        compile with no runtime compiler present. -->
   <ItemGroup Condition="'$(Configuration)' == 'Debug'">
-    <PackageReference Include="WolverineFx.RuntimeCompilation" Version="6.23.1" />
+    <PackageReference Include="WolverineFx.RuntimeCompilation" Version="6.30.0" />
   </ItemGroup>
 
 </Project>

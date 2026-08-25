@@ -21,10 +21,11 @@ var builder = WebApplication.CreateBuilder(args);
 // The console's own Postgres store — and the host of the Wolverine DB-backed queue tables. Under Aspire
 // this is the `critterwatch` database; standalone it falls back to the localhost docker-compose Postgres.
 // NOTE: this is the *console's* event store, kept in its own Marten schema, separate from each monitored
-// service's event store schema. The Wolverine queue/transport tables live in the DEFAULT Wolverine
-// transport schema — the one every monitored service ALSO uses (none of them passes a per-service
-// transportSchema), which is exactly why they all resolve "postgresql://critterwatch" to the SAME queue
-// table and the console actually sees their telemetry. See plan 04's schema-coupling note.
+// service's event store schema. Since CritterWatch 1.0 (#1025) AddCritterWatch pins the console's Wolverine
+// queue/transport tables to the "critterwatch_wolverine" schema (its durability schema) — and that is NOT
+// overridable from here. Every monitored service therefore passes transportSchema: "critterwatch_wolverine"
+// to its own DB-queue transport, which is exactly why they all resolve "postgresql://critterwatch" to the
+// SAME queue table and the console actually sees their telemetry. See plan 04's schema-coupling note.
 var consoleConnectionString = SampleConnections.Postgres();
 
 // begin-snippet: console-postgres-db-queue-control-channel

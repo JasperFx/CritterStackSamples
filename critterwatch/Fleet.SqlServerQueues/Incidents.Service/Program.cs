@@ -42,9 +42,9 @@ public static class IncidentServiceProgram
         var sqlServer = SampleConnections.SqlServer();
 
         // Shared SQL Server DB-queue transport (no broker). role: Ancillary keeps the Polecat event store
-        // as Main. NO per-service transportSchema — the "critterwatch" control queue lives in the ONE
-        // shared transport schema (see the TripService schema-coupling note).
-        opts.UseSqlServerPersistenceAndTransport(sqlServer, role: MessageStoreRole.Ancillary)
+        // as Main. transportSchema: "critterwatch_wolverine" — the "critterwatch" control queue lives in the ONE
+        // shared transport schema, the console's (see the TripService schema-coupling note).
+        opts.UseSqlServerPersistenceAndTransport(sqlServer, transportSchema: "critterwatch_wolverine", role: MessageStoreRole.Ancillary)
             .AutoProvision();
 
         opts.Policies.UseDurableInboxOnAllListeners();

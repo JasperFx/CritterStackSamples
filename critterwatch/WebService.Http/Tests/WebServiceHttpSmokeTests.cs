@@ -65,7 +65,7 @@ public class WebServiceHttpSmokeTests
         using var client = _fixture.CreateCritterWatchClient();
 
         // The OrderService self-registers ASYNCHRONOUSLY — it POSTs its registration/heartbeat over the HTTP
-        // transport to the console's /_wolverine/invoke route after the console is up — so we poll /services
+        // transport to the console's /_wolverine/batch/critterwatch route after the console is up — so we poll /services
         // rather than asserting immediately.
         // Route through the fixture (not the bare HttpClient extension) so a timeout dumps every resource's
         // captured logs into the failure message — essential for diagnosing why OrderService doesn't register.
@@ -75,5 +75,42 @@ public class WebServiceHttpSmokeTests
             timeout: TimeSpan.FromMinutes(2));
 
         services.Select(s => s.Id).ShouldContain("OrderService");
+    }
+
+    /// <summary>
+    /// The CONTROL direction of the monitoring link — console → service — which this battery never
+    /// covered. Everything above exercises telemetry (service → console), which is why ProductSupport#34
+    /// shipped: the console's send side throws on every attempt, and nothing here noticed.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Asserted through the console's logs rather than by driving an operator command, because operator
+    /// commands travel CritterWatch's SignalR hub and this harness has no SignalR client. It still pins
+    /// the defect: the console pushes to a registered service on its own, so a broken send surfaces as
+    /// <c>BufferedSendingAgent</c> failures in the console log with no operator action at all — exactly
+    /// how the reporter found it.
+    /// </para>
+    /// <para>
+    /// Fails on WolverineFx 6.23.1 and earlier — legitimately, because the control channel really is broken
+    /// there — and passes from 6.24.0 (wolverine#3681 / GH-3690) onward. See README.md.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task console_control_channel_sends_without_transport_errors()
+    {
+        using var client = _fixture.CreateCritterWatchClient();
+
+        // Registration first: the console has nothing to send to until OrderService reports its control URI.
+        await _fixture.WaitForServicesAsync(client, ["OrderService"], timeout: TimeSpan.FromMinutes(2));
+
+        // Give the console a window to actually push to the freshly-registered service.
+        await Task.Delay(TimeSpan.FromSeconds(20));
+
+        var consoleLogs = _fixture.DumpResourceLogs(CritterWatchAppHostFixture<Projects.AppHost>.CritterWatchResourceName);
+
+        // The GH-3690 signature. Matched on the exception text rather than the sender type so the assertion
+        // survives Wolverine renaming BufferedSendingAgent.
+        consoleLogs.ShouldNotContain("An invalid request URI was provided");
+        consoleLogs.ShouldNotContain("Failed to send outgoing envelopes batch");
     }
 }

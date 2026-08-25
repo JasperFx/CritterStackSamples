@@ -10,9 +10,8 @@
 // SCHEMA COORDINATION (the load-bearing detail): a DB-backed queue is a TABLE in a specific schema,
 // not a broker destination. For the whole multi-host fleet to share the one "critterwatch" control
 // queue, the console AND every monitored service must resolve that queue to the SAME table — i.e.
-// they must all use the SAME Wolverine transport/message-storage schema. We achieve that by letting
-// every participant use the DEFAULT Wolverine transport schema (none of them passes a per-service
-// transportSchema). Each service still keeps its OWN distinct Marten event-store schema (trips,
+// they must all use the SAME Wolverine transport schema. CritterWatch 1.0 pins the console's to
+// "critterwatch_wolverine", so every monitored service passes transportSchema: "critterwatch_wolverine". Each service still keeps its OWN distinct Marten event-store schema (trips,
 // repair_shop, incidents, …) — only the queue/transport schema must coincide. See each Program.cs.
 // =============================================================================================
 
@@ -21,7 +20,13 @@ var builder = DistributedApplication.CreateBuilder(args);
 // ---- Infrastructure: ONE Postgres container, no broker ---------------------------------------
 // AddPostgres pulls the official Postgres image and exposes a connection string to any resource that
 // .WithReference()s it (injected as ConnectionStrings__<name>).
-var postgres = builder.AddPostgres("postgres");
+// The postgres image defaults to max_connections=100. Every monitored service here runs Marten + a
+// Wolverine durability store (and, for the DB-queue flavors, the transport store too), each with its own
+// Npgsql pool — a whole fleet plus the console holds ~100 pooled connections at idle, which exhausts the
+// default and silently starves the CritterWatch telemetry writes ("sorry, too many clients already").
+// Raise the ceiling for the sample fleet.
+var postgres = builder.AddPostgres("postgres")
+    .WithArgs("-c", "max_connections=300");
 
 // Resource name "critterstore" (NOT "critterwatch" — Aspire resource names are unique case-insensitive
 // across types, and the console PROJECT below owns the name "critterwatch"). The 2nd arg keeps the actual

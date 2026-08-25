@@ -52,11 +52,10 @@ builder.AddCritterWatch(
 builder.Services.AddWolverineHttp();
 
 // The console can also push operator commands (PauseProjection / RebuildProjection / DLQ ops / …) BACK to
-// the OrderService over the same HTTP transport. Sending over the transport needs the transport client;
-// register it so those sends work when an operator triggers them. (The named HttpClient that targets a
-// specific service's control URL is created on demand from the service's reported control URI.)
-builder.Services.AddScoped<IWolverineHttpTransportClient, WolverineHttpTransportClient>();
-builder.Services.AddHttpClient();
+// the OrderService over the same HTTP transport. AddWolverineHttp() above registers the transport client for
+// that; since wolverine#3681 (GH-3690, WolverineFx 6.24.0) the transport posts to the absolute outbound URI
+// it learns from the service's registration, so no per-service named HttpClient has to be pre-registered.
+// (On 6.23.1 and earlier that send threw "An invalid request URI was provided…" — ProductSupport#34.)
 
 builder.Services.AddHealthChecks();
 
@@ -67,10 +66,12 @@ var app = builder.Build();
 app.UseCritterWatch();
 
 // THE receive side of the monitoring link. Maps:
-//   POST /_wolverine/invoke          — single inline envelope (what AddCritterWatchMonitoring's https route
-//                                       uses); executed against this console's CritterWatch handlers.
-//   POST /_wolverine/batch/{queue}   — batched envelopes, delivered to the named local queue.
-// The OrderService's AddCritterWatchMonitoring(...) points its first URI at this console's /_wolverine/invoke.
+//   POST /_wolverine/invoke          — single inline envelope, executed against this console's handlers.
+//   POST /_wolverine/batch/{queue}   — batched envelopes, delivered to the named local queue — THIS is what
+//                                       the monitored service's telemetry uses: CritterWatch 1.0 (#958) sends
+//                                       all telemetry BufferedInMemory, i.e. as batches, and the invoke route
+//                                       answers a batch with 415.
+// The OrderService's AddCritterWatchMonitoring(...) points its first URI at /_wolverine/batch/critterwatch.
 app.MapWolverineHttpTransportEndpoints();
 
 app.MapHealthChecks("/health");

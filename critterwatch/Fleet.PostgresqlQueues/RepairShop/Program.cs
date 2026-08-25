@@ -30,8 +30,8 @@ public static class RepairShopProgram
                 var connectionString = SampleConnections.Postgres();
 
                 // Wolverine PostgreSQL DB-backed queue transport (no broker). Ancillary so the Marten store
-                // below stays Main; default transport schema (wolverine_queues) shared fleet-wide.
-                opts.UsePostgresqlPersistenceAndTransport(connectionString, role: MessageStoreRole.Ancillary)
+                // below stays Main; transport schema "critterwatch_wolverine" (the console's) shared fleet-wide.
+                opts.UsePostgresqlPersistenceAndTransport(connectionString, transportSchema: "critterwatch_wolverine", role: MessageStoreRole.Ancillary)
                     .AutoProvision();
 
                 opts.Services.AddMarten(m =>
