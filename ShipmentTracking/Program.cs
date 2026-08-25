@@ -183,5 +183,9 @@ var app = builder.Build();
 app.MapWolverineEndpoints();
 
 // Replaces EnableInstallers() — creates the Polecat schema and the envelope
-// storage on startup, and adds db-apply / db-assert / db-dump to the CLI.
+// storage on startup, and adds the JasperFx `resources` and `codegen` commands.
 return await app.RunJasperFxCommands(args);
+
+// Makes the implicit Program class reachable from the test project so Alba can
+// bootstrap the real application rather than a hand-assembled imitation of it.
+public partial class Program;

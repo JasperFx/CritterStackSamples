@@ -63,6 +63,13 @@ public static class CarrierScanHandler
 
         if (command.ScanType == "DELIVERED")
         {
+            // Phase 4 found this missing. Nothing in the NServiceBus original or the
+            // Dapper port ever wrote "Delivered" — RecordScanAsync touched only the
+            // location columns — so CancelShipmentHandler's "a delivered shipment
+            // cannot be cancelled" guard was unreachable, and a delivered shipment
+            // could be cancelled. The rule was written; it just never fired.
+            shipment.Status = "Delivered";
+
             messages.Add(new ShipmentDelivered(command.ShipmentId, command.OccurredAt));
         }
 

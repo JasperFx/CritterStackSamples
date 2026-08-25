@@ -1,6 +1,6 @@
 # ShipmentTracking
 
-A Wolverine service converted from NServiceBus. Phases 1–3 of a migration walkthrough:
+A Wolverine service converted from NServiceBus. Phases 1–4 of a migration walkthrough:
 NServiceBus → Wolverine → Wolverine.HTTP → Polecat → integration tests → Aspire + CritterWatch.
 
 The NServiceBus starting point is **not** in this repository. NServiceBus is RPL-1.5
@@ -258,6 +258,136 @@ persistence, and converting to event sourcing is a different exercise with diffe
 trade-offs — the messages this service publishes are integration events, not a stream it
 folds state from. Polecat would host that happily; it is just not what phase 3 asked for.
 
+## Phase 4 — integration tests over every handler and endpoint
+
+`Tests/` covers all five HTTP endpoints, all five message handlers and every saga
+transition: **29 tests in about two seconds**, against a real SQL Server 2025, a real
+RabbitMQ, real Wolverine code generation and the application's own `Program.cs`.
+Nothing sleeps.
+
+### Two substitutions, and only two
+
+`AppFixture` overrides exactly two things, and neither is part of the system under test:
+
+- **A database of its own** (`ShipmentTracking_Testing`), so running the suite cannot
+  wipe whatever you were looking at.
+- **`ICarrierLabelClient`**, because `FakeCarrierLabelClient` sleeps 45 seconds on
+  purpose and a test may not. That duration is the whole reason `label-generation` is a
+  Durable listener; it belongs in the running application, not in a test.
+
+Everything else is the real thing — including the Polecat store, the outbox, the three
+RabbitMQ listeners and the sharded `carrier-events` topology.
+
+### ⚠️ The mistake this suite was nearly built on
+
+The usual advice for a Wolverine test host is
+`services.DisableAllExternalWolverineTransports()`. **For this application it produces a
+suite in which nothing happens and everything passes.**
+
+Stubbing sets `ExternalTransportsAreStubbed`, which replaces each external sender with a
+`NullSender`. It does not reroute anything locally. Every command here is routed
+`ToRabbitQueue(...)` by `Program.cs`, so the first exploratory test printed exactly this:
+
+```
+Sent: BookShipment -> rabbitmq://queue/shipment-commands
+SHIPMENTS IN DB: 0
+```
+
+A green test over a system that had done nothing. Stubbing is right for an application
+whose messages route locally by convention. It is wrong for one whose topology is the
+point.
+
+So the suite talks to the real broker and turns on `IncludeExternalTransports()`, without
+which a `Sent` record to a non-`local://` destination is marked complete the instant the
+send is made — same vacuous result by a different route. One HTTP call now traces
+end to end in about a second:
+
+```
+Sent/Received/Executed  BookShipment          -> rabbitmq://queue/shipment-commands
+Sent/Received/Executed  ShipmentBooked        -> local://…/       (starts the saga)
+Sent (scheduled)        DeliverySlaExpired    -> local://…/       (five days out)
+Sent/Received/Executed  GenerateLabel         -> rabbitmq://queue/label-generation
+Sent/Received/Executed  RecordTrackingNumber  -> rabbitmq://queue/shipment-commands
+Sent/Received/Executed  LabelGenerated        -> local://…/
+```
+
+### Nothing sleeps, including the five-day timeout
+
+Every wait is a wait for *work*, never for a duration:
+
+| What is being waited for | How |
+|---|---|
+| An HTTP call and everything it cascades | `Host.Scenario` inside `TrackActivity().ExecuteAndWaitAsync` |
+| A message handler and its cascade | `TrackActivity().InvokeMessageAndWaitAsync` |
+| **The saga's five-day SLA timeout** | `PlayScheduledMessagesAsync(30.Seconds())` |
+
+`PlayScheduledMessagesAsync` replays the captured scheduled envelopes immediately and
+hands back a fresh tracked session. A sleep could not have tested this at all.
+
+The `Timeout(30.Seconds())` on every session is a **ceiling, not a duration** — it costs
+nothing when the work finishes in 40ms, which it does.
+
+### Proving the suite can fail
+
+A tracked-session suite that has never been seen fail has not been tested — the failure
+mode is a *green* test that raced its own assertions. Every handler and the saga were
+mutated one at a time and the suite was re-run:
+
+| Mutation | Tests red |
+|---|---|
+| Remove the stale-scan guard | 1 |
+| Stop writing `Status = "Delivered"` | 2 |
+| Stop writing `Status = "Cancelled"` | 2 |
+| Let a late label resurrect a cancelled shipment | 1 |
+| Saga stops scheduling the SLA timeout | 4 |
+| Escalate even when delivered | 1 |
+| Saga stops cascading `GenerateLabel` | 5 |
+
+### Three things the tests found
+
+**1. A business rule that could never fire.** `CancelShipmentHandler` refuses to cancel a
+shipment whose status is `"Delivered"` — and *nothing in the application ever wrote that
+status.* Not the NServiceBus original, not the Dapper port; `RecordScanAsync` touched only
+the location columns. The rule was written, reviewed and carried across three phases
+without ever being reachable. Writing the test for it is what surfaced it.
+
+**2. A race that only the carrier's slowness was hiding.** `BookShipmentHandler` cascaded
+`ShipmentBooked` (which starts the saga) and `GenerateLabel` in parallel. With a real
+carrier taking 30–90 seconds, `ShipmentBooked` always won. With an instant test double it
+did not, and `LabelGenerated` reached the saga before the saga existed —
+`UnknownSagaException`, on a cold database, in one test out of 29.
+
+The fix is structural rather than a retry: `GenerateLabel` is now cascaded from the saga's
+`Start`. Wolverine commits the saga insert and that method's outgoing messages in one
+transaction, so `GenerateLabel` cannot leave before the saga row exists.
+
+> **This is the phase-4 lesson.** "It works because that call is slow" is not a
+> correctness argument — it is the same reasoning phase 1 rejected when it refused to put
+> `label-generation` on `NativeAck`. The difference is that phase 1 caught it by thinking
+> and phase 4 caught it by running.
+
+**3. An event that goes nowhere.** `ShipmentLocationUpdated` is published on every scan,
+and this application declares no subscriber and no route for it — Wolverine records
+`NoRoutes` and drops it. Carried over from the NServiceBus original, where a subscriber
+elsewhere picked it up. The tests assert the `NoRoutes` record rather than hiding it, so
+if a route is ever added the assertion breaks and someone has to look at it. **It is a
+finding, not a design.**
+
+### Reading the generated code instead of guessing
+
+When a declarative attribute does not resolve, preview what Wolverine actually generated
+rather than reasoning about it:
+
+```bash
+dotnet run --project ShipmentTracking -- wolverine-diagnostics codegen-preview --route "GET /shipments"
+dotnet run --project ShipmentTracking -- wolverine-diagnostics codegen-preview --handler CancelShipment
+dotnet run --project ShipmentTracking -- wolverine-diagnostics describe-routing --all
+dotnet run --project ShipmentTracking -- codegen test    # compile every chain, no host start
+```
+
+The first one prints the `[All]` endpoint's body — `documentSession.Query<Shipment>()`
+piped through `ToListAsync`, bound to the *outboxed* Polecat session.
+
 ## Running it
 
 `docker-compose.yml` in this directory brings up SQL Server 2025 and RabbitMQ. Polecat needs
@@ -283,3 +413,14 @@ dotnet run --project ShipmentTracking
 `dotnet run --project ShipmentTracking -- codegen test` compiles every generated handler and
 endpoint without starting the host — the fastest way to check that `[Entity]`, `[All]` and the
 saga all resolve.
+
+### The tests
+
+```bash
+docker compose up -d
+dotnet test ShipmentTracking/Tests/Tests.csproj
+```
+
+The fixture creates `ShipmentTracking_Testing` itself, so no setup step is needed beyond
+the containers. The suite needs the RabbitMQ from `docker-compose.yml` — it talks to the
+real broker on purpose; see the phase 4 notes above.

@@ -14,7 +14,7 @@ public static class BookShipmentHandler
     // the insert and the two outgoing messages commit in one transaction with the
     // outbox — which the Dapper version could not do, because it opened its own
     // connection outside Wolverine's.
-    public static (Insert<Shipment>, ShipmentBooked, GenerateLabel) Handle(
+    public static (Insert<Shipment>, ShipmentBooked) Handle(
         BookShipment command,
         ILogger logger)
     {
@@ -31,12 +31,13 @@ public static class BookShipmentHandler
             Status = "Booked"
         };
 
+        // GenerateLabel used to be cascaded from here alongside ShipmentBooked. Phase 4
+        // moved it into the saga's Start, and the reason is in the README: cascading
+        // both in parallel let LabelGenerated reach the saga before ShipmentBooked had
+        // created it. The only thing preventing that was the carrier taking 30-90
+        // seconds — a timing accident standing in for a correctness argument.
         return (
             Storage.Insert(shipment),
-            new ShipmentBooked(command.ShipmentId, command.Carrier, DateTimeOffset.UtcNow),
-
-            // Label generation is slow, so it stays a separate command. Routing
-            // sends it to the label queue.
-            new GenerateLabel(command.ShipmentId, command.Carrier));
+            new ShipmentBooked(command.ShipmentId, command.Carrier, DateTimeOffset.UtcNow));
     }
 }

@@ -30,13 +30,25 @@ public class ShipmentDeliverySaga : Saga
     ///
     /// The delay lives on DeliverySlaExpired, which subclasses TimeoutMessage,
     /// so there is no schedule call here at all.
+    ///
+    /// <para>
+    /// GenerateLabel is cascaded from HERE rather than from BookShipmentHandler, and
+    /// that is an ordering guarantee rather than a preference. Wolverine inserts the
+    /// saga and flushes this method's outgoing messages in one transaction, so
+    /// GenerateLabel cannot leave before the saga row exists — and therefore
+    /// LabelGenerated cannot arrive before there is a saga to receive it. Cascading
+    /// both from the booking handler raced, and only the carrier's 30-90 second
+    /// latency was hiding it.
+    /// </para>
     /// </summary>
-    public DeliverySlaExpired Start(ShipmentBooked booked)
+    public (DeliverySlaExpired, GenerateLabel) Start(ShipmentBooked booked)
     {
         Id = booked.ShipmentId;
         BookedAt = booked.BookedAt;
 
-        return new DeliverySlaExpired(booked.ShipmentId);
+        return (
+            new DeliverySlaExpired(booked.ShipmentId),
+            new GenerateLabel(booked.ShipmentId, booked.Carrier));
     }
 
     public void Handle(LabelGenerated _) => LabelGenerated = true;

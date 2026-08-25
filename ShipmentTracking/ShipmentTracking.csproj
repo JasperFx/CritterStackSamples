@@ -26,4 +26,12 @@
     <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The Tests project lives under this directory; keep it out of the web project's
+         default globs. Matches BookingMonolith and the other samples. -->
+    <Compile Remove="Tests/**" />
+    <Content Remove="Tests/**" />
+    <None Remove="Tests/**" />
+  </ItemGroup>
+
 </Project>
