@@ -31,6 +31,16 @@ public record RecordCarrierScan(
     DateTimeOffset OccurredAt);
 
 /// <summary>
+/// Applies a carrier tracking number to the shipment document.
+///
+/// Phase 3 introduced this. GenerateLabel's handler used to make the 30-90 second
+/// carrier call AND write the result; with a document store that would mean holding a
+/// loaded document — and its revision — across the whole call. Splitting the write out
+/// keeps the slow handler free of the database entirely.
+/// </summary>
+public record RecordTrackingNumber(Guid ShipmentId, string TrackingNumber);
+
+/// <summary>
 /// Raised by the delivery saga when a shipment blows its SLA. Routed to the
 /// operations service rather than handled here.
 /// </summary>

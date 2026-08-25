@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using ShipmentTracking.Data;
 using ShipmentTracking.Messages;
 using Wolverine.Http;
+using Wolverine.Persistence;
 
 namespace ShipmentTracking.Api;
 
@@ -47,16 +48,27 @@ public static class ShipmentEndpoints
         => (TypedResults.Accepted((string?)null), new CancelShipment(id, request.Reason));
 
     /// <summary>
-    /// A nullable return is Wolverine's 404: no explicit Results.NotFound(), and
-    /// OpenAPI gets both 200 and 404 without an attribute.
+    /// Phase 2 got the 404 from a nullable return. Phase 3 gets it one step earlier:
+    /// [Entity] resolves the id from the {id} route parameter, loads the document, and
+    /// short-circuits with a 404 before the endpoint body runs — and still contributes
+    /// Produces(404) to the OpenAPI document, so the generated contract is unchanged.
+    ///
+    /// These are genuinely two different mechanisms and they are easy to conflate: the
+    /// entity guard fires when the *load* misses, while a nullable return fires when
+    /// the endpoint runs and produces no *body*. Only one of them is in play here,
+    /// because the guard runs first.
     /// </summary>
     [WolverineGet("/shipments/{id}")]
-    public static Task<Shipment?> Get(Guid id, ShipmentRepository repository)
-        => repository.LoadAsync(id);
+    public static Shipment Get([Entity] Shipment shipment) => shipment;
 
+    /// <summary>
+    /// [All] is the declarative "every document of this type" — no IQuerySession, no
+    /// repository, no await. It is deliberately unfiltered and deliberately blunt, and
+    /// it is the right shape only while this table stays small; a real one wants a
+    /// compiled query or a query plan behind [FromQuerySpecification].
+    /// </summary>
     [WolverineGet("/shipments")]
-    public static Task<IReadOnlyList<Shipment>> GetAll(ShipmentRepository repository)
-        => repository.ListAsync();
+    public static IReadOnlyList<Shipment> GetAll([All] IReadOnlyList<Shipment> shipments) => shipments;
 
     /// <summary>
     /// The carrier webhook. The scan arrives as the request body and is cascaded

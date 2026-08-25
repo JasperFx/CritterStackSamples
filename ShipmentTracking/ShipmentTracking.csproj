@@ -10,9 +10,20 @@
     <PackageReference Include="WolverineFx" Version="6.30.0" />
     <PackageReference Include="WolverineFx.Http" Version="6.30.0" />
     <PackageReference Include="WolverineFx.RabbitMQ" Version="6.30.0" />
-    <PackageReference Include="WolverineFx.SqlServer" Version="6.30.0" />
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.3" />
-    <PackageReference Include="Dapper" Version="2.1.66" />
+
+    <!-- Wolverine 6 removed the Roslyn runtime compiler from core WolverineFx
+         (GH-2876). Without this the host throws at startup. It is the right choice
+         for a sample and for local development; production deployments generally
+         pre-generate with the `codegen write` CLI command and set
+         opts.CodeGeneration.TypeLoadMode = TypeLoadMode.Static instead. -->
+    <PackageReference Include="WolverineFx.RuntimeCompilation" Version="6.30.0" />
+
+    <!-- Brings Polecat and WolverineFx.SqlServer with it. WolverineFx.SqlServer is no
+         longer referenced directly: Polecat's IntegrateWithWolverine() stands up the
+         SQL Server envelope storage itself, so PersistMessagesWithSqlServer() is gone.
+         Microsoft.Data.SqlClient stays explicit because Program.cs names SqlException. -->
+    <PackageReference Include="WolverineFx.Polecat" Version="6.30.0" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.0" />
   </ItemGroup>
 
 </Project>
