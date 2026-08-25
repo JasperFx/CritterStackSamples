@@ -52,20 +52,10 @@ builder.AddCritterWatch(
 builder.Services.AddWolverineHttp();
 
 // The console can also push operator commands (PauseProjection / RebuildProjection / DLQ ops / …) BACK to
-// the OrderService over the same HTTP transport. Sending over the transport needs the transport client.
-//
-// ⚠️ On WolverineFx 6.23.1 (the pin below) this registration is NOT sufficient, and the control channel
-// does not work. An earlier version of this comment claimed the named HttpClient for a service's control
-// URL is "created on demand from the service's reported control URI" — it is not, and nothing creates it.
-// WolverineHttpTransportClient uses the outbound URI purely as an IHttpClientFactory client NAME and then
-// posts to that client's BaseAddress; CreateClient returns a default client with a null BaseAddress for an
-// unknown name, so the send throws "An invalid request URI was provided…". The console cannot pre-register
-// a named client either, because it only learns a service's control URL at runtime from that service's own
-// registration. Reported as ProductSupport#34, fixed in wolverine#3681 (GH-3690): the transport falls back
-// to its own isolated client and posts to the absolute outbound URI, and AddWolverineHttp() registers both
-// of these lines for you. DELETE THEM when this sample bumps past that Wolverine release.
-builder.Services.AddScoped<IWolverineHttpTransportClient, WolverineHttpTransportClient>();
-builder.Services.AddHttpClient();
+// the OrderService over the same HTTP transport. AddWolverineHttp() above registers the transport client for
+// that; since wolverine#3681 (GH-3690, WolverineFx 6.24.0) the transport posts to the absolute outbound URI
+// it learns from the service's registration, so no per-service named HttpClient has to be pre-registered.
+// (On 6.23.1 and earlier that send threw "An invalid request URI was provided…" — ProductSupport#34.)
 
 builder.Services.AddHealthChecks();
 
@@ -76,10 +66,12 @@ var app = builder.Build();
 app.UseCritterWatch();
 
 // THE receive side of the monitoring link. Maps:
-//   POST /_wolverine/invoke          — single inline envelope (what AddCritterWatchMonitoring's https route
-//                                       uses); executed against this console's CritterWatch handlers.
-//   POST /_wolverine/batch/{queue}   — batched envelopes, delivered to the named local queue.
-// The OrderService's AddCritterWatchMonitoring(...) points its first URI at this console's /_wolverine/invoke.
+//   POST /_wolverine/invoke          — single inline envelope, executed against this console's handlers.
+//   POST /_wolverine/batch/{queue}   — batched envelopes, delivered to the named local queue — THIS is what
+//                                       the monitored service's telemetry uses: CritterWatch 1.0 (#958) sends
+//                                       all telemetry BufferedInMemory, i.e. as batches, and the invoke route
+//                                       answers a batch with 415.
+// The OrderService's AddCritterWatchMonitoring(...) points its first URI at /_wolverine/batch/critterwatch.
 app.MapWolverineHttpTransportEndpoints();
 
 app.MapHealthChecks("/health");

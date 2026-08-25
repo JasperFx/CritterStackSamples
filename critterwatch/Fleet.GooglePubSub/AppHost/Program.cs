@@ -48,7 +48,13 @@ var pubsub = builder.AddContainer("pubsub", "gcr.io/google.com/cloudsdktool/goog
 var emulatorHost = $"localhost:{emulatorPort}";
 
 // ---- Infrastructure: Postgres -----------------------------------------------------------------
-var postgres = builder.AddPostgres("postgres");
+// The postgres image defaults to max_connections=100. Every monitored service here runs Marten + a
+// Wolverine durability store (and, for the DB-queue flavors, the transport store too), each with its own
+// Npgsql pool — a whole fleet plus the console holds ~100 pooled connections at idle, which exhausts the
+// default and silently starves the CritterWatch telemetry writes ("sorry, too many clients already").
+// Raise the ceiling for the sample fleet.
+var postgres = builder.AddPostgres("postgres")
+    .WithArgs("-c", "max_connections=300");
 // Resource name "critterstore" (NOT "critterwatch" — Aspire resource names are unique case-insensitive
 // across types, and the console PROJECT below owns the name "critterwatch"). The 2nd arg keeps the actual
 // Postgres database named "critterwatch" so the non-Aspire localhost fallback string still matches.

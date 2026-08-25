@@ -121,9 +121,10 @@ public static class TripServiceProgram
             "asb://queue/critterwatch".ToUri(),
             "asb://queue/trip_service".ToUri()).EnableEventStoreExplorer = true;
 
-        // Build Marten schema on startup (dev convenience). The ASB entities are owned by the emulator
-        // config (declared in the AppHost), so there is no transport topology to set up here.
-        opts.Services.AddResourceSetupOnStartup();
+        // NOTE: no AddResourceSetupOnStartup() here. Since WolverineFx 6.30.0 (wolverine#4119) a failed broker-endpoint setup
+        // FAILS the resource sweep instead of logging it, and the ASB emulator has no administration API, so the
+        // sweep would kill this host at startup. Marten builds its schema lazily on first use, and the ASB entities
+        // are owned by the emulator config (declared in the AppHost), so there is nothing to set up eagerly.
     }
     // end-snippet
 }

@@ -59,7 +59,10 @@ public static class RepairShopProgram
                 // local-queue routing (RepairRequestedHandler routes by state) in the CritterWatch view.
                 opts.Policies.AllLocalQueues(listener => listener.Sequential());
 
-                opts.Services.AddResourceSetupOnStartup();
+                // NOTE: no AddResourceSetupOnStartup() here. Since WolverineFx 6.30.0 (wolverine#4119) a failed broker-endpoint setup
+                // FAILS the resource sweep instead of logging it, and the ASB emulator has no administration API, so the
+                // sweep would kill this host at startup. Marten builds its schema lazily on first use, and the ASB entities
+                // are owned by the emulator config (declared in the AppHost), so there is nothing to set up eagerly.
 
                 // #345: must be the `asb://queue/{name}` form (see TripService for the why).
                 opts.AddCritterWatchMonitoring(

@@ -52,14 +52,15 @@ public static class TripServiceProgram
         // table in a specific schema. AddCritterWatchMonitoring routes telemetry to sqlserver://critterwatch
         // — a queue named "critterwatch" resolved to a queue TABLE in THIS node's transport schema. For the
         // console to actually receive this service's telemetry, console + EVERY monitored service must use
-        // the SAME Wolverine transport schema for that control queue. So we deliberately DO NOT pass a
-        // per-service transportSchema here — every participant shares the default transport schema, and the
-        // one shared "critterwatch" queue table is what the console drains. (Each service still keeps its
+        // the SAME Wolverine transport schema for that control queue. Since CritterWatch 1.0 (#1025, CritterWatch#1126) the
+        // console's AddCritterWatch pins its transport schema to "critterwatch_wolverine" (not overridable
+        // console-side), so every participant passes transportSchema: "critterwatch_wolverine" and the one
+        // shared "critterwatch" queue table there is what the console drains. (Each service still keeps its
         // OWN distinct Polecat EVENT-STORE schema below — only the transport/queue schema must coincide.)
         //
         // role: Ancillary — the SQL Server transport otherwise registers a second Main store and Wolverine
         // refuses to start. The app's Polecat event store stays the Main durability store.
-        opts.UseSqlServerPersistenceAndTransport(sqlServer, role: MessageStoreRole.Ancillary)
+        opts.UseSqlServerPersistenceAndTransport(sqlServer, transportSchema: "critterwatch_wolverine", role: MessageStoreRole.Ancillary)
             .AutoProvision();
 
         // Durable inbox/outbox so in-flight messages survive a restart — the realistic production posture

@@ -63,7 +63,10 @@ public static class TripPublisherProgram
             {
                 // The hosted service kicks off the first burst; ContinueTrip drives the rest.
                 services.AddHostedService<KickOffPublishing>();
-                services.AddResourceSetupOnStartup();
+                // NOTE: no AddResourceSetupOnStartup() here. Since WolverineFx 6.30.0 (wolverine#4119) a failed broker-endpoint setup
+                // FAILS the resource sweep instead of logging it, and the ASB emulator has no administration API, so the
+                // sweep would kill this host at startup. Marten builds its schema lazily on first use, and the ASB entities
+                // are owned by the emulator config (declared in the AppHost), so there is nothing to set up eagerly.
             });
     }
 }

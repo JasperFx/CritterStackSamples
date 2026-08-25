@@ -33,7 +33,7 @@ public static class TripPublisherProgram
 
                 // Shared SQL Server DB-queue transport (no broker). role: Ancillary — this driver still
                 // needs a Wolverine durability store for the inbox; it isn't the Main of anything.
-                opts.UseSqlServerPersistenceAndTransport(sqlServer, role: MessageStoreRole.Ancillary)
+                opts.UseSqlServerPersistenceAndTransport(sqlServer, transportSchema: "critterwatch_wolverine", role: MessageStoreRole.Ancillary)
                     .AutoProvision();
 
                 // The SQL Server transport has no convention-based routing (unlike RabbitMQ), so route the

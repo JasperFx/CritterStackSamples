@@ -52,14 +52,16 @@ public static class TripServiceProgram
         //     and throws at startup. Ancillary tells Wolverine "this is just my transport, not my node
         //     store" so the Marten IntegrateWithWolverine store stays Main.
         //
-        //   * NO transportSchema argument — we deliberately leave it at the Wolverine DEFAULT
-        //     ("wolverine_queues"). EVERY participant (console + all services) does the same, so they ALL
-        //     resolve "postgresql://critterwatch" to the SAME queue table in the SAME schema. Pass a
-        //     per-service transportSchema here and this service would write to its own private
-        //     "critterwatch" table that the console never reads — the silent schema-isolation failure
-        //     mode plan 04 warns about. (Each service still keeps a DISTINCT Marten event-store schema —
-        //     see DatabaseSchemaName below — only the transport/queue schema must coincide.)
-        opts.UsePostgresqlPersistenceAndTransport(connectionString, role: MessageStoreRole.Ancillary)
+        //   * transportSchema: "critterwatch_wolverine" — the console's transport schema. Since CritterWatch
+        //     1.0 (#1025, see CritterWatch#1126) AddCritterWatch pins the console's Wolverine transport AND durability tables to
+        //     "{schema}_wolverine" (= critterwatch_wolverine for the default "critterwatch" schema), and it
+        //     cannot be overridden from the console side. EVERY monitored service must therefore point its
+        //     DB-queue transport at that same schema, so they ALL resolve "postgresql://critterwatch" to the
+        //     SAME queue table the console drains. Leave this at Wolverine's default ("wolverine_queues") and
+        //     this service writes to its own private "critterwatch" table the console never reads — the silent
+        //     schema-isolation failure mode plan 04 warns about. (Each service still keeps a DISTINCT Marten
+        //     event-store schema — see DatabaseSchemaName below — only the transport/queue schema must coincide.)
+        opts.UsePostgresqlPersistenceAndTransport(connectionString, transportSchema: "critterwatch_wolverine", role: MessageStoreRole.Ancillary)
             .AutoProvision();
 
         // Durable inbox/outbox so in-flight messages survive a restart — the realistic production posture
@@ -78,7 +80,7 @@ public static class TripServiceProgram
             {
                 m.Connection(connectionString);
                 // This service's OWN event-store schema — distinct from every other service's. ONLY the
-                // transport/queue schema is shared (default wolverine_queues); the event data is isolated.
+                // transport/queue schema is shared (critterwatch_wolverine); the event data is isolated.
                 m.DatabaseSchemaName = "trips";
                 m.DisableNpgsqlLogging = true;
 
@@ -113,7 +115,7 @@ public static class TripServiceProgram
         opts.PublishMessage<ContinueTrip>().ToPostgresqlQueue("trip_callbacks");
 
         // This service's own inbound CritterWatch control queue — another Wolverine PostgreSQL queue (same
-        // default transport schema). AddCritterWatchMonitoring's second URI points here so CritterWatch can
+        // shared transport schema). AddCritterWatchMonitoring's second URI points here so CritterWatch can
         // call operator commands back to this service. Kept distinct from the business "trip_commands"
         // queue so operator control traffic and domain traffic don't share a drain.
         opts.ListenToPostgresqlQueue("trip_service_control");

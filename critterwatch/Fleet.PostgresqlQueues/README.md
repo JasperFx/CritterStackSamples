@@ -52,8 +52,10 @@ builder.AddCritterWatch(
 // Stand up Wolverine's DB-backed queues IN THE SAME POSTGRES that backs the event store.
 //  * role: Ancillary  -> the Marten IntegrateWithWolverine store stays Main; the transport store doesn't
 //                        register a competing Main (it would throw at startup otherwise).
-//  * NO transportSchema -> leave it at the Wolverine DEFAULT ("wolverine_queues"), shared by EVERYONE.
-opts.UsePostgresqlPersistenceAndTransport(connectionString, role: MessageStoreRole.Ancillary)
+//  * transportSchema  -> "critterwatch_wolverine", the schema CritterWatch 1.0 pins the console's queue
+//                        tables to. Shared by EVERYONE, so it is the one "critterwatch" queue table.
+opts.UsePostgresqlPersistenceAndTransport(connectionString, transportSchema: "critterwatch_wolverine",
+    role: MessageStoreRole.Ancillary)
     .AutoProvision();
 
 opts.ListenToPostgresqlQueue("trip_service_control");   // this service's own control queue (2nd URI)
@@ -68,10 +70,12 @@ opts.AddCritterWatchMonitoring(
 A Wolverine DB-backed queue is a **table in a specific schema**, not a broker destination. `postgresql://critterwatch`
 resolves to a queue table `critterwatch` **in that node's transport schema**. So for the multi-host fleet
 to share the one control queue, **the console AND every monitored service must use the SAME Wolverine
-transport schema**. We achieve that by letting every participant use the **default** transport schema
-(`wolverine_queues`) — *nobody* passes a per-service `transportSchema`. If you copied the DocSamples
-`transportSchema: "myapp_cw_control"` onto each service, each would write to its own private `critterwatch`
-table and the console would never see their telemetry. The `Tests` battery asserts all five services
+transport schema**. Since CritterWatch 1.0 (#1025; tracked as CritterWatch#1126) the console's side of that is fixed: `AddCritterWatch`
+pins the console's Wolverine transport *and* durability tables to `{schema}_wolverine` — `critterwatch_wolverine`
+for the default `critterwatch` schema — and nothing in `configureWolverine` can override it. So every monitored
+service passes `transportSchema: "critterwatch_wolverine"`. Leave a service on Wolverine's default
+(`wolverine_queues`), or copy the DocSamples' `transportSchema: "myapp_cw_control"` onto it, and it writes to
+its own private `critterwatch` table the console never reads. The `Tests` battery asserts all five services
 register precisely to catch that.
 
 Each service still keeps its **own distinct Marten event-store schema** (`trips`, `repair_shop`,

@@ -10,7 +10,7 @@ just to get it onto the CritterWatch dashboard.
 
 - A small **event-sourced Orders API** (`OrderService`) built on **WolverineFx.Http + Marten**.
 - That service reporting itself to a standalone **CritterWatch console** over **Wolverine's HTTP transport**
-  (`POST /_wolverine/invoke`) — no RabbitMQ, no database queue, just HTTP.
+  (`POST /_wolverine/batch/{queue}`) — no RabbitMQ, no database queue, just HTTP.
 - Its non-Wolverine ASP.NET endpoints surfaced on CritterWatch's HTTP tab via `AddCritterWatchHttp()` (#538).
 - **Aspire** provisioning a single Postgres container (the only infrastructure dependency) and launching
   both processes.
@@ -36,30 +36,27 @@ The monitoring link is **push**: the monitored service is the HTTP *client*, the
 receiver's HTTP endpoint.)
 
 **OrderService (sender)** — `OrderService/Program.cs`:
-- `AddCritterWatchMonitoring(telemetryUri, controlUri)` with `telemetryUri = {console}/_wolverine/invoke`.
-  Because the URI scheme is `http`/`https`, the monitoring routes send **inline** — each registration /
-  heartbeat / telemetry envelope is a POST to the console's invoke route.
+- `AddCritterWatchMonitoring(telemetryUri, controlUri)` with `telemetryUri = {console}/_wolverine/batch/critterwatch`.
+  CritterWatch 1.0 (#958; see CritterWatch#1129) sends every telemetry route `BufferedInMemory`, which on the HTTP transport means
+  **batches** (`binary/wolverine-envelopes`) — and only the `/_wolverine/batch/{queue}` route accepts those;
+  `/_wolverine/invoke` (single envelope) answers 415. The batch route drops the envelopes on the console's
+  local queue named in the path, where CritterWatch's handlers run.
 - The HTTP transport sender needs `IWolverineHttpTransportClient` + a **named** `HttpClient` whose name equals
   the telemetry URI string and whose `BaseAddress` is that URI (the transport does
   `IHttpClientFactory.CreateClient(outboundUri)` and POSTs to `client.BaseAddress`).
 - `MapWolverineHttpTransportEndpoints()` so the console can POST operator commands **back** to this service.
 
-> ⚠️ **The control channel (console → service) does not work on WolverineFx 6.23.1.** Telemetry
-> (service → console) is fine. The send side resolves its `HttpClient` by using the outbound URI as an
-> `IHttpClientFactory` client *name* and then posts to that client's `BaseAddress`; for a name nobody
-> registered, `CreateClient` returns a default client whose `BaseAddress` is `null`, and the send throws
-> `"An invalid request URI was provided. Either the request URI must be an absolute URI or BaseAddress
-> must be set."` The console **cannot** work around it — it only learns a service's control URL at runtime
-> from that service's own registration, so there is no point at which it could register a named client.
->
-> Reported as ProductSupport#34, fixed in wolverine#3681 (GH-3690). When this sample bumps past that
-> release: delete the two manual registration lines in `CritterWatchConsole/Program.cs`
-> (`AddWolverineHttp()` registers them), and un-skip
-> `WebServiceHttpSmokeTests.console_control_channel_sends_without_transport_errors`.
+> ℹ️ **The control channel (console → service) needs WolverineFx ≥ 6.24.0.** On 6.23.1 and earlier the send
+> side resolved its `HttpClient` by using the outbound URI as an `IHttpClientFactory` client *name* and then
+> posted to that client's `BaseAddress` — `null` for a name nobody registered — so every console → service
+> send threw `"An invalid request URI was provided…"`, and the console could not work around it because it
+> only learns a service's control URL at runtime. Reported as ProductSupport#34, fixed in wolverine#3681
+> (GH-3690): the transport now posts to the absolute outbound URI, and `AddWolverineHttp()` registers the
+> client. `WebServiceHttpSmokeTests.console_control_channel_sends_without_transport_errors` pins this.
 
 **CritterWatchConsole (receiver)** — `CritterWatchConsole/Program.cs`:
 - `AddCritterWatch(...)` for the dashboard/store, then `app.MapWolverineHttpTransportEndpoints()` to receive
-  envelopes at `/_wolverine/invoke`, executed inline against the console's CritterWatch handlers.
+  telemetry batches at `/_wolverine/batch/{queue}` (and single envelopes at `/_wolverine/invoke`).
 - Its Wolverine **default serializer** is pinned to `BuildCritterWatchSerializer()`. This is the
   HTTP-transport equivalent of the broker fleets' `.UseCritterWatchSerializer()` on the inbound queue: the
   CritterWatch serializer reports content-type `application/json` but frames its body with a Brotli prefix,

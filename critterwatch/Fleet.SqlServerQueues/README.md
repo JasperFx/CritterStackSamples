@@ -40,8 +40,9 @@ queues** — queue *tables* in the same SQL Server. The convention:
 // ResolveMainStoreOnConflict reconciliation already wired.
 builder.AddCritterWatch(sqlServerConnString, configureWolverine: opts =>
 {
-    // Stand up the SQL Server DB-queue transport on the SAME SQL Server (no schema arg → "dbo").
-    opts.UseSqlServerPersistenceAndTransport(sqlServerConnString).AutoProvision();
+    // Stand up the SQL Server DB-queue transport on the SAME SQL Server. CritterWatch itself pins the queue
+    // tables into "critterwatch_wolverine". Ancillary, NOT Main: see Program.cs / CritterWatch#1130.
+    opts.UseSqlServerPersistenceAndTransport(sqlServerConnString, role: MessageStoreRole.Ancillary).AutoProvision();
 
     opts.ListenToSqlServerQueue("critterwatch")   // THE shared control/telemetry queue (a queue TABLE)
         .ListenOnlyAtLeader()                      // one console node owns it (no split-brain)
@@ -74,11 +75,12 @@ Wolverine transport schema**. So for the console to actually receive a service's
 every monitored service must use the SAME Wolverine transport schema** for that control queue — otherwise
 each writes to its own private `critterwatch` table and the console never sees it.
 
-- **Do:** let console + all services use the **same** transport schema (here: the default `dbo` — we pass
-  **no** `transportSchema`). Each service still keeps its OWN distinct **Polecat event-store** schema
+- **Do:** let console + all services use the **same** transport schema. Since CritterWatch 1.0 (#1025; tracked as CritterWatch#1126) the
+  console's is fixed at `critterwatch_wolverine` (`AddCritterWatch` pins it; `configureWolverine` can't
+  override it), so every service passes `transportSchema: "critterwatch_wolverine"`. Each service still keeps its OWN distinct **Polecat event-store** schema
   (`trips` / `repair_shop` / `incidents`) — only the transport/queue schema must coincide.
-- **Don't:** set a per-service `transportSchema` — it isolates the queue table and silently breaks
-  delivery to the console.
+- **Don't:** leave a service on Wolverine's default transport schema, or give it a private one — either
+  isolates its `critterwatch` queue table and silently breaks delivery to the console.
 
 `Tests/FleetSmokeTests.cs` asserts all services (incl. `IncidentService`) appear in `/services` — which is
 exactly the assertion that catches a per-service-transport-schema mistake (a single-host control-channel

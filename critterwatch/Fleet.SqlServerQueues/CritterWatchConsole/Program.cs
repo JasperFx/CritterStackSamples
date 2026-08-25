@@ -2,6 +2,7 @@ using CritterWatch.Services.Hosting;
 using Fleet.Common;
 using JasperFx.Resources;
 using Wolverine.CritterWatch;
+using Wolverine.Persistence.Durability;
 using Wolverine.SqlServer;
 
 // =============================================================================================
@@ -29,17 +30,20 @@ builder.AddCritterWatch(
     configureWolverine: opts =>
     {
         // Stand up the Wolverine SQL Server database-backed queue transport — the SAME SQL Server that
-        // backs the console's Polecat store. The queue TABLES (transport) live in the default "dbo" schema:
-        // we deliberately pass NO schema/transportSchema so the "critterwatch" control queue lands in the
-        // ONE shared transport schema every monitored service also uses. (Each service keeps its own
-        // distinct Polecat event-store schema; ONLY the transport/queue schema must coincide — this is the
-        // #1 DB-queue failure mode, see this solution's README + plan 04's CRITICAL note.)
+        // backs the console's Polecat store. The queue TABLES (transport) land in "critterwatch_wolverine":
+        // CritterWatch 1.0 (#1025) pins the console's Wolverine transport schema there (its IntegrateWithWolverine
+        // sets TransportSchemaName explicitly, which overrides this call's default at host build), and that is
+        // the ONE shared transport schema every monitored service also passes as transportSchema.
         //
-        // No role: argument here — the SQL Server transport store takes the Main role. CritterWatch's
-        // AddCritterWatch already wired ResolveMainStoreOnConflict (#531): it keeps the transport store as
-        // Main and demotes CritterWatch's own "critterwatch_wolverine" durability store to Ancillary, so
-        // the two SQL-Server Main claims reconcile instead of throwing at startup.
-        opts.UseSqlServerPersistenceAndTransport(consoleConnectionString)
+        // role: Ancillary — deliberately, and this differs from CritterWatch's own docs/tests. Wolverine.Polecat's
+        // IntegrateWithWolverine (>= 6.30) also stamps the transport's MessageStorageSchemaName with the console's
+        // "critterwatch_wolverine", so with the default Main role there are TWO Main stores in that one schema and
+        // AddCritterWatch's ResolveMainStoreOnConflict (which picks "the Main store NOT in critterwatch_wolverine",
+        // #531) resolves to nothing — every request then dies with "Wolverine.Polecat requires a SQL Server-backed
+        // message store. The configured store was NullMessageStore" (CritterWatch#1130). Ancillary sidesteps the
+        // conflict: the console's Polecat store stays Main and the transport is just a transport — the same posture
+        // every monitored service in this fleet takes.
+        opts.UseSqlServerPersistenceAndTransport(consoleConnectionString, role: MessageStoreRole.Ancillary)
             .AutoProvision();
 
         // THE control channel. Every monitored service points the FIRST URI of its

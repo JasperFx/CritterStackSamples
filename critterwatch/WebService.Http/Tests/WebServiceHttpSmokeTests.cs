@@ -65,7 +65,7 @@ public class WebServiceHttpSmokeTests
         using var client = _fixture.CreateCritterWatchClient();
 
         // The OrderService self-registers ASYNCHRONOUSLY — it POSTs its registration/heartbeat over the HTTP
-        // transport to the console's /_wolverine/invoke route after the console is up — so we poll /services
+        // transport to the console's /_wolverine/batch/critterwatch route after the console is up — so we poll /services
         // rather than asserting immediately.
         // Route through the fixture (not the bare HttpClient extension) so a timeout dumps every resource's
         // captured logs into the failure message — essential for diagnosing why OrderService doesn't register.
@@ -91,12 +91,11 @@ public class WebServiceHttpSmokeTests
     /// how the reporter found it.
     /// </para>
     /// <para>
-    /// SKIPPED until this sample bumps past wolverine#3681 (GH-3690). It fails on the pinned WolverineFx
-    /// 6.23.1 — legitimately, because the control channel really is broken there. Un-skip with the bump;
-    /// see the warning in README.md.
+    /// Fails on WolverineFx 6.23.1 and earlier — legitimately, because the control channel really is broken
+    /// there — and passes from 6.24.0 (wolverine#3681 / GH-3690) onward. See README.md.
     /// </para>
     /// </remarks>
-    [Fact(Skip = "Control channel is broken on WolverineFx 6.23.1 — un-skip when this sample bumps past wolverine#3681 (GH-3690).")]
+    [Fact]
     public async Task console_control_channel_sends_without_transport_errors()
     {
         using var client = _fixture.CreateCritterWatchClient();
