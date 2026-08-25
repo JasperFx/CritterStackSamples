@@ -391,6 +391,23 @@ Simple project management application on .NET 8 showing modular monolith structu
 - **MediatR** has announced a move to commercial licensing (April 2025). The sample repos listed here are MIT licensed and remain safe to use; MediatR as a dependency is what will require attention.
 - **NServiceBus** is RPL 1.5 licensed (not permissive). No NServiceBus sample applications are listed here as primary targets; the framework would be replaced entirely in any migration scenario.
 
+  Two consequences worth stating separately, because they bite in different ways:
+
+  1. **Do not fork an NServiceBus sample into this repository.** A copy of RPL-1.5
+     code is a derivative of RPL-1.5 code, and this repository is MIT. That is the
+     reason there is no NServiceBus section above.
+  2. **Do not commit NServiceBus package references or binaries here either**, even
+     as the "before" state of a migration walkthrough. This repository is public and
+     MIT; a project that carries a commercial dependency does not belong in it, and a
+     `dotnet build` inside the tree drops the assemblies into `bin/` where a broad
+     `git add` will happily take them.
+
+  When a walkthrough needs an NServiceBus starting point, write it yourself against
+  NServiceBus' public API — original code has no RPL provenance — and **keep it outside
+  this repository**. Quote it inline in the write-up, and commit only the converted
+  result here. The migration is the artifact worth publishing; the thing being migrated
+  away from is not.
+
 ---
 
 ## Recommended Starting Order
