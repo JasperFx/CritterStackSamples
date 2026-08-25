@@ -1,7 +1,7 @@
 # ShipmentTracking
 
-A Wolverine service converted from NServiceBus. Phase 1 of a migration walkthrough:
-NServiceBus → Wolverine → Polecat → integration tests → Aspire + CritterWatch.
+A Wolverine service converted from NServiceBus. Phases 1–2 of a migration walkthrough:
+NServiceBus → Wolverine → Wolverine.HTTP → Polecat → integration tests → Aspire + CritterWatch.
 
 The NServiceBus starting point is **not** in this repository. NServiceBus is RPL-1.5
 licensed and this repo is MIT, so the "before" state was written from scratch against
@@ -53,7 +53,7 @@ already recorded, so a duplicate is a no-op rather than a regression.
 | `Saga<TData>` + `ContainSagaData` | `Saga` base class; state lives on the saga |
 | `ConfigureHowToFindSaga` mapper | `[SagaIdentity]` on message properties |
 | `IAmStartedByMessages<T>` / `IHandleTimeouts<T>` | `Start(T)` / an ordinary `Handle(T)` — a timeout is just a scheduled message |
-| `RequestTimeout<T>(context, delay)` | `new DeliverySlaExpired(id).DelayedFor(5.Days())` returned as a cascade |
+| `RequestTimeout<T>(context, delay)` | `DeliverySlaExpired : TimeoutMessage(5.Days())` — the delay is on the message type, so `Start` just returns it |
 | `MarkAsComplete()` | `MarkCompleted()` |
 | `Behavior<IIncomingLogicalMessageContext>` | **deleted** — see below |
 | `IMessageSession` outside handlers | `IMessageBus` |
@@ -77,6 +77,73 @@ behavior was assembling by hand, on a span rather than a log scope.
 So the conversion is: delete it, register the `Wolverine` `ActivitySource`, and read the
 trace. **Not every behavior wants an equivalent** — some are scaffolding around a gap
 the new framework does not have.
+
+## Phase 2 — Minimal API to Wolverine.HTTP
+
+The endpoints were minimal API lambdas that injected `IMessageBus` and called it
+explicitly. They are now endpoint methods discovered by `MapWolverineEndpoints()`.
+
+**The explicit bus call is gone the same way `context.Publish` went in phase 1.** A
+command is the second element of a tuple return, so Wolverine sends it through the
+outbox after the response is written — the same cascading shape the message handlers
+already use.
+
+### What a client sees: nothing changed
+
+Every route, verb, status code and response body is identical, including 202 on all
+three command routes and the `Location` header on `POST /shipments` only.
+
+**Wolverine ships `AcceptResponse` for 202**, the sibling of `CreationResponse`, in the
+same file and on the same `IHttpAware` seam. `ShipmentAccepted` derives from it, so the
+status code, the `Location` header and the OpenAPI metadata all come for free:
+
+```csharp
+public record ShipmentAccepted(Guid ShipmentId) : AcceptResponse($"/shipments/{ShipmentId}");
+```
+
+The two routes that return 202 with **no** body are the exception. `AcceptResponse`
+requires a `Url` and always stamps `Location`, and those routes never had one — the
+minimal API returned a bare `Results.Accepted()`. They use `TypedResults.Accepted((string?)null)`
+instead, which is still a concrete type: `Accepted` implements `IEndpointMetadataProvider`
+and Wolverine calls `PopulateMetadata` on any return type that does
+(`HttpChain.EndpointBuilder.tryApplyAsEndpointMetadataProvider`), so 202 still reaches
+the OpenAPI document. This is not the opaque `IResult` case the docs warn about.
+
+> A wrong turn worth recording, because it is easy to repeat: the first cut of this
+> conversion hand-rolled an `AcceptResponse` against `IHttpAware`, having grepped for
+> `class AcceptResponse` and found nothing. It is a `record`. Forty lines reimplementing
+> a type that already shipped. **Absence of a grep hit is not absence of an API** — and
+> in `Wolverine.Http`, response types live together in `IHttpAware.cs`.
+
+### What did change: the OpenAPI document got better
+
+The minimal API returned `Results.Accepted(...)` — the untyped helper, which tells the
+generator nothing. The converted endpoints return `Accepted<T>`, so 202 and the response
+schema are both documented, and `GET /shipments/{id}` gets 200 and 404 from its nullable
+return with no attribute at all. Additive: no client behaviour changes, but a generated
+client would now be correct where it previously was not.
+
+### A saga method returns the cascade, not itself
+
+`Start` sets the saga's state and returns **only** what should happen next:
+
+```csharp
+public DeliverySlaExpired Start(ShipmentBooked booked)
+{
+    Id = booked.ShipmentId;
+    BookedAt = booked.BookedAt;
+    return new DeliverySlaExpired(booked.ShipmentId);
+}
+```
+
+Returning `(this, cascade)` compiles and appears to work, which is what makes it worth
+naming: that tuple shape belongs to an **immutable** saga, or to a `static Start` that
+*creates* the instance. On a mutable saga it reads as though the state were being
+returned when it is really being mutated in place.
+
+The delay is not here either. `DeliverySlaExpired` subclasses `TimeoutMessage(5.Days())`,
+so every instance is scheduled five days out wherever it is returned, and the saga method
+stays a pure function naming an outcome rather than scheduling one.
 
 ## Still carried over
 

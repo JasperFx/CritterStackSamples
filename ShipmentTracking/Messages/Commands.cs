@@ -1,3 +1,5 @@
+using JasperFx.Core;
+using Wolverine;
 using Wolverine.Persistence.Sagas;
 
 namespace ShipmentTracking.Messages;
@@ -35,8 +37,12 @@ public record RecordCarrierScan(
 public record EscalateLateShipment(Guid ShipmentId, DateTimeOffset BookedAt);
 
 /// <summary>
-/// The saga's SLA timer. In NServiceBus this was an IHandleTimeouts message
-/// requested through RequestTimeout; in Wolverine a timeout is just a scheduled
-/// message, so it is an ordinary contract carrying the saga identity.
+/// The saga's SLA timer. NServiceBus expressed this as IHandleTimeouts plus a
+/// RequestTimeout call that carried the delay at the call site. Wolverine puts
+/// the delay on the message type: subclassing TimeoutMessage means every
+/// DeliverySlaExpired is scheduled five days out wherever it is returned, so the
+/// saga method stays a pure function that names an outcome rather than
+/// scheduling one.
 /// </summary>
-public record DeliverySlaExpired([property: SagaIdentity] Guid ShipmentId);
+public record DeliverySlaExpired([property: SagaIdentity] Guid ShipmentId)
+    : TimeoutMessage(5.Days());

@@ -7,6 +7,7 @@ using ShipmentTracking.Handlers;
 using ShipmentTracking.Messages;
 using Wolverine;
 using Wolverine.ErrorHandling;
+using Wolverine.Http;
 using Wolverine.RabbitMQ;
 using Wolverine.SqlServer;
 
@@ -120,7 +121,7 @@ builder.UseWolverine(opts =>
 
 var app = builder.Build();
 
-app.MapShipmentEndpoints();
+app.MapWolverineEndpoints();
 
 // Replaces EnableInstallers() — creates the envelope storage on startup.
 return await app.RunJasperFxCommands(args);

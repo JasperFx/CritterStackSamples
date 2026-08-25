@@ -1,6 +1,7 @@
+using Microsoft.AspNetCore.Http.HttpResults;
 using ShipmentTracking.Data;
 using ShipmentTracking.Messages;
-using Wolverine;
+using Wolverine.Http;
 
 namespace ShipmentTracking.Api;
 
@@ -9,51 +10,60 @@ public record BookShipmentRequest(
 
 public record CancelShipmentRequest(string Reason);
 
+/// <summary>
+/// 202 + Location + body, via Wolverine's own AcceptResponse — the 202 sibling of
+/// CreationResponse, in the same file, on the same IHttpAware seam.
+/// </summary>
+public record ShipmentAccepted(Guid ShipmentId) : AcceptResponse($"/shipments/{ShipmentId}");
+
 public static class ShipmentEndpoints
 {
-    public static void MapShipmentEndpoints(this WebApplication app)
+    /// <summary>
+    /// The explicit IMessageBus call is gone. The command is the second tuple
+    /// element, so Wolverine sends it through the outbox after the response is
+    /// written — the same cascading shape the message handlers use.
+    ///
+    /// 202 through Wolverine's AcceptResponse, which sets the status and the
+    /// Location header and contributes the OpenAPI metadata.
+    /// </summary>
+    [WolverinePost("/shipments")]
+    public static (ShipmentAccepted, BookShipment) Book(BookShipmentRequest request)
     {
-        // IMessageBus replaces NServiceBus' IMessageSession as the way to reach
-        // the bus from outside a handler.
-        app.MapPost("/shipments", async (BookShipmentRequest request, IMessageBus bus) =>
-        {
-            var id = Guid.NewGuid();
+        var id = Guid.NewGuid();
 
-            await bus.SendAsync(new BookShipment(
-                id, request.Origin, request.Destination, request.Carrier, request.WeightKg));
-
-            return Results.Accepted($"/shipments/{id}", new { shipmentId = id });
-        });
-
-        app.MapPost("/shipments/{id:guid}/cancel", async (
-            Guid id, CancelShipmentRequest request, IMessageBus bus) =>
-        {
-            await bus.SendAsync(new CancelShipment(id, request.Reason));
-            return Results.Accepted();
-        });
-
-        app.MapGet("/shipments/{id:guid}", async (Guid id, ShipmentRepository repository) =>
-        {
-            var shipment = await repository.LoadAsync(id);
-            return shipment is null ? Results.NotFound() : Results.Ok(shipment);
-        });
-
-        app.MapGet("/shipments", async (ShipmentRepository repository) =>
-            Results.Ok(await repository.ListAsync()));
-
-        // The carrier webhook. This is the firehose.
-        app.MapPost("/webhooks/carrier-scan", async (
-            RecordCarrierScan scan, HttpRequest http, IMessageBus bus) =>
-        {
-            // SendOptions -> DeliveryOptions. No GroupId is set here: the global
-            // partitioned topology infers grouping from ShipmentId, so the shard
-            // is chosen for us and every scan for one shipment stays ordered.
-            await bus.SendAsync(scan, new DeliveryOptions
-            {
-                Headers = { ["Carrier.ScanId"] = http.Headers["X-Carrier-Scan-Id"].ToString() }
-            });
-
-            return Results.Accepted();
-        });
+        return (
+            new ShipmentAccepted(id),
+            new BookShipment(id, request.Origin, request.Destination, request.Carrier, request.WeightKg));
     }
+
+    /// <summary>
+    /// 202 with no body. AcceptResponse requires a Url and always stamps
+    /// Location; this route never had one, so the typed ASP.NET Core result is
+    /// the closer match. Accepted implements IEndpointMetadataProvider, which
+    /// Wolverine honours, so 202 still reaches OpenAPI.
+    /// </summary>
+    [WolverinePost("/shipments/{id}/cancel")]
+    public static (Accepted, CancelShipment) Cancel(Guid id, CancelShipmentRequest request)
+        => (TypedResults.Accepted((string?)null), new CancelShipment(id, request.Reason));
+
+    /// <summary>
+    /// A nullable return is Wolverine's 404: no explicit Results.NotFound(), and
+    /// OpenAPI gets both 200 and 404 without an attribute.
+    /// </summary>
+    [WolverineGet("/shipments/{id}")]
+    public static Task<Shipment?> Get(Guid id, ShipmentRepository repository)
+        => repository.LoadAsync(id);
+
+    [WolverineGet("/shipments")]
+    public static Task<IReadOnlyList<Shipment>> GetAll(ShipmentRepository repository)
+        => repository.ListAsync();
+
+    /// <summary>
+    /// The carrier webhook. The scan arrives as the request body and is cascaded
+    /// straight back out; the global partitioned topology picks the shard from
+    /// ShipmentId.
+    /// </summary>
+    [WolverinePost("/webhooks/carrier-scan")]
+    public static (Accepted, RecordCarrierScan) CarrierScan(RecordCarrierScan scan)
+        => (TypedResults.Accepted((string?)null), scan);
 }

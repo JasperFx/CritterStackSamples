@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="WolverineFx" Version="6.30.0" />
+    <PackageReference Include="WolverineFx.Http" Version="6.30.0" />
     <PackageReference Include="WolverineFx.RabbitMQ" Version="6.30.0" />
     <PackageReference Include="WolverineFx.SqlServer" Version="6.30.0" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.3" />

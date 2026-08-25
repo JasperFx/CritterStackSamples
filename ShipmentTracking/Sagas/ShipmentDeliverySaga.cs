@@ -23,16 +23,20 @@ public class ShipmentDeliverySaga : Saga
     /// Replaces IAmStartedByMessages&lt;ShipmentBooked&gt;. Wolverine starts a saga
     /// on a method named Start / Starts.
     ///
-    /// The NServiceBus version called RequestTimeout&lt;DeliverySlaExpired&gt;. A
-    /// Wolverine timeout is just a scheduled message, so the SLA timer is
-    /// returned as a cascading message with a delay.
+    /// Set the state on the saga and return only what should happen next. Do
+    /// NOT return `this` alongside it — that shape is for an immutable saga
+    /// that returns a new instance, and while it compiles for a mutable one it
+    /// is not how the model is meant to work.
+    ///
+    /// The delay lives on DeliverySlaExpired, which subclasses TimeoutMessage,
+    /// so there is no schedule call here at all.
     /// </summary>
-    public (ShipmentDeliverySaga, DeliveryMessage<DeliverySlaExpired>) Start(ShipmentBooked booked)
+    public DeliverySlaExpired Start(ShipmentBooked booked)
     {
         Id = booked.ShipmentId;
         BookedAt = booked.BookedAt;
 
-        return (this, new DeliverySlaExpired(booked.ShipmentId).DelayedFor(TimeSpan.FromDays(5)));
+        return new DeliverySlaExpired(booked.ShipmentId);
     }
 
     public void Handle(LabelGenerated _) => LabelGenerated = true;
