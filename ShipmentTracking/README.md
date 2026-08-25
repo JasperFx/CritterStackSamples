@@ -1,6 +1,6 @@
 # ShipmentTracking
 
-A Wolverine service converted from NServiceBus. Phases 1–4 of a migration walkthrough:
+A Wolverine service converted from NServiceBus. All five phases of a migration walkthrough:
 NServiceBus → Wolverine → Wolverine.HTTP → Polecat → integration tests → Aspire + CritterWatch.
 
 The NServiceBus starting point is **not** in this repository. NServiceBus is RPL-1.5
@@ -388,11 +388,178 @@ dotnet run --project ShipmentTracking -- codegen test    # compile every chain, 
 The first one prints the `[All]` endpoint's body — `documentSession.Query<Shipment>()`
 piped through `ToListAsync`, bound to the *outboxed* Polecat session.
 
+## Phase 5 — Aspire and CritterWatch
+
+Two new projects, and the `docker-compose.yml` demoted from the primary way to run this
+to the fallback for people who would rather not run Aspire.
+
+```
+ShipmentTracking/
+├── AppHost/            .NET Aspire — provisions SQL Server 2025 + RabbitMQ, orders start-up
+├── CritterWatchHost/   the monitoring console (its own database, deliberately)
+├── Tests/              29 integration tests
+└── …                   the service itself
+```
+
+```bash
+dotnet run --project ShipmentTracking/AppHost
+```
+
+That is the whole setup step now. Aspire pulls both containers, creates both databases,
+generates the credentials, injects the connection strings, starts the console, waits for
+it, then starts the service.
+
+### The console does not share the service's database
+
+`AppHost` puts two databases on one SQL Server:
+
+```csharp
+var shipmentsDb  = sql.AddDatabase("shipments",     "ShipmentTracking");
+var critterStore = sql.AddDatabase("critterstore",  "CritterWatch");
+```
+
+That separation is the point, not tidiness. **A monitoring console that dies alongside
+the thing it monitors is not a monitoring console** — and CritterWatch's metrics table is
+the fastest-growing table in either system, which is not something to put next to your
+shipments.
+
+`critterstore` is also a worked example of an Aspire rule that bites: **resource names are
+unique case-insensitively across resource types.** The console *project* is called
+`critterwatch`, so its database cannot be. The second `AddDatabase` argument keeps the real
+database named `CritterWatch` so the non-Aspire fallback connection string still points
+somewhere sensible.
+
+### Three things that are not optional
+
+**`.WithImageTag("2025-latest")` on SQL Server.** Aspire's default tag is not 2025, and
+Polecat requires v17+ for the native `json` column type. On an older image it fails at
+schema creation with a message that never mentions the version.
+
+**`.WithHttpEndpoint(env: "ASPNETCORE_HTTP_PORTS")` on both projects.** Neither ships a
+`launchSettings.json`, so Aspire has no launch profile to read an endpoint from. Without
+this the console never starts at all and the service binds port 5000 outside Aspire's
+knowledge — the first run of this AppHost did exactly that, and the dashboard showed a
+service with no endpoint next to a console that had never launched.
+
+**`.WaitFor(...)` on every reference.** Wolverine's `AutoProvision()` declares exchanges and
+queues, and Polecat creates its tables, the moment the host boots. `WaitFor` gates start-up
+on the container's health check; without it, provisioning races the container and fails
+intermittently. Monitored services additionally `.WaitFor(critterwatch)` so the shared
+`critterwatch` queue exists before the first registration message is published.
+
+### The console needs its schema, and nothing was going to create it
+
+The console starts, listens, serves the SPA — and then fails **every** inbound telemetry
+message:
+
+```
+Microsoft.Data.SqlClient.SqlException: Invalid object name 'critterwatch.pc_streams'.
+```
+
+Polecat creates **document** tables on demand, but the event tables (`pc_streams`,
+`pc_events`) come from the resource model, and under Aspire the console is simply started —
+it never gets a CLI invocation to provision anything. One line fixes it:
+
+```csharp
+builder.Services.AddResourceSetupOnStartup();
+```
+
+The failure is nasty because the console looks healthy from the outside. HTTP 200, SPA
+served, dashboard loads, and not one message ever lands.
+
+### The DLQ argument that has to match on both sides
+
+Neither `Program.cs` calls `.DisableDeadLetterQueueing()`, and that is a decision rather
+than an omission.
+
+The console and the service share one broker, and **both** declare the well-known
+`critterwatch` queue. RabbitMQ rejects an inequivalent redeclare of an existing queue with
+`PRECONDITION_FAILED` (406), so the queue's dead-letter arguments must be *identical* on
+every side. Disabling DLQ on the console while the service leaves it at the Wolverine
+default means whichever process starts second dies at startup. Leaving both at the default
+is the simplest way to keep them the same.
+
+### Monitoring is off unless something is listening
+
+```csharp
+if (builder.Configuration.GetValue("CritterWatch:Enabled", false))
+{
+    opts.AddCritterWatchMonitoring(
+        critterWatchUri:  new Uri("rabbitmq://queue/critterwatch"),
+        systemControlUri: new Uri("rabbitmq://queue/shipmenttracking_control"));
+}
+```
+
+Default `false` in `appsettings.json`; the AppHost sets `CritterWatch__Enabled=true`, because
+Aspire is the environment where a console exists. A plain `dotnet run` under
+`docker-compose` publishes no telemetry to a queue nobody reads.
+
+`critterWatchUri` is shared by every monitored service — the console listens there.
+`systemControlUri` is **unique per service**: it is how the console sends commands *back*,
+to pause a listener, drain a queue or replay a dead letter.
+
+### And it is off in the tests
+
+```csharp
+services.DisableCritterWatch();
+```
+
+`AddCritterWatchMonitoring` also enables message-causation and event-append tracking, which
+do per-envelope work in the hot path, and no test consumes the telemetry. `DisableCritterWatch()`
+is order-independent — it registers nothing if called first, and removes exactly what was
+registered if called after.
+
+> Do **not** do this by branching on `IHostEnvironment`. It fails in both directions: Alba
+> runs as `Development` by default so the branch would not fire where it is needed, and a
+> developer running this service against a real local console **is** a normal `Development`
+> activity, so disabling there would break the setup they most want working.
+
+### Version coupling — resolve it, do not copy it
+
+CritterWatch pins the Wolverine line it was compiled against. The published guidance quotes
+a snapshot; **the snapshot was wrong**, and checking took one command:
+
+```bash
+dotnet list package --include-transitive | grep -i wolverine
+```
+
+`CritterWatch.SqlServer` 1.0.1 actually resolves WolverineFx **6.29.1**, JasperFx 2.52.1 and
+Polecat 5.19.0 — not the 6.30.0 / 2.55.0 / 5.19.2 the docs quoted. The console is therefore
+pinned to 6.29.1 and stays internally consistent; ShipmentTracking stays on 6.30.0. They are
+separate processes, so what has to line up is *within* each host, and the wire format between
+them is version-tolerant brotli JSON.
+
+### Verified, not assumed
+
+The fleet was run and the console's own database inspected:
+
+```
+service           | type           | version
+ShipmentTracking  | ServiceSummary | 39
+
+total_events   39
+metric_samples  5
+```
+
+Thirty-nine events on a `ServiceSummary` stream keyed by service name — capabilities,
+endpoint health, broker health, leadership, node lifecycle, message causation — plus real
+metrics samples, after booking a shipment and posting a carrier scan through the
+Aspire-assigned ports.
+
 ## Running it
 
-`docker-compose.yml` in this directory brings up SQL Server 2025 and RabbitMQ. Polecat needs
-SQL Server **2025** (v17+) for the native `json` column type; earlier images fail at schema
-creation.
+**Preferred — Aspire.** One command; no manual database creation, no connection strings:
+
+```bash
+dotnet run --project ShipmentTracking/AppHost
+```
+
+The containers are declared `ContainerLifetime.Persistent`, so they survive an AppHost
+restart and your data with them. `docker rm -f` them when you want a clean slate.
+
+**Fallback — docker-compose.** `docker-compose.yml` in this directory brings up SQL Server
+2025 and RabbitMQ. Polecat needs SQL Server **2025** (v17+) for the native `json` column
+type; earlier images fail at schema creation.
 
 ```bash
 docker compose up -d

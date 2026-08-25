@@ -11,10 +11,14 @@ using Wolverine.ErrorHandling;
 using Wolverine.Http;
 using Wolverine.Persistence;
 using Wolverine.Polecat;
+using Wolverine.CritterWatch;
 using Wolverine.RabbitMQ;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Under Aspire these come from the AppHost as ConnectionStrings__shipments and
+// ConnectionStrings__rabbitmq. Configuration keys are case-insensitive, so the same
+// two lines read the appsettings.json values when running under plain docker-compose.
 var shipmentsConnection = builder.Configuration.GetConnectionString("Shipments")!;
 var rabbitConnection = builder.Configuration.GetConnectionString("RabbitMq")!;
 
@@ -60,6 +64,30 @@ builder.UseWolverine(opts =>
     // did, before a single line of Polecat code was reached.
     opts.UseRabbitMq(factory => factory.Uri = new Uri(rabbitConnection))
         .AutoProvision();
+
+    // =======================================================================
+    // CritterWatch monitoring.
+    //
+    // Off unless CritterWatch:Enabled is true, so a plain `dotnet run` does not
+    // publish telemetry to a queue nobody is listening on. The Aspire AppHost sets
+    // the environment variable; that is the environment where a console exists.
+    //
+    // Note what is NOT here: no .DisableDeadLetterQueueing(). The console and this
+    // service share a broker and both declare the well-known `critterwatch` queue,
+    // and RabbitMQ rejects an inequivalent redeclare with PRECONDITION_FAILED. Both
+    // sides leave DLQ at the Wolverine default, which is the simplest way to keep
+    // them identical.
+    // =======================================================================
+    if (builder.Configuration.GetValue("CritterWatch:Enabled", false))
+    {
+        opts.AddCritterWatchMonitoring(
+            // Shared across every monitored service. The console listens here.
+            critterWatchUri: new Uri("rabbitmq://queue/critterwatch"),
+
+            // Unique per service — this is how the console sends control commands
+            // BACK to us: pause a listener, replay a dead letter, drain a queue.
+            systemControlUri: new Uri("rabbitmq://queue/shipmenttracking_control"));
+    }
 
     // -----------------------------------------------------------------------
     // Routing. Commands are SENT and need a destination; events are published.

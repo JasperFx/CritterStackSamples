@@ -24,6 +24,10 @@
          Microsoft.Data.SqlClient stays explicit because Program.cs names SqlException. -->
     <PackageReference Include="WolverineFx.Polecat" Version="6.30.0" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.0" />
+
+    <!-- The monitored side. MIT-licensed and shippable in production regardless of which
+         console tier runs on the other end. -->
+    <PackageReference Include="Wolverine.CritterWatch" Version="1.0.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -32,6 +36,12 @@
     <Compile Remove="Tests/**" />
     <Content Remove="Tests/**" />
     <None Remove="Tests/**" />
+    <Compile Remove="AppHost/**" />
+    <Content Remove="AppHost/**" />
+    <None Remove="AppHost/**" />
+    <Compile Remove="CritterWatchHost/**" />
+    <Content Remove="CritterWatchHost/**" />
+    <None Remove="CritterWatchHost/**" />
   </ItemGroup>
 
 </Project>

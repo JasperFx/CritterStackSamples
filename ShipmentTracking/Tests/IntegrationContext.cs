@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Polecat;
 using ShipmentTracking.Handlers;
 using Wolverine;
+using Wolverine.CritterWatch;
 using Wolverine.Polecat;
 using Wolverine.RabbitMQ;
 using Wolverine.Tracking;
@@ -49,6 +50,22 @@ public class AppFixture : IAsyncLifetime
             {
                 // One node, no leader election, no agent assignment churn.
                 services.RunWolverineInSoloMode();
+
+                // Belt and braces. CritterWatch:Enabled defaults to false, so nothing
+                // is registered in the first place — but this is the documented,
+                // order-independent off switch, and it is what keeps the suite honest
+                // if someone ever flips the default or an environment variable leaks
+                // in. Running the monitoring pipeline under Alba is pure overhead:
+                // nothing consumes the telemetry, and AddCritterWatchMonitoring also
+                // turns on message-causation and event-append tracking, which do
+                // per-envelope work in the hot path.
+                //
+                // Do NOT try to do this by branching on IHostEnvironment. Alba runs as
+                // Development by default, so the branch would not fire here — and a
+                // developer running this service against a real local console IS a
+                // normal Development activity, so disabling there would break the setup
+                // they most want working.
+                services.DisableCritterWatch();
 
                 // Stands in for the downstream operations service. EscalateLateShipment
                 // is routed to shipment-operations and nothing in THIS application
