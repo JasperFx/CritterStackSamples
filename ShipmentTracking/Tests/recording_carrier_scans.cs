@@ -60,7 +60,7 @@ public class recording_carrier_scans(AppFixture fixture) : IntegrationContext(fi
 
         // ...and no event was published at all for a scan that changed nothing
         tracked.AllRecordsInOrder()
-            .ShouldNotContain(r => r.Envelope.Message is ShipmentLocationUpdated);
+            .ShouldNotContain(r => r.Message is ShipmentLocationUpdated);
     }
 
     [Fact]
@@ -129,10 +129,12 @@ public class recording_carrier_scans(AppFixture fixture) : IntegrationContext(fi
     private static void ShouldHavePublishedLocationUpdate(ITrackedSession tracked, string location)
     {
         var record = tracked.AllRecordsInOrder()
-            .SingleOrDefault(r => r.Envelope.Message is ShipmentLocationUpdated);
+            .SingleOrDefault(r => r.Message is ShipmentLocationUpdated);
 
         record.ShouldNotBeNull("The handler did not publish a ShipmentLocationUpdated at all");
         record.MessageEventType.ShouldBe(MessageEventType.NoRoutes);
-        ((ShipmentLocationUpdated)record.Envelope.Message!).Location.ShouldBe(location);
+        // EnvelopeRecord.Message is the null-safe shortcut for Envelope?.Message —
+        // reaching through .Envelope directly is a CS8602 waiting to happen.
+        ((ShipmentLocationUpdated)record.Message!).Location.ShouldBe(location);
     }
 }
