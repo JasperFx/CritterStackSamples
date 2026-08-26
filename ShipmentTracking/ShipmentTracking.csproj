@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WolverineFx" Version="6.30.0" />
+    <PackageReference Include="WolverineFx.Http" Version="6.30.0" />
+    <PackageReference Include="WolverineFx.RabbitMQ" Version="6.30.0" />
+
+    <!-- Wolverine 6 removed the Roslyn runtime compiler from core WolverineFx
+         (GH-2876). Without this the host throws at startup. It is the right choice
+         for a sample and for local development; production deployments generally
+         pre-generate with the `codegen write` CLI command and set
+         opts.CodeGeneration.TypeLoadMode = TypeLoadMode.Static instead. -->
+    <PackageReference Include="WolverineFx.RuntimeCompilation" Version="6.30.0" />
+
+    <!-- Brings Polecat and WolverineFx.SqlServer with it. WolverineFx.SqlServer is no
+         longer referenced directly: Polecat's IntegrateWithWolverine() stands up the
+         SQL Server envelope storage itself, so PersistMessagesWithSqlServer() is gone.
+         Microsoft.Data.SqlClient stays explicit because Program.cs names SqlException. -->
+    <PackageReference Include="WolverineFx.Polecat" Version="6.30.0" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.0" />
+
+    <!-- The monitored side. MIT-licensed and shippable in production regardless of which
+         console tier runs on the other end. -->
+    <PackageReference Include="Wolverine.CritterWatch" Version="1.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The Tests project lives under this directory; keep it out of the web project's
+         default globs. Matches BookingMonolith and the other samples. -->
+    <Compile Remove="Tests/**" />
+    <Content Remove="Tests/**" />
+    <None Remove="Tests/**" />
+    <Compile Remove="AppHost/**" />
+    <Content Remove="AppHost/**" />
+    <None Remove="AppHost/**" />
+    <Compile Remove="CritterWatchHost/**" />
+    <Content Remove="CritterWatchHost/**" />
+    <None Remove="CritterWatchHost/**" />
+  </ItemGroup>
+
+</Project>

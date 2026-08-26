@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The Polecat / SQL Server flavor of the console. CritterWatch ships one package
+         per store: CritterWatch (Marten/PostgreSQL), CritterWatch.SqlServer
+         (Polecat/SQL Server), CritterWatch.Sqlite (Fisher/SQLite). ShipmentTracking is
+         on Polecat, so this is the matching one — but note the console keeps its OWN
+         store; it does not share the monitored service's database. -->
+    <PackageReference Include="CritterWatch.SqlServer" Version="1.0.1" />
+    <PackageReference Include="WolverineFx.RabbitMQ" Version="6.29.1" />
+    <PackageReference Include="WolverineFx.RuntimeCompilation" Version="6.29.1" />
+  </ItemGroup>
+
+</Project>

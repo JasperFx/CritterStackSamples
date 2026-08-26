@@ -404,3 +404,9 @@ FodyWeavers.xsd
 
 # CritterWatch samples: machine-specific local-feed config (see critterwatch/README.md)
 critterwatch/nuget.config
+
+# Wolverine pre-generated code (regenerate with `dotnet run -- codegen write`)
+Internal/Generated/
+
+# Aspire CLI bundle settings file (only generated when AspireUseCliBundle=true)
+aspire.config.json
