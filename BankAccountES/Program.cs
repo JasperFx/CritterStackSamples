@@ -1,3 +1,4 @@
+using JasperFx;
 using BankAccountES;
 using JasperFx.Events.Projections;
 using Marten;
@@ -29,6 +30,13 @@ builder.Services.AddMarten(opts =>
 
     // Transaction history projection — builds read model from deposit/withdrawal events
     opts.Projections.Add<AccountTransactionsProjection>(ProjectionLifecycle.Inline);
+
+    // Register the event types by name. Projection registration alone does not do this,
+    // and the name is what `projection-run` resolves a stored event through.
+    opts.Events.AddEventTypes([
+        typeof(AccountOpened), typeof(FundsDeposited), typeof(FundsWithdrawn),
+        typeof(ClientEnrolled), typeof(ClientUpdated)
+    ]);
 })
 .IntegrateWithWolverine()
 .UseLightweightSessions();
@@ -54,4 +62,4 @@ app.MapWolverineEndpoints(opts =>
     opts.UseFluentValidationProblemDetailMiddleware();
 });
 
-await app.RunAsync();
+return await app.RunJasperFxCommands(args);
