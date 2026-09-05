@@ -21,6 +21,7 @@ docker compose down
 
 | Sample | Original Project | Description | Patterns |
 |--------|-----------------|-------------|----------|
+| [CritterCrush](CritterCrush/) | [Powerworks/K9DatingApp](https://github.com/Powerworks/K9DatingApp) | Dog-dating app rebuilt spec-first from a declared Event Model | Curated event-model file, Bobcat specs bound by identity, aggregate handler workflow, event-forwarded automation, async multi-stream projection |
 | [CqrsMinimalApi](CqrsMinimalApi/) | [matjazbravc/CQRS.MinimalAPI.Demo](https://github.com/matjazbravc/CQRS.MinimalAPI.Demo) | Student CRUD — simplest MediatR → Wolverine port | Wolverine.HTTP, Marten documents, `[Entity]`, Alba tests |
 | [CleanArchitectureTodos](CleanArchitectureTodos/) | [jasontaylordev/CleanArchitecture](https://github.com/jasontaylordev/CleanArchitecture) | Todo lists — Clean Architecture unraveling (67 files → 11) | FluentValidation middleware, `ValidateAsync`, one-file-per-request layout |
 | [OutboxDemo](OutboxDemo/) | [MassTransit/Sample-Outbox](https://github.com/MassTransit/Sample-Outbox) | Registration workflow with transactional outbox and Saga | Marten outbox, Wolverine Saga, cascading messages, `Results.NoContent()` |
