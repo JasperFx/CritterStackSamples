@@ -1,51 +1,52 @@
-using Wolverine;
+using JasperFx;
+using Microsoft.AspNetCore.Mvc;
 using Wolverine.Http;
 using Wolverine.Persistence.EventSourcing;
 
 namespace CritterCrush.Discovery;
 
-/// <summary>The command, addressed to the pair's stream via its SwipePairId member.</summary>
-public record SwipeOnDog(Guid SwipePairId, Guid SwiperDogId, Guid TargetDogId, bool Liked);
-
-public record SwipeRequest(Guid SwiperDogId, Guid TargetDogId, bool Liked);
+public record SwipeRequest(Guid SwiperDogId, Guid TargetDogId, bool Liked)
+{
+    /// <summary>
+    /// The pair's deterministic stream identity, computed once, here — [Identity] is what lets
+    /// [WriteModel] load the right stream straight off the request body, so the endpoint needs
+    /// no translation hop and no injected session.
+    /// </summary>
+    [Identity]
+    public Guid SwipePairId => SwipePair.IdFor(SwiperDogId, TargetDogId);
+}
 
 public record SwipeReceipt(Guid SwipePairId);
 
 public static class SwipeOnDogEndpoint
 {
+    /// <summary>Shape validation belongs on the railway, not in the decision.</summary>
+    public static ProblemDetails Validate(SwipeRequest request)
+        => request.SwiperDogId == request.TargetDogId
+            ? new ProblemDetails { Detail = "A dog cannot swipe on itself", Status = 400 }
+            : WolverineContinue.NoProblems;
+
     /// <summary>
-    /// Pure translation at the edge: compute the pair's deterministic stream id once, here, and
-    /// cascade the command through the outbox.
+    /// The endpoint IS the handler: decides only "is this swipe recordable" — the mutual-match
+    /// consequence is the DetectMutualMatch automation, triggered by the DogLiked event this
+    /// appends. The nullable [WriteModel] parameter is the maybe-new-stream shape: the first
+    /// swipe of a pair starts the stream.
     /// </summary>
     [WolverinePost("/api/discovery/swipes")]
-    public static (SwipeReceipt, SwipeOnDog) Post(SwipeRequest request)
+    public static (SwipeReceipt, EventsToAppend) Post(SwipeRequest request, [WriteModel] SwipePair? pair)
     {
-        var pairId = SwipePair.IdFor(request.SwiperDogId, request.TargetDogId);
-        return (new SwipeReceipt(pairId),
-            new SwipeOnDog(pairId, request.SwiperDogId, request.TargetDogId, request.Liked));
-    }
-}
+        var receipt = new SwipeReceipt(request.SwipePairId);
 
-public static class SwipeOnDogHandler
-{
-    /// <summary>
-    /// A state-change slice decides only "is this swipe recordable" — it never decides what a
-    /// like *leads to*. The mutual-match consequence is the DetectMutualMatch automation,
-    /// triggered by the DogLiked event this emits. The nullable [WriteModel] parameter is the
-    /// maybe-new-stream shape: the first swipe of a pair starts the stream.
-    /// </summary>
-    public static EventsToAppend Handle(SwipeOnDog command, [WriteModel] SwipePair? pair)
-    {
-        if (pair is not null && pair.LikedBy.Contains(command.SwiperDogId))
+        if (pair is not null && pair.LikedBy.Contains(request.SwiperDogId))
         {
             // Recorded already; swiping twice is a no-op, not an error.
-            return [];
+            return (receipt, []);
         }
 
-        object swipe = command.Liked
-            ? new DogLiked(command.SwipePairId, command.SwiperDogId, command.TargetDogId)
-            : new DogPassed(command.SwipePairId, command.SwiperDogId, command.TargetDogId);
+        object swipe = request.Liked
+            ? new DogLiked(request.SwipePairId, request.SwiperDogId, request.TargetDogId)
+            : new DogPassed(request.SwipePairId, request.SwiperDogId, request.TargetDogId);
 
-        return [swipe];
+        return (receipt, [swipe]);
     }
 }

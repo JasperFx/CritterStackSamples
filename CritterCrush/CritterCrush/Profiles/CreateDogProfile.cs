@@ -3,37 +3,24 @@ using Wolverine.Marten;
 
 namespace CritterCrush.Profiles;
 
-/// <summary>The command. Carries its own new stream id so callers (and specs) control identity.</summary>
-public record CreateDogProfile(Guid DogProfileId, string Name, string Breed, int AgeInMonths, Guid OwnerId);
-
-/// <summary>What the HTTP surface accepts — the id is minted at the edge, not by the client.</summary>
 public record CreateDogProfileRequest(string Name, string Breed, int AgeInMonths, Guid OwnerId);
 
 public static class CreateDogProfileEndpoint
 {
     /// <summary>
-    /// A state-change slice's HTTP face is a pure translation: mint the id, return the receipt,
-    /// and cascade the command. The cascade rides the transactional outbox — there is no
-    /// bus.InvokeAsync ceremony and no work done here that a crash could tear in half.
+    /// The endpoint IS the handler. One transaction: the stream starts, anything cascaded rides
+    /// the same outbox commit, and the 201 is true — the profile exists when the response
+    /// returns. A separate message handler would buy nothing here but a queue hop and a second
+    /// transaction; split one out only when the command genuinely needs bus visibility (other
+    /// callers, retry policies, scheduling) — never for testability.
     /// </summary>
     [WolverinePost("/api/profiles")]
-    public static (CreationResponse, CreateDogProfile) Post(CreateDogProfileRequest request)
+    public static (CreationResponse, IStartStream) Post(CreateDogProfileRequest request)
     {
-        var command = new CreateDogProfile(Guid.NewGuid(), request.Name, request.Breed,
-            request.AgeInMonths, request.OwnerId);
+        var id = Guid.NewGuid();
+        var start = MartenOps.StartStream<DogProfile>(id,
+            new DogProfileCreated(id, request.Name, request.Breed, request.AgeInMonths, request.OwnerId));
 
-        return (new CreationResponse($"/api/profiles/{command.DogProfileId}"), command);
+        return (new CreationResponse($"/api/profiles/{id}"), start);
     }
-}
-
-public static class CreateDogProfileHandler
-{
-    /// <summary>
-    /// The decision is a pure function returning a side effect description — Wolverine starts the
-    /// stream and commits, atomically with the inbox.
-    /// </summary>
-    public static IStartStream Handle(CreateDogProfile command)
-        => MartenOps.StartStream<DogProfile>(command.DogProfileId,
-            new DogProfileCreated(command.DogProfileId, command.Name, command.Breed,
-                command.AgeInMonths, command.OwnerId));
 }
