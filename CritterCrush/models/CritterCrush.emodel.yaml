@@ -38,6 +38,8 @@ slices:
     command: SwipeOnDog
     aggregates: [SwipePair]
     events: [DogLiked, DogPassed]
+    hotspots:
+      - A pass after a like leaves the like standing — change-your-mind semantics are undefined.
     notes: >
       Decides only "is this swipe recordable". The mutual-match consequence is the
       DetectMutualMatch automation. One stream per unordered dog pair (SwipePair.IdFor).
