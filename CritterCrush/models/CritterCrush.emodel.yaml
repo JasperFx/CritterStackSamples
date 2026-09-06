@@ -57,6 +57,10 @@ slices:
           when: { command: SwipeOnDog, with: { Liked: "false" } }
           then:
             - event: DogPassed
+        - name: Swiping yourself is refused
+          when: { command: SwipeOnDog, with: { SwiperDogId: same, TargetDogId: same } }
+          then:
+            - validationFails: "A dog cannot swipe on itself" 
 
   - name: DetectMutualMatch
     pattern: Automation
@@ -80,6 +84,7 @@ slices:
     domain: Discovery
     trigger: { kind: Http, label: Matches page }
     projections: [MatchListProjection]
+    fanOut: true
     readModels: [MatchList]
     notes: >
       Async multi-stream fan-out — one MutualMatchDetected updates both dogs' documents;
