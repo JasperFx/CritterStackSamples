@@ -1,0 +1,36 @@
+<Project>
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- ⚠️ A STAGED, UNPUBLISHED version. See Directory.Build.props: this is the release-cycle
+         staging mechanism, not a permanent state. Flip to the published 1.1 and delete this island. -->
+    <CritterWatchVersion>1.1.0-embedded.3</CritterWatchVersion>
+  </PropertyGroup>
+
+  <ItemGroup Label="CritterWatch (LOCAL FEED — unpublished embedded build)">
+    <PackageVersion Include="CritterWatch.Sqlite" Version="$(CritterWatchVersion)" />
+    <PackageVersion Include="CritterWatch.Services" Version="$(CritterWatchVersion)" />
+    <PackageVersion Include="Wolverine.CritterWatch" Version="$(CritterWatchVersion)" />
+  </ItemGroup>
+
+  <ItemGroup Label="Wolverine">
+    <!-- ⚠️ Embedded generates the console's chains at RUNTIME — it cannot use the static registries
+         the standalone package ships with, because those skip the assembly scan the HOST's own
+         handlers are found by. So an embedded host needs the runtime compiler. -->
+    <PackageVersion Include="WolverineFx.RuntimeCompilation" Version="6.33.0" />
+    <PackageVersion Include="WolverineFx.Fisher" Version="6.33.0" />
+    <PackageVersion Include="WolverineFx.Http" Version="6.33.0" />
+  </ItemGroup>
+
+  <ItemGroup Label="Store">
+    <PackageVersion Include="Fisher" Version="1.1.0" />
+  </ItemGroup>
+
+  <ItemGroup Label="Testing">
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageVersion Include="xunit.v3" Version="3.1.0" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.0" />
+    <PackageVersion Include="Shouldly" Version="4.3.0" />
+  </ItemGroup>
+
+</Project>

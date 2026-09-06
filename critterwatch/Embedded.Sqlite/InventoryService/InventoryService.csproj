@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- The HOST APPLICATION. It is an ordinary Wolverine + Fisher web app that happens to embed the
+       CritterWatch console. Nothing about its own store, handlers or routes is CritterWatch-shaped —
+       which is the point: the sample only demonstrates isolation if the host is genuinely its own app. -->
+
+  <ItemGroup>
+    <!-- Embedded mode ships in the flavour package; there is no separate CritterWatch.Embedded. -->
+    <PackageReference Include="CritterWatch.Sqlite" />
+    <PackageReference Include="Wolverine.CritterWatch" />
+
+    <PackageReference Include="WolverineFx.Fisher" />
+    <PackageReference Include="WolverineFx.Http" />
+    <!-- ⚠️ REQUIRED for embedded, and it is not optional: the console's chains are code-generated at
+         runtime here. The standalone package ships static registries, but those SKIP the assembly scan
+         that finds this application's OWN handlers, so embedded cannot use them. -->
+    <PackageReference Include="WolverineFx.RuntimeCompilation" />
+    <PackageReference Include="Fisher" />
+  </ItemGroup>
+
+</Project>

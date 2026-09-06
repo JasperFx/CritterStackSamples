@@ -1,93 +1,229 @@
-# The declared Event Model for CritterCrush — the curated format (bobcat#201).
-# `model:` matches opts.ServiceName and [assembly: EventModelName]; every specification
-# identity below ({feature}/{scenario}) is reproduced exactly by a scenario in
-# CritterCrush.Specs/Features, which is what binds spec evidence onto these slices.
+# The declared Event Model for CritterCrush — the BookingAppointments chapter of the K9CRUSH
+# board (Powerworks/K9DatingApp, MIT), imported from the raw emlang export with
+# `bobcat import-event-model` and then curated: domains and aggregates added, automation triggers
+# tightened from free board prose to the actual triggering event, scenario names made sentences.
+#
+# This file is the source of truth. The code is generated and built FROM it — nothing here
+# describes code that already exists.
 schema: 1
 model: CritterCrush
 namespace: CritterCrush
 
 slices:
-  - name: CreateDogProfile
-    pattern: Command
-    domain: Profiles
-    trigger: { kind: Http, label: Dog owner registers a dog }
-    command: CreateDogProfile
-    aggregates: [DogProfile]
-    events: [DogProfileCreated]
-    specifications:
-      feature: DogProfiles
-      scenarios:
-        - name: Creating a profile starts its stream
-          when:
-            command: CreateDogProfile
-            with: { Name: Biscuit, Breed: Corgi, AgeInMonths: "24" }
-          then:
-            - event: DogProfileCreated
+  # ---- Proposals: three flows elsewhere in the board all end in "somebody needs an appointment".
+  # Each is an automation triggered by that flow's event; each starts an Appointment stream.
 
-  - name: ViewDogProfile
-    pattern: View
-    domain: Profiles
-    trigger: { kind: Http, label: Profile page }
-    readModels: [DogProfile]
-    notes: Reads the entity's own Inline snapshot back by id — no projector of its own.
-
-  - name: SwipeOnDog
-    pattern: Command
-    domain: Discovery
-    trigger: { kind: Http, label: Discovery feed }
-    command: SwipeOnDog
-    aggregates: [SwipePair]
-    events: [DogLiked, DogPassed]
-    hotspots:
-      - A pass after a like leaves the like standing — change-your-mind semantics are undefined.
-    notes: >
-      Decides only "is this swipe recordable". The mutual-match consequence is the
-      DetectMutualMatch automation. One stream per unordered dog pair (SwipePair.IdFor).
-    specifications:
-      feature: Swiping
-      scenarios:
-        - name: A like is recorded
-          when: { command: SwipeOnDog, with: { Liked: "true" } }
-          then:
-            - event: DogLiked
-        - name: Swiping the same dog twice is a clean no-op
-          given: [ { event: DogLiked } ]
-          when: { command: SwipeOnDog, with: { Liked: "true" } }
-          then:
-            - event: DogLiked
-        - name: A pass is recorded without a like
-          when: { command: SwipeOnDog, with: { Liked: "false" } }
-          then:
-            - event: DogPassed
-        - name: Swiping yourself is refused
-          when: { command: SwipeOnDog, with: { SwiperDogId: same, TargetDogId: same } }
-          then:
-            - validationFails: "A dog cannot swipe on itself" 
-
-  - name: DetectMutualMatch
+  - name: ProposeHomeCheckAppointment
     pattern: Automation
-    domain: Discovery
-    trigger: { kind: MessageHandler, label: DogLiked }
-    events: [MutualMatchDetected]
-    aggregates: [SwipePair]
-    hotspots:
-      - Notifying both owners of the match is a further automation, not built yet.
-    specifications:
-      feature: Swiping
-      scenarios:
-        - name: A mutual like produces a match
-          given: [ { event: DogLiked } ]
-          when: { command: SwipeOnDog, with: { Liked: "true" } }
-          then:
-            - event: MutualMatchDetected
-
-  - name: MatchList
-    pattern: View
-    domain: Discovery
-    trigger: { kind: Http, label: Matches page }
-    projections: [MatchListProjection]
-    fanOut: true
-    readModels: [MatchList]
+    domain: Appointments
+    trigger: { kind: MessageHandler, label: HomeCheckAssignmentAccepted }
+    command: ProposeHomeCheckAppointment
+    aggregates: [Appointment]
+    events: [HomeCheckAppointmentProposed]
     notes: >
-      Async multi-stream fan-out — one MutualMatchDetected updates both dogs' documents;
-      the async daemon owns it and reads are eventually consistent.
+      From chapter 'BookingAppointments', actor 'System'. Triggered by the volunteering flow
+      accepting a home-check assignment.
+    specifications:
+      feature: BookingAppointments
+      scenarios:
+        - name: Accepting a home check assignment proposes an appointment
+          when: { command: ProposeHomeCheckAppointment }
+          then:
+            - event: HomeCheckAppointmentProposed
+
+  - name: ProposeFosterHandoverAppointment
+    pattern: Automation
+    domain: Appointments
+    trigger: { kind: MessageHandler, label: FosterPlacementApproved }
+    command: ProposeFosterHandoverAppointment
+    aggregates: [Appointment]
+    events: [FosterHandoverAppointmentProposed]
+    notes: From chapter 'BookingAppointments', actor 'System'.
+    specifications:
+      feature: BookingAppointments
+      scenarios:
+        - name: Approving a foster placement proposes a handover appointment
+          when: { command: ProposeFosterHandoverAppointment }
+          then:
+            - event: FosterHandoverAppointmentProposed
+
+  - name: ProposeSurrenderIntakeAppointment
+    pattern: Automation
+    domain: Appointments
+    trigger: { kind: MessageHandler, label: SurrenderRequestApproved }
+    command: ProposeSurrenderIntakeAppointment
+    aggregates: [Appointment]
+    events: [SurrenderIntakeAppointmentProposed]
+    notes: From chapter 'BookingAppointments', actor 'System'.
+    specifications:
+      feature: BookingAppointments
+      scenarios:
+        - name: Approving a surrender request proposes an intake appointment
+          when: { command: ProposeSurrenderIntakeAppointment }
+          then:
+            - event: SurrenderIntakeAppointmentProposed
+
+  # ---- The lifecycle: an owner confirms or asks to move; the shelter reschedules, completes,
+  # cancels, or records a no-show.
+
+  - name: ConfirmAppointment
+    pattern: Command
+    domain: Appointments
+    trigger: { kind: Http, label: My appointments }
+    command: ConfirmAppointment
+    aggregates: [Appointment]
+    events: [AppointmentConfirmed]
+    elements:
+      ConfirmAppointment:
+        fields: { appointmentId: Guid }
+      AppointmentConfirmed:
+        description: The owner accepted the proposed time
+        fields: { appointmentId: Guid, confirmedAt: DateTimeOffset }
+    specifications:
+      feature: BookingAppointments
+      scenarios:
+        - name: A proposed appointment is confirmed
+          given:
+            - event: HomeCheckAppointmentProposed
+          when: { command: ConfirmAppointment }
+          then:
+            - event: AppointmentConfirmed
+        - name: Confirming an already cancelled appointment is refused
+          given:
+            - event: HomeCheckAppointmentProposed
+            - event: AppointmentCancelled
+          when: { command: ConfirmAppointment }
+          then:
+            - validationFails: "This appointment was cancelled"
+
+  - name: RequestReschedule
+    pattern: Command
+    domain: Appointments
+    trigger: { kind: Http, label: My appointments }
+    command: RequestReschedule
+    aggregates: [Appointment]
+    events: [RescheduleRequested]
+    elements:
+      RequestReschedule:
+        fields: { appointmentId: Guid, reason: string }
+    specifications:
+      feature: BookingAppointments
+      scenarios:
+        - name: An owner asks for a different time
+          given:
+            - event: HomeCheckAppointmentProposed
+          when: { command: RequestReschedule }
+          then:
+            - event: RescheduleRequested
+
+  - name: RescheduleAppointment
+    pattern: Command
+    domain: Appointments
+    trigger: { kind: Http, label: Appointments queue }
+    command: RescheduleAppointment
+    aggregates: [Appointment]
+    events: [AppointmentRescheduled]
+    elements:
+      RescheduleAppointment:
+        fields: { appointmentId: Guid, scheduledFor: DateTimeOffset }
+    specifications:
+      feature: BookingAppointments
+      scenarios:
+        - name: The shelter moves an appointment to a new time
+          given:
+            - event: HomeCheckAppointmentProposed
+            - event: RescheduleRequested
+          when: { command: RescheduleAppointment }
+          then:
+            - event: AppointmentRescheduled
+
+  - name: CompleteAppointment
+    pattern: Command
+    domain: Appointments
+    trigger: { kind: Http, label: Appointments queue }
+    command: CompleteAppointment
+    aggregates: [Appointment]
+    events: [AppointmentCompleted]
+    elements:
+      CompleteAppointment:
+        fields: { appointmentId: Guid, notes: string }
+    specifications:
+      feature: BookingAppointments
+      scenarios:
+        - name: A confirmed appointment is completed
+          given:
+            - event: HomeCheckAppointmentProposed
+            - event: AppointmentConfirmed
+          when: { command: CompleteAppointment }
+          then:
+            - event: AppointmentCompleted
+
+  - name: CancelAppointment
+    pattern: Command
+    domain: Appointments
+    trigger: { kind: Http, label: My appointments }
+    command: CancelAppointment
+    aggregates: [Appointment]
+    events: [AppointmentCancelled]
+    elements:
+      CancelAppointment:
+        fields: { appointmentId: Guid, reason: string }
+    specifications:
+      feature: BookingAppointments
+      scenarios:
+        - name: An appointment is cancelled before it happens
+          given:
+            - event: HomeCheckAppointmentProposed
+          when: { command: CancelAppointment }
+          then:
+            - event: AppointmentCancelled
+        - name: A completed appointment cannot be cancelled
+          given:
+            - event: HomeCheckAppointmentProposed
+            - event: AppointmentConfirmed
+            - event: AppointmentCompleted
+          when: { command: CancelAppointment }
+          then:
+            - validationFails: "This appointment is already completed"
+
+  - name: RecordAppointmentNoShow
+    pattern: Command
+    domain: Appointments
+    trigger: { kind: Http, label: Appointments queue }
+    command: RecordAppointmentNoShow
+    aggregates: [Appointment]
+    events: [AppointmentNoShowRecorded]
+    elements:
+      RecordAppointmentNoShow:
+        fields: { appointmentId: Guid }
+    specifications:
+      feature: BookingAppointments
+      scenarios:
+        - name: Nobody turned up
+          given:
+            - event: HomeCheckAppointmentProposed
+            - event: AppointmentConfirmed
+          when: { command: RecordAppointmentNoShow }
+          then:
+            - event: AppointmentNoShowRecorded
+
+  # ---- The two read models. Both group by an identity that is NOT the stream id, so both are
+  # multi-stream projections.
+
+  - name: AppointmentsQueue
+    pattern: View
+    domain: Appointments
+    trigger: { kind: Http, label: Appointments queue }
+    projections: [AppointmentsQueueProjection]
+    fanOut: true
+    readModels: [AppointmentsQueue]
+    notes: The shelter's work queue — every appointment awaiting action, across all streams.
+
+  - name: MyAppointments
+    pattern: View
+    domain: Appointments
+    trigger: { kind: Http, label: My appointments }
+    projections: [MyAppointmentsProjection]
+    fanOut: true
+    readModels: [MyAppointments]
+    notes: One document per owner, folding that owner's appointments from every stream.

@@ -1,62 +1,55 @@
-# CritterCrush
+# CritterCrush — built from the raw Event Model, not by hand
 
-A dog-dating sample built **spec-first from a declared Event Model**, in full Critter Stack house
-style. The original is [Powerworks/K9DatingApp](https://github.com/Powerworks/K9DatingApp) (MIT) —
-a third-party app generated from an eventmodelers.ai board; CritterCrush rebuilds it through the
-first-party pipeline: a curated Event Model file → Bobcat specs bound by identity → Wolverine +
-Marten slices, with drift between the declared model and the code rendered by the Bobcat viewer.
+This sample is **generated from a declared Event Model** through the first-party Critter Stack
+pipeline. Nothing here was written by reading code and imitating it: the model came first, the
+scaffold came from the model, and the implementation is filled against Bobcat specs whose
+identities the model declared.
 
-**Iteration 1** carries the two flows the original descoped (dog profiles, swipe → mutual match),
-as five Event Modeling slices:
+## Where it came from
 
-| Slice | Pattern | Where |
-|---|---|---|
-| CreateDogProfile | Command | `CritterCrush/Profiles/CreateDogProfile.cs` |
-| ViewDogProfile | View | `CritterCrush/Profiles/GetDogProfile.cs` |
-| SwipeOnDog | Command | `CritterCrush/Discovery/SwipeOnDog.cs` |
-| DetectMutualMatch | Automation | `CritterCrush/Discovery/DetectMutualMatch.cs` |
-| MatchList | View | `CritterCrush/Discovery/MatchList.cs` |
+The board is the K9CRUSH Event Model from
+[Powerworks/K9DatingApp](https://github.com/Powerworks/K9DatingApp) (MIT) — 28 chapters exported
+as raw `emlang` YAML. The **BookingAppointments** chapter was chosen for its shape: six commands,
+three automations, and two views exercise every Event Modeling slice pattern.
 
-## The idioms on display
+```
+K9CRUSH.emlang.v3.yaml  (raw board export, 161 slices)
+        │  bobcat import-event-model
+        ▼
+models/CritterCrush.emodel.yaml   ← curated: domains, aggregates, tightened triggers
+        │  Bobcat.EventModel.Scaffolding
+        ▼
+CritterCrush/Appointments/*.cs + CritterCrush.Specs/Features/*.feature
+        │  the critterstack-sdd skills fill the judgment (36 TODOs)
+        ▼
+green specs → the Stoat plan's slice gates go done
+```
 
-- **Aggregate handler workflow everywhere**: `[WriteModel]`/`[ReadAggregate]` parameters, pure
-  handlers returning `EventsToAppend` / `IStartStream` / cascaded messages — no injected session,
-  no `SaveChangesAsync`, `AutoApplyTransactions` owns the commit.
-- **HTTP endpoints as pure translations**: `POST /api/discovery/swipes` computes the pair's
-  deterministic stream id and *cascades* the command through the transactional outbox — no
-  mediator hop, nothing a crash can tear in half.
-- **The automation slice discipline**: `SwipeOnDog` decides only "is this swipe recordable"; the
-  mutual-match consequence is `DetectMutualMatch`, triggered by the `DogLiked` event via fast
-  event forwarding, aggregating its own stream (`[WriteModel]` hides the aggregation), idempotent
-  under redelivery.
-- **Lifecycles chosen per read pattern**: write models as Inline snapshots (your next GET sees
-  your write); the `MatchList` fan-out as an Async multi-stream projection with the daemon
-  actually running (`AddAsyncDaemon(DaemonMode.Solo)`).
-- **Modular-monolith rails on from day one**: `MultipleHandlerBehavior.Separated`,
-  `MessageIdentity.IdAndDestination`, durable local queues.
-- **Specs are the tests**: `CritterCrush.Specs` is a Bobcat suite in the shipped grammar —
-  `@slice:`/`@domain:` tagged, feature/scenario names reproducing the identities declared in
-  [`models/CritterCrush.emodel.yaml`](models/CritterCrush.emodel.yaml) exactly, which is what
-  binds run evidence onto the Event Model.
+## Reading the current state
+
+The scaffold is **structurally complete and deliberately unfinished**. Every mechanical decision
+is made — the aggregate handler workflow, collapsed endpoints, `EventsToAppend` returns,
+`ProblemDetails` guards harvested from the model's refusal scenarios, `MultiStreamProjection` for
+both fan-out views, one `Appointment` aggregate folding all nine events — and every *judgment*
+is a marked `TODO`: field mapping, decision logic, projection identity routing.
+
+That boundary is the point. The generator spends zero tokens on shape; the agent spends them only
+on meaning.
 
 ## Running it
 
 ```bash
-# Postgres on 5433, from the repo root
-docker compose up -d
+docker compose up -d                                    # Postgres on 5433, from the repo root
 docker exec -it $(docker ps -qf "publish=5433") psql -U postgres -c "CREATE DATABASE crittercrush;"
-
-# The specs — a self-executing Bobcat suite
-dotnet run --project CritterCrush.Specs
-
-# The app itself
+dotnet test CritterCrush.Specs                          # specs are MTP tests (Bobcat 0.10.0)
+dotnet test CritterCrush.Specs -- --filter-feature BookingAppointments
 dotnet run --project CritterCrush
 ```
 
-## The Event Model
+The spec project has **no hand-written `Main`** — Bobcat's generator emits the entry point and
+calls `[BobcatConfiguration]` (see `SuiteConfiguration.cs`).
 
-[`models/CritterCrush.emodel.yaml`](models/CritterCrush.emodel.yaml) is the declared model in the
-curated format. With a Bobcat console 0.9.2+ (`bobcat import-event-model models/CritterCrush.emodel.yaml
---url http://localhost:5525`) it renders on the Event Model canvas; the specs' generated source
-contributes the same slices from the code side, and the two merge by slice name — declared-only
-slices are the backlog, spec-bound green slices are done. Status is derived, never asserted.
+## The parked v1
+
+`../CritterCrush.v1-parked/` is the hand-written review vehicle that proved the idioms and the
+tooling. It did its job; this is the version the pipeline built.

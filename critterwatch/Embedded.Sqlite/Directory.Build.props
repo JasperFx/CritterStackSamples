@@ -1,0 +1,26 @@
+<Project>
+
+  <!-- ============================================================================
+       Embedded.Sqlite — a NESTED island inside the CritterWatch samples island.
+
+       It exists for one reason: embedded mode (CritterWatch#1139) is not published
+       yet, so this sample pins CritterWatch 1.1.0-embedded.* from a LOCAL FEED while
+       every other sample here stays on the published 1.0.1. Central Package
+       Management allows one version per package id per island, and Wolverine.CritterWatch
+       is pinned at 1.0.1 by the parent — so the two cannot share a props file.
+
+       ⚠️ THIS NESTING IS TEMPORARY. When 1.1 publishes to nuget.org, delete this file,
+       delete the sibling Directory.Packages.props and nuget.config, and let the sample
+       fall back to the parent island like every other sample. That is the whole
+       migration: nothing in the sample's own code depends on the nesting.
+       ============================================================================ -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <NuGetAudit>false</NuGetAudit>
+  </PropertyGroup>
+
+</Project>
