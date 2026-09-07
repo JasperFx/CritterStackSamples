@@ -5,7 +5,7 @@ public record AppointmentConfirmed(Guid AppointmentId, Guid OwnerId, DateTimeOff
 
 public record ConfirmAppointmentRequest(Guid AppointmentId);
 
-public record ConfirmAppointmentResponse();
+public record ConfirmAppointmentResponse(Guid AppointmentId, string Status);
 
 /// <summary>
 /// The endpoint IS the handler: one transaction, honest status codes. Split a separate
@@ -18,21 +18,26 @@ public static class ConfirmAppointmentEndpoint
     {
         // The model's refusing scenarios arrange prior events, so these refusals are about
         // appointment's state, not the request's shape. Null means the stream does not exist yet.
-        // TODO guard: return new ProblemDetails { Detail = "This appointment was cancelled", Status = 400 };
+        if (appointment is null)
+        {
+            return new ProblemDetails { Detail = "No such appointment", Status = 404 };
+        }
+
+        if (appointment.Status == AppointmentStatus.Cancelled)
+        {
+            return new ProblemDetails { Detail = "This appointment was cancelled", Status = 400 };
+        }
+
         return WolverineContinue.NoProblems;
     }
 
-
     [WolverinePost("/api/appointments/confirmappointment")]
-    public static (ConfirmAppointmentResponse, EventsToAppend) Post(ConfirmAppointmentRequest request, [WriteModel] Appointment? appointment)
+    public static (ConfirmAppointmentResponse, EventsToAppend) Post(ConfirmAppointmentRequest request, [WriteModel] Appointment appointment)
     {
-        // The decision. Nothing to append is `return (..., []);` — never a nullable event (wolverine#4309).
-        // A computed stream id belongs on the request record: [Identity] public Guid ...Id => ...;
-        // Fill this in and delete the throw — the shape is:
-        //     return (new ConfirmAppointmentResponse(/* … */), [new AppointmentConfirmed(/* … */)]);
-        throw new NotImplementedException("TODO: ConfirmAppointment — decide which events this slice appends, and what to answer with");
+        // Validate already refused a missing or cancelled appointment, so the decision here is
+        // only to record the owner's acceptance. The timestamp lives on the event, not in Apply.
+        var confirmed = new AppointmentConfirmed(appointment.Id, appointment.OwnerId, DateTimeOffset.UtcNow);
+
+        return (new ConfirmAppointmentResponse(appointment.Id, AppointmentStatus.Confirmed), [confirmed]);
     }
-
 }
-
-
