@@ -126,7 +126,9 @@ slices:
           when:
             command: FosterPlacementApproved
             with:
-              placementId: "b1ac0002-0000-0000-0000-000000000002"
+              # The appointment takes the placement's identity, so the act must address the
+              # arranged stream: {streamId} is the scaffolder's token for the Given's id.
+              placementId: "{streamId}"
               ownerId: "0e5e0002-0000-0000-0000-000000000002"
               shelterId: "5e1e0001-0000-0000-0000-000000000001"
               dogId: "d0670002-0000-0000-0000-000000000002"

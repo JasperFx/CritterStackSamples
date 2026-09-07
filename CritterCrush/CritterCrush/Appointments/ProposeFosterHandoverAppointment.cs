@@ -5,20 +5,28 @@ public record FosterHandoverAppointmentProposed(Guid AppointmentId, Guid OwnerId
 
 /// <summary>
 /// Automation slice: triggered by the FosterPlacementApproved event, never by a route. Decides and returns —
-/// the framework loads the aggregate, appends, and commits. Design for at-least-once delivery.
+/// the framework loads the aggregate, appends, and commits. Designed for at-least-once delivery:
+/// one approved placement is exactly one handover appointment, so the appointment takes the
+/// placement's identity. A redelivered FosterPlacementApproved then finds the stream it already
+/// started and cleanly does nothing, rather than proposing a second handover.
 /// </summary>
 public static class ProposeFosterHandoverAppointmentHandler
 {
-    public static StartStream Handle(FosterPlacementApproved trigger)
+    public static EventsToAppend Handle(
+        FosterPlacementApproved trigger,
+        [WriteModel(nameof(FosterPlacementApproved.PlacementId))] Appointment? existing)
     {
-        // The decision. Every scenario of this slice arranges no prior events, so it starts the
-        // stream: mint the id (or take it off the trigger) and hand back the Appointment's first event.
-        // Fill this in and delete the throw — the shape is:
-        //     var id = Guid.NewGuid();   // or the identity the trigger already carries
-        //     return Storage.StartStream<Appointment>(id, new FosterHandoverAppointmentProposed(/* … */));
-        throw new NotImplementedException("TODO: ProposeFosterHandoverAppointment — decide which event starts the stream, and what its id is");
+        if (existing is not null) return [];
+
+        return
+        [
+            new FosterHandoverAppointmentProposed(
+                trigger.PlacementId,
+                trigger.OwnerId,
+                trigger.ShelterId,
+                trigger.DogId,
+                trigger.FosterId,
+                trigger.ProposedFor)
+        ];
     }
-
 }
-
-
