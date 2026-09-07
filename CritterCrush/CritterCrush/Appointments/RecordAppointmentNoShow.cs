@@ -22,9 +22,11 @@ public static class RecordAppointmentNoShowEndpoint
     [WolverinePost("/api/appointments/recordappointmentnoshow")]
     public static (RecordAppointmentNoShowResponse, EventsToAppend) Post(RecordAppointmentNoShowRequest request, [WriteModel] Appointment? appointment)
     {
-        // TODO: the decision. Nothing to append is `return (..., []);` — never a nullable event (wolverine#4309).
+        // The decision. Nothing to append is `return (..., []);` — never a nullable event (wolverine#4309).
         // A computed stream id belongs on the request record: [Identity] public Guid ...Id => ...;
-        return (new RecordAppointmentNoShowResponse(/* TODO */), [new AppointmentNoShowRecorded(/* TODO */)]);
+        // Fill this in and delete the throw — the shape is:
+        //     return (new RecordAppointmentNoShowResponse(/* … */), [new AppointmentNoShowRecorded(/* … */)]);
+        throw new NotImplementedException("TODO: RecordAppointmentNoShow — decide which events this slice appends, and what to answer with");
     }
 
 }

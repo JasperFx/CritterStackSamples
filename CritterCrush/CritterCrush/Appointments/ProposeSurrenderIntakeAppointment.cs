@@ -10,8 +10,10 @@ public static class ProposeSurrenderIntakeAppointmentHandler
 {
     public static EventsToAppend Handle(SurrenderRequestApproved trigger, [WriteModel] Appointment appointment)
     {
-        // TODO: the decision. Nothing to append is `return [];` — never a nullable event (wolverine#4309).
-        return [new SurrenderIntakeAppointmentProposed(/* TODO */)];
+        // The decision. Nothing to append is `return [];` — never a nullable event (wolverine#4309).
+        // Fill this in and delete the throw — the shape is:
+        //     return [new SurrenderIntakeAppointmentProposed(/* … */)];
+        throw new NotImplementedException("TODO: ProposeSurrenderIntakeAppointment — decide which events this slice appends");
     }
 
 }

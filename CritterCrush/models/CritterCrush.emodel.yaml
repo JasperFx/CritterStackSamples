@@ -17,6 +17,8 @@ slices:
     pattern: Automation
     domain: Appointments
     trigger: { kind: MessageHandler, label: HomeCheckAssignmentAccepted }
+    externalSystems:
+      - { name: Volunteering, direction: Inbound }
     command: ProposeHomeCheckAppointment
     aggregates: [Appointment]
     events: [HomeCheckAppointmentProposed]
@@ -35,6 +37,8 @@ slices:
     pattern: Automation
     domain: Appointments
     trigger: { kind: MessageHandler, label: FosterPlacementApproved }
+    externalSystems:
+      - { name: Fostering, direction: Inbound }
     command: ProposeFosterHandoverAppointment
     aggregates: [Appointment]
     events: [FosterHandoverAppointmentProposed]
@@ -51,6 +55,8 @@ slices:
     pattern: Automation
     domain: Appointments
     trigger: { kind: MessageHandler, label: SurrenderRequestApproved }
+    externalSystems:
+      - { name: Surrender, direction: Inbound }
     command: ProposeSurrenderIntakeAppointment
     aggregates: [Appointment]
     events: [SurrenderIntakeAppointmentProposed]

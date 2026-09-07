@@ -24,9 +24,11 @@ public static class ConfirmAppointmentEndpoint
     [WolverinePost("/api/appointments/confirmappointment")]
     public static (ConfirmAppointmentResponse, EventsToAppend) Post(ConfirmAppointmentRequest request, [WriteModel] Appointment? appointment)
     {
-        // TODO: the decision. Nothing to append is `return (..., []);` — never a nullable event (wolverine#4309).
+        // The decision. Nothing to append is `return (..., []);` — never a nullable event (wolverine#4309).
         // A computed stream id belongs on the request record: [Identity] public Guid ...Id => ...;
-        return (new ConfirmAppointmentResponse(/* TODO */), [new AppointmentConfirmed(/* TODO */)]);
+        // Fill this in and delete the throw — the shape is:
+        //     return (new ConfirmAppointmentResponse(/* … */), [new AppointmentConfirmed(/* … */)]);
+        throw new NotImplementedException("TODO: ConfirmAppointment — decide which events this slice appends, and what to answer with");
     }
 
 }

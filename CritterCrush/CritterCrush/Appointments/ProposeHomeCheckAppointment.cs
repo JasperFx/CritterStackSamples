@@ -10,8 +10,10 @@ public static class ProposeHomeCheckAppointmentHandler
 {
     public static EventsToAppend Handle(HomeCheckAssignmentAccepted trigger, [WriteModel] Appointment appointment)
     {
-        // TODO: the decision. Nothing to append is `return [];` — never a nullable event (wolverine#4309).
-        return [new HomeCheckAppointmentProposed(/* TODO */)];
+        // The decision. Nothing to append is `return [];` — never a nullable event (wolverine#4309).
+        // Fill this in and delete the throw — the shape is:
+        //     return [new HomeCheckAppointmentProposed(/* … */)];
+        throw new NotImplementedException("TODO: ProposeHomeCheckAppointment — decide which events this slice appends");
     }
 
 }

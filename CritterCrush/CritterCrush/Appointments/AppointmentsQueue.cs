@@ -16,7 +16,11 @@ public class AppointmentsQueueProjection : MultiStreamProjection<AppointmentsQue
     }
 
 
-    // TODO: Apply methods per source event
+    public void Apply(HomeCheckAppointmentProposed e, AppointmentsQueue view)
+    {
+        // TODO: project this event onto the view — the model's scenarios say what it must contain
+        throw new NotImplementedException("TODO: AppointmentsQueue — project HomeCheckAppointmentProposed");
+    }
 }
 
 

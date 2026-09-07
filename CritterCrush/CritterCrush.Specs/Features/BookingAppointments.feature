@@ -5,19 +5,19 @@ Feature: BookingAppointments
   @slice:ProposeHomeCheckAppointment
   Scenario: Accepting a home check assignment proposes an appointment
     Given no events for Appointment "83328332-8332-8332-8332-833283328332"
-    When ProposeHomeCheckAppointment is received
+    When HomeCheckAssignmentAccepted is received
     Then HomeCheckAppointmentProposed is emitted
 
   @slice:ProposeFosterHandoverAppointment
   Scenario: Approving a foster placement proposes a handover appointment
     Given no events for Appointment "66166616-6616-6616-6616-661666166616"
-    When ProposeFosterHandoverAppointment is received
+    When FosterPlacementApproved is received
     Then FosterHandoverAppointmentProposed is emitted
 
   @slice:ProposeSurrenderIntakeAppointment
   Scenario: Approving a surrender request proposes an intake appointment
     Given no events for Appointment "47544754-4754-4754-4754-475447544754"
-    When ProposeSurrenderIntakeAppointment is received
+    When SurrenderRequestApproved is received
     Then SurrenderIntakeAppointmentProposed is emitted
 
   @slice:ConfirmAppointment
@@ -26,7 +26,7 @@ Feature: BookingAppointments
     And events for Appointment
       | Event |
       | HomeCheckAppointmentProposed |
-    When ConfirmAppointment is received
+    When ConfirmAppointmentRequest is posted to "/api/appointments/confirmappointment"
     Then AppointmentConfirmed is emitted
 
   @slice:ConfirmAppointment
@@ -38,7 +38,7 @@ Feature: BookingAppointments
     And events for Appointment
       | Event |
       | AppointmentCancelled |
-    When ConfirmAppointment is received
+    When ConfirmAppointmentRequest is posted to "/api/appointments/confirmappointment"
     Then validation fails with "This appointment was cancelled"
     And no events are emitted
 
@@ -48,7 +48,7 @@ Feature: BookingAppointments
     And events for Appointment
       | Event |
       | HomeCheckAppointmentProposed |
-    When RequestReschedule is received
+    When RequestRescheduleRequest is posted to "/api/appointments/requestreschedule"
     Then RescheduleRequested is emitted
 
   @slice:RescheduleAppointment
@@ -60,7 +60,7 @@ Feature: BookingAppointments
     And events for Appointment
       | Event |
       | RescheduleRequested |
-    When RescheduleAppointment is received
+    When RescheduleAppointmentRequest is posted to "/api/appointments/rescheduleappointment"
     Then AppointmentRescheduled is emitted
 
   @slice:CompleteAppointment
@@ -72,7 +72,7 @@ Feature: BookingAppointments
     And events for Appointment
       | Event |
       | AppointmentConfirmed |
-    When CompleteAppointment is received
+    When CompleteAppointmentRequest is posted to "/api/appointments/completeappointment"
     Then AppointmentCompleted is emitted
 
   @slice:CancelAppointment
@@ -81,7 +81,7 @@ Feature: BookingAppointments
     And events for Appointment
       | Event |
       | HomeCheckAppointmentProposed |
-    When CancelAppointment is received
+    When CancelAppointmentRequest is posted to "/api/appointments/cancelappointment"
     Then AppointmentCancelled is emitted
 
   @slice:CancelAppointment
@@ -96,7 +96,7 @@ Feature: BookingAppointments
     And events for Appointment
       | Event |
       | AppointmentCompleted |
-    When CancelAppointment is received
+    When CancelAppointmentRequest is posted to "/api/appointments/cancelappointment"
     Then validation fails with "This appointment is already completed"
     And no events are emitted
 
@@ -109,5 +109,5 @@ Feature: BookingAppointments
     And events for Appointment
       | Event |
       | AppointmentConfirmed |
-    When RecordAppointmentNoShow is received
+    When RecordAppointmentNoShowRequest is posted to "/api/appointments/recordappointmentnoshow"
     Then AppointmentNoShowRecorded is emitted

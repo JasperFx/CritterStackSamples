@@ -10,8 +10,10 @@ public static class ProposeFosterHandoverAppointmentHandler
 {
     public static EventsToAppend Handle(FosterPlacementApproved trigger, [WriteModel] Appointment appointment)
     {
-        // TODO: the decision. Nothing to append is `return [];` — never a nullable event (wolverine#4309).
-        return [new FosterHandoverAppointmentProposed(/* TODO */)];
+        // The decision. Nothing to append is `return [];` — never a nullable event (wolverine#4309).
+        // Fill this in and delete the throw — the shape is:
+        //     return [new FosterHandoverAppointmentProposed(/* … */)];
+        throw new NotImplementedException("TODO: ProposeFosterHandoverAppointment — decide which events this slice appends");
     }
 
 }

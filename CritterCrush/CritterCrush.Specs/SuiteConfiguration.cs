@@ -1,6 +1,7 @@
 using Bobcat;
 using Bobcat.Alba;
 using Bobcat.CritterStack;
+using Bobcat.Runtime;
 using JasperFx.Events.EventModeling;
 
 // The declared model, the host, and the specs all merge by this one name.

@@ -23,8 +23,14 @@ builder.Services.AddMarten(opts =>
 
         // Both read models group by an identity that is not the stream id, so both are
         // multi-stream — and Async means the daemon below is load-bearing.
-        opts.Projections.Add<AppointmentsQueueProjection>(ProjectionLifecycle.Async);
-        opts.Projections.Add<MyAppointmentsProjection>(ProjectionLifecycle.Async);
+        //
+        // NOT REGISTERED YET, deliberately: the model marks both View slices unrealized (no bound
+        // specifications), and Marten validates a projection at startup — an unfilled one has no
+        // slicing rules and no Apply methods, so registering it stops the host booting and takes
+        // every other slice's specs down with it (bobcat#232). Register each one as its slice is
+        // built and its specs bound.
+        // opts.Projections.Add<AppointmentsQueueProjection>(ProjectionLifecycle.Async);
+        // opts.Projections.Add<MyAppointmentsProjection>(ProjectionLifecycle.Async);
     })
     .IntegrateWithWolverine(m => m.UseFastEventForwarding = true)
     .AddAsyncDaemon(DaemonMode.Solo)

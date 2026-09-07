@@ -22,9 +22,11 @@ public static class RequestRescheduleEndpoint
     [WolverinePost("/api/appointments/requestreschedule")]
     public static (RequestRescheduleResponse, EventsToAppend) Post(RequestRescheduleRequest request, [WriteModel] Appointment? appointment)
     {
-        // TODO: the decision. Nothing to append is `return (..., []);` — never a nullable event (wolverine#4309).
+        // The decision. Nothing to append is `return (..., []);` — never a nullable event (wolverine#4309).
         // A computed stream id belongs on the request record: [Identity] public Guid ...Id => ...;
-        return (new RequestRescheduleResponse(/* TODO */), [new RescheduleRequested(/* TODO */)]);
+        // Fill this in and delete the throw — the shape is:
+        //     return (new RequestRescheduleResponse(/* … */), [new RescheduleRequested(/* … */)]);
+        throw new NotImplementedException("TODO: RequestReschedule — decide which events this slice appends, and what to answer with");
     }
 
 }
