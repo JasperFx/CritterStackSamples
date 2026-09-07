@@ -74,8 +74,8 @@ public class Appointment
 
     public void Apply(AppointmentRescheduled appointmentRescheduled)
     {
-        // TODO: fold this event into the state. Deterministic only —
-        // timestamps belong on the event record, never DateTimeOffset.UtcNow here.
+        ScheduledFor = appointmentRescheduled.ScheduledFor;
+        RescheduleRequested = false;
     }
 
 

@@ -5,7 +5,7 @@ public record AppointmentRescheduled(Guid AppointmentId, Guid OwnerId, DateTimeO
 
 public record RescheduleAppointmentRequest(Guid AppointmentId, DateTimeOffset ScheduledFor);
 
-public record RescheduleAppointmentResponse();
+public record RescheduleAppointmentResponse(Guid AppointmentId, DateTimeOffset ScheduledFor);
 
 /// <summary>
 /// The endpoint IS the handler: one transaction, honest status codes. Split a separate
@@ -14,22 +14,30 @@ public record RescheduleAppointmentResponse();
 /// </summary>
 public static class RescheduleAppointmentEndpoint
 {
-    public static ProblemDetails Validate(RescheduleAppointmentRequest request)
+    public static ProblemDetails Validate(RescheduleAppointmentRequest request, [ReadModel] Appointment? appointment)
     {
+        // Null means the stream does not exist yet: there is nothing to move.
+        if (appointment is null)
+        {
+            return new ProblemDetails { Detail = "This appointment does not exist", Status = 404 };
+        }
+
         return WolverineContinue.NoProblems;
     }
 
-
     [WolverinePost("/api/appointments/rescheduleappointment")]
-    public static (RescheduleAppointmentResponse, EventsToAppend) Post(RescheduleAppointmentRequest request, [WriteModel] Appointment? appointment)
+    public static (RescheduleAppointmentResponse, EventsToAppend) Post(
+        RescheduleAppointmentRequest request,
+        [WriteModel] Appointment appointment)
     {
-        // The decision. Nothing to append is `return (..., []);` — never a nullable event (wolverine#4309).
-        // A computed stream id belongs on the request record: [Identity] public Guid ...Id => ...;
-        // Fill this in and delete the throw — the shape is:
-        //     return (new RescheduleAppointmentResponse(/* … */), [new AppointmentRescheduled(/* … */)]);
-        throw new NotImplementedException("TODO: RescheduleAppointment — decide which events this slice appends, and what to answer with");
+        // The timestamp is taken here, in the decision, and lives on the event — so a rebuild
+        // folds the same value the live run did.
+        var rescheduled = new AppointmentRescheduled(
+            appointment.Id,
+            appointment.OwnerId,
+            request.ScheduledFor,
+            DateTimeOffset.UtcNow);
+
+        return (new RescheduleAppointmentResponse(appointment.Id, request.ScheduledFor), [rescheduled]);
     }
-
 }
-
-
