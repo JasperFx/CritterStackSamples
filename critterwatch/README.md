@@ -37,7 +37,7 @@ this step disappears and the samples become true clone-and-F5.
 | `Fleet.RabbitMq` | Standalone CritterWatch console monitoring a fleet (Trips + Incidents) over RabbitMQ ⭐ flagship |
 | `Fleet.AmazonSqs` / `.AzureServiceBus` / `.Kafka` / `.Redis` / `.GooglePubSub` | Same fleet over each transport |
 | `Fleet.PostgresqlQueues` / `.SqlServerQueues` | DB-backed queue transport (also the standalone Marten / Polecat storage showcases) |
-| `Embedded.Marten` / `Embedded.Polecat` | CritterWatch embedded in a modular monolith, self-monitoring over `local://`, RepairShop on an ancillary store |
+| `Embedded.Sqlite` | **CritterWatch embedded in your own app**, on SQLite — no broker, no database server, no containers |
 | `WebService.Http` | Monitoring a Wolverine HTTP service over the HTTP transport |
 | `Metrics.Prometheus` | Services in `SystemDiagnosticsMeter` mode; CritterWatch polls Prometheus |
 

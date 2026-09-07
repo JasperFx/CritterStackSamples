@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CritterWatch.Sqlite" />
+    <PackageReference Include="WolverineFx.Http.Fisher" />
+    <!-- ⚠️ Embedded generates the console's chains at runtime; without this the host
+         fails at startup. It is a prerequisite of embedded mode, not an optimisation. -->
+    <PackageReference Include="WolverineFx.RuntimeCompilation" />
+  </ItemGroup>
+
+</Project>
