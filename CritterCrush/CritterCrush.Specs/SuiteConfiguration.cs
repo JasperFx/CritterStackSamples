@@ -17,5 +17,28 @@ public static class SuiteConfiguration
 {
     [BobcatConfiguration]
     public static void Configure(BobcatRunner runner)
-        => runner.Suite.AddResource(new AlbaResource<Program>(reset: host => host.ResetEventStoresAsync()));
+    {
+        // One schema per working copy. Every spec run resets the event store, so several agents
+        // building different slices in their own git worktrees against one Postgres would wipe
+        // each other's data mid-run — not a race that shows up as a race, but as another slice's
+        // scenarios failing for no visible reason. The directory name is the only thing that
+        // reliably differs between worktrees, so it names the schema.
+        Environment.SetEnvironmentVariable("Marten__SchemaName", schemaName());
+
+        runner.Suite.AddResource(new AlbaResource<Program>(reset: host => host.ResetEventStoresAsync()));
+    }
+
+    private static string schemaName()
+    {
+        var root = Directory.GetCurrentDirectory();
+        while (root is not null && !Directory.Exists(Path.Combine(root, ".git")) &&
+               !File.Exists(Path.Combine(root, ".git")))
+        {
+            root = Path.GetDirectoryName(root);
+        }
+
+        var name = Path.GetFileName(root ?? Directory.GetCurrentDirectory());
+        var cleaned = new string(name.Select(c => char.IsLetterOrDigit(c) ? char.ToLowerInvariant(c) : '_').ToArray());
+        return ("crittercrush_" + cleaned).Length > 63 ? ("crittercrush_" + cleaned)[..63] : "crittercrush_" + cleaned;
+    }
 }

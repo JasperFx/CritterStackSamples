@@ -1,0 +1,85 @@
+schema: 1
+plan: crittercrush-appointments
+title: CritterCrush — the BookingAppointments chapter, built from the model
+nodes:
+  - id: propose-home-check-appointment
+    kind: slice
+    slice: ProposeHomeCheckAppointment
+    pattern: automation
+    domain: Appointments
+    specs:
+      - BookingAppointments/Accepting a home check assignment proposes an appointment
+  - id: propose-foster-handover-appointment
+    kind: slice
+    slice: ProposeFosterHandoverAppointment
+    pattern: automation
+    domain: Appointments
+    specs:
+      - BookingAppointments/Approving a foster placement proposes a handover appointment
+  - id: propose-surrender-intake-appointment
+    kind: slice
+    slice: ProposeSurrenderIntakeAppointment
+    pattern: automation
+    domain: Appointments
+    specs:
+      - BookingAppointments/Approving a surrender request proposes an intake appointment
+  - id: confirm-appointment
+    kind: slice
+    slice: ConfirmAppointment
+    pattern: command
+    domain: Appointments
+    specs:
+      - BookingAppointments/A proposed appointment is confirmed
+      - BookingAppointments/Confirming an already cancelled appointment is refused
+  - id: request-reschedule
+    kind: slice
+    slice: RequestReschedule
+    pattern: command
+    domain: Appointments
+    specs:
+      - BookingAppointments/An owner asks for a different time
+  - id: reschedule-appointment
+    kind: slice
+    slice: RescheduleAppointment
+    pattern: command
+    domain: Appointments
+    specs:
+      - BookingAppointments/The shelter moves an appointment to a new time
+  - id: complete-appointment
+    kind: slice
+    slice: CompleteAppointment
+    pattern: command
+    domain: Appointments
+    specs:
+      - BookingAppointments/A confirmed appointment is completed
+  - id: cancel-appointment
+    kind: slice
+    slice: CancelAppointment
+    pattern: command
+    domain: Appointments
+    specs:
+      - BookingAppointments/An appointment is cancelled before it happens
+      - BookingAppointments/A completed appointment cannot be cancelled
+  - id: record-appointment-no-show
+    kind: slice
+    slice: RecordAppointmentNoShow
+    pattern: command
+    domain: Appointments
+    specs:
+      - BookingAppointments/Nobody turned up
+  - id: appointments-queue
+    kind: slice
+    slice: AppointmentsQueue
+    pattern: view
+    domain: Appointments
+    specs:
+      - BookingAppointments/A proposed home check waits in the queue for the owner
+      - BookingAppointments/A completed appointment stops awaiting action
+  # Deliberately spec-less, so it derives `unrealized` rather than a faked done: this document is
+  # keyed by ownerId, and `Then the {readmodel} read model contains` can only address the
+  # scenario's stream id (bobcat#236). The model records the same thing as a hotspot.
+  - id: my-appointments
+    kind: slice
+    slice: MyAppointments
+    pattern: view
+    domain: Appointments

@@ -15,7 +15,10 @@ builder.Services.AddMarten(opts =>
     {
         opts.Connection(builder.Configuration.GetConnectionString("Marten")
                         ?? "Host=localhost;Port=5433;Database=crittercrush;Username=postgres;Password=postgres");
-        opts.DatabaseSchemaName = "crittercrush";
+        // Configurable so a parallel build can isolate itself: every spec run resets the event
+        // store, so two agents sharing one schema wipe each other's data mid-run. See
+        // CritterCrush.Specs/SuiteConfiguration.cs.
+        opts.DatabaseSchemaName = builder.Configuration["Marten:SchemaName"] ?? "crittercrush";
 
         // The write model read back by id gets an Inline snapshot: a caller's next GET sees
         // their own write, and the automations aggregate against committed state.
