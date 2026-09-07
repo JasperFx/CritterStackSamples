@@ -5,7 +5,7 @@ public record AppointmentCancelled(Guid AppointmentId, Guid OwnerId, string Reas
 
 public record CancelAppointmentRequest(Guid AppointmentId, string Reason);
 
-public record CancelAppointmentResponse();
+public record CancelAppointmentResponse(Guid AppointmentId, string Status);
 
 /// <summary>
 /// The endpoint IS the handler: one transaction, honest status codes. Split a separate
@@ -16,23 +16,37 @@ public static class CancelAppointmentEndpoint
 {
     public static ProblemDetails Validate(CancelAppointmentRequest request, [ReadModel] Appointment? appointment)
     {
-        // The model's refusing scenarios arrange prior events, so these refusals are about
-        // appointment's state, not the request's shape. Null means the stream does not exist yet.
-        // TODO guard: return new ProblemDetails { Detail = "This appointment is already completed", Status = 400 };
+        // The refusals are about the appointment's state, not the request's shape.
+        // Null means the stream does not exist yet.
+        if (appointment is null)
+        {
+            return new ProblemDetails { Detail = "This appointment does not exist", Status = 404 };
+        }
+
+        if (appointment.Status == "Completed")
+        {
+            return new ProblemDetails { Detail = "This appointment is already completed", Status = 400 };
+        }
+
         return WolverineContinue.NoProblems;
     }
 
-
     [WolverinePost("/api/appointments/cancelappointment")]
-    public static (CancelAppointmentResponse, EventsToAppend) Post(CancelAppointmentRequest request, [WriteModel] Appointment? appointment)
+    public static (CancelAppointmentResponse, EventsToAppend) Post(CancelAppointmentRequest request, [WriteModel] Appointment appointment)
     {
-        // The decision. Nothing to append is `return (..., []);` — never a nullable event (wolverine#4309).
-        // A computed stream id belongs on the request record: [Identity] public Guid ...Id => ...;
-        // Fill this in and delete the throw — the shape is:
-        //     return (new CancelAppointmentResponse(/* … */), [new AppointmentCancelled(/* … */)]);
-        throw new NotImplementedException("TODO: CancelAppointment — decide which events this slice appends, and what to answer with");
+        // Cancelling twice is a no-op rather than a refusal: the outcome the caller asked for
+        // already holds, so answer honestly and append nothing.
+        if (appointment.Status == "Cancelled")
+        {
+            return (new CancelAppointmentResponse(appointment.Id, appointment.Status), []);
+        }
+
+        var cancelled = new AppointmentCancelled(
+            appointment.Id,
+            appointment.OwnerId,
+            request.Reason,
+            DateTimeOffset.UtcNow);
+
+        return (new CancelAppointmentResponse(appointment.Id, "Cancelled"), [cancelled]);
     }
-
 }
-
-

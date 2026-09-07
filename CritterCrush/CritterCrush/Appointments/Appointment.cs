@@ -11,17 +11,30 @@ public class Appointment
     public DateTimeOffset ScheduledFor { get; set; }
     public bool RescheduleRequested { get; set; }
 
-    public static Appointment Create(HomeCheckAppointmentProposed homeCheckAppointmentProposed)
+    public static Appointment Create(HomeCheckAppointmentProposed proposed)
     {
-        // TODO: fold the creating event into the initial state
-        return new Appointment();
+        return new Appointment
+        {
+            Id = proposed.AppointmentId,
+            OwnerId = proposed.OwnerId,
+            ShelterId = proposed.ShelterId,
+            DogId = proposed.DogId,
+            Kind = "HomeCheck",
+            Status = "Proposed",
+            ScheduledFor = proposed.ProposedFor
+        };
     }
 
 
-    public void Apply(HomeCheckAppointmentProposed homeCheckAppointmentProposed)
+    public void Apply(HomeCheckAppointmentProposed proposed)
     {
-        // TODO: fold this event into the state. Deterministic only —
-        // timestamps belong on the event record, never DateTimeOffset.UtcNow here.
+        Id = proposed.AppointmentId;
+        OwnerId = proposed.OwnerId;
+        ShelterId = proposed.ShelterId;
+        DogId = proposed.DogId;
+        Kind = "HomeCheck";
+        Status = "Proposed";
+        ScheduledFor = proposed.ProposedFor;
     }
 
 
@@ -60,17 +73,15 @@ public class Appointment
     }
 
 
-    public void Apply(AppointmentCompleted appointmentCompleted)
+    public void Apply(AppointmentCompleted completed)
     {
-        // TODO: fold this event into the state. Deterministic only —
-        // timestamps belong on the event record, never DateTimeOffset.UtcNow here.
+        Status = "Completed";
     }
 
 
-    public void Apply(AppointmentCancelled appointmentCancelled)
+    public void Apply(AppointmentCancelled cancelled)
     {
-        // TODO: fold this event into the state. Deterministic only —
-        // timestamps belong on the event record, never DateTimeOffset.UtcNow here.
+        Status = "Cancelled";
     }
 
 
