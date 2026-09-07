@@ -45,10 +45,15 @@ public class Appointment
     }
 
 
-    public void Apply(FosterHandoverAppointmentProposed fosterHandoverAppointmentProposed)
+    public void Apply(FosterHandoverAppointmentProposed proposed)
     {
-        // TODO: fold this event into the state. Deterministic only —
-        // timestamps belong on the event record, never DateTimeOffset.UtcNow here.
+        Id = proposed.AppointmentId;
+        OwnerId = proposed.OwnerId;
+        ShelterId = proposed.ShelterId;
+        DogId = proposed.DogId;
+        Kind = "FosterHandover";
+        Status = "Proposed";
+        ScheduledFor = proposed.ProposedFor;
     }
 
 
