@@ -13,8 +13,16 @@ public class Appointment
 
     public static Appointment Create(HomeCheckAppointmentProposed homeCheckAppointmentProposed)
     {
-        // TODO: fold the creating event into the initial state
-        return new Appointment();
+        return new Appointment
+        {
+            Id = homeCheckAppointmentProposed.AppointmentId,
+            OwnerId = homeCheckAppointmentProposed.OwnerId,
+            ShelterId = homeCheckAppointmentProposed.ShelterId,
+            DogId = homeCheckAppointmentProposed.DogId,
+            Kind = "HomeCheck",
+            Status = "Proposed",
+            ScheduledFor = homeCheckAppointmentProposed.ProposedFor
+        };
     }
 
 
@@ -48,15 +56,14 @@ public class Appointment
 
     public void Apply(RescheduleRequested rescheduleRequested)
     {
-        // TODO: fold this event into the state. Deterministic only —
-        // timestamps belong on the event record, never DateTimeOffset.UtcNow here.
+        RescheduleRequested = true;
     }
 
 
     public void Apply(AppointmentRescheduled appointmentRescheduled)
     {
-        // TODO: fold this event into the state. Deterministic only —
-        // timestamps belong on the event record, never DateTimeOffset.UtcNow here.
+        ScheduledFor = appointmentRescheduled.ScheduledFor;
+        RescheduleRequested = false;
     }
 
 
