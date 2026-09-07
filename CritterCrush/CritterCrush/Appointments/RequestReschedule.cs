@@ -5,7 +5,7 @@ public record RescheduleRequested(Guid AppointmentId, Guid OwnerId, string Reaso
 
 public record RequestRescheduleRequest(Guid AppointmentId, string Reason, DateTimeOffset PreferredFor);
 
-public record RequestRescheduleResponse();
+public record RequestRescheduleResponse(Guid AppointmentId, DateTimeOffset PreferredFor);
 
 /// <summary>
 /// The endpoint IS the handler: one transaction, honest status codes. Split a separate
@@ -14,22 +14,34 @@ public record RequestRescheduleResponse();
 /// </summary>
 public static class RequestRescheduleEndpoint
 {
-    public static ProblemDetails Validate(RequestRescheduleRequest request)
+    public static ProblemDetails Validate(RequestRescheduleRequest request, [ReadModel] Appointment? appointment)
     {
+        // Null means the stream does not exist yet: there is nothing to ask a different time for.
+        if (appointment is null)
+        {
+            return new ProblemDetails { Detail = "No such appointment", Status = 404 };
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Reason))
+        {
+            return new ProblemDetails { Detail = "A reason for the reschedule is required", Status = 400 };
+        }
+
         return WolverineContinue.NoProblems;
     }
 
-
     [WolverinePost("/api/appointments/requestreschedule")]
-    public static (RequestRescheduleResponse, EventsToAppend) Post(RequestRescheduleRequest request, [WriteModel] Appointment? appointment)
+    public static (RequestRescheduleResponse, EventsToAppend) Post(RequestRescheduleRequest request, [WriteModel] Appointment appointment)
     {
-        // The decision. Nothing to append is `return (..., []);` — never a nullable event (wolverine#4309).
-        // A computed stream id belongs on the request record: [Identity] public Guid ...Id => ...;
-        // Fill this in and delete the throw — the shape is:
-        //     return (new RequestRescheduleResponse(/* … */), [new RescheduleRequested(/* … */)]);
-        throw new NotImplementedException("TODO: RequestReschedule — decide which events this slice appends, and what to answer with");
+        // The owner is whoever the appointment was proposed to; the request carries only the
+        // appointment and the wish. The timestamp rides on the event, never in Apply.
+        var requested = new RescheduleRequested(
+            appointment.Id,
+            appointment.OwnerId,
+            request.Reason,
+            request.PreferredFor,
+            DateTimeOffset.UtcNow);
+
+        return (new RequestRescheduleResponse(appointment.Id, request.PreferredFor), [requested]);
     }
-
 }
-
-

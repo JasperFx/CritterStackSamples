@@ -48,8 +48,8 @@ public class Appointment
 
     public void Apply(RescheduleRequested rescheduleRequested)
     {
-        // TODO: fold this event into the state. Deterministic only —
-        // timestamps belong on the event record, never DateTimeOffset.UtcNow here.
+        // The proposed time stands until the shelter actually moves it; only the flag changes.
+        RescheduleRequested = true;
     }
 
 
