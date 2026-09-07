@@ -81,8 +81,8 @@ public class Appointment
 
     public void Apply(AppointmentCompleted appointmentCompleted)
     {
-        // TODO: fold this event into the state. Deterministic only —
-        // timestamps belong on the event record, never DateTimeOffset.UtcNow here.
+        Status = "Completed";
+        RescheduleRequested = false;
     }
 
 
