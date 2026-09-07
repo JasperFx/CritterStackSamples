@@ -11,14 +11,17 @@ public static class ProposeSurrenderIntakeAppointmentHandler
 {
     public static StartStream Handle(SurrenderRequestApproved trigger)
     {
-        // The decision. Every scenario of this slice arranges no prior events, so it starts the
-        // stream: mint the id (or take it off the trigger) and hand back the Appointment's first event.
-        // Fill this in and delete the throw — the shape is:
-        //     var id = Guid.NewGuid();   // or the identity the trigger already carries
-        //     return Storage.StartStream<Appointment>(id, new SurrenderIntakeAppointmentProposed(/* … */));
-        throw new NotImplementedException("TODO: ProposeSurrenderIntakeAppointment — decide which event starts the stream, and what its id is");
+        // One approved surrender request proposes exactly one intake appointment, so the request's
+        // own identity names the Appointment stream. That keeps the decision deterministic: a
+        // redelivered trigger targets the same stream instead of quietly minting a second
+        // appointment for the same surrender.
+        var appointmentId = trigger.RequestId;
+
+        return Storage.StartStream<Appointment>(appointmentId, new SurrenderIntakeAppointmentProposed(
+            appointmentId,
+            trigger.OwnerId,
+            trigger.ShelterId,
+            trigger.DogId,
+            trigger.ProposedFor));
     }
-
 }
-
-

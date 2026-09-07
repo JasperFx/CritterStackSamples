@@ -32,7 +32,7 @@ Feature: BookingAppointments
 
   @slice:ProposeSurrenderIntakeAppointment
   Scenario: Approving a surrender request proposes an intake appointment
-    Given no events for Appointment "47544754-4754-4754-4754-475447544754"
+    Given no events for Appointment "c0110003-0000-0000-0000-000000000003"
     When SurrenderRequestApproved is received
       | requestId | ownerId | shelterId | dogId | proposedFor |
       | c0110003-0000-0000-0000-000000000003 | 0e5e0003-0000-0000-0000-000000000003 | 5e1e0001-0000-0000-0000-000000000001 | d0670003-0000-0000-0000-000000000003 | 2026-10-03T09:00:00Z |
