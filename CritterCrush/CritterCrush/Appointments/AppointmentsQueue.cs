@@ -3,7 +3,13 @@ namespace CritterCrush.Appointments;
 public class AppointmentsQueue
 {
     public Guid Id { get; set; }
-    // TODO: the projected columns the model's scenarios assert on
+    public Guid OwnerId { get; set; }
+    public Guid ShelterId { get; set; }
+    public Guid DogId { get; set; }
+    public string Kind { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public DateTimeOffset ScheduledFor { get; set; }
+    public bool AwaitingAction { get; set; }
 }
 
 

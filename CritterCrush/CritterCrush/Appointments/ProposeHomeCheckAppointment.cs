@@ -9,12 +9,14 @@ public record HomeCheckAppointmentProposed(Guid AppointmentId, Guid OwnerId, Gui
 /// </summary>
 public static class ProposeHomeCheckAppointmentHandler
 {
-    public static EventsToAppend Handle(HomeCheckAssignmentAccepted trigger, [WriteModel] Appointment appointment)
+    public static StartStream Handle(HomeCheckAssignmentAccepted trigger)
     {
-        // The decision. Nothing to append is `return [];` — never a nullable event (wolverine#4309).
+        // The decision. Every scenario of this slice arranges no prior events, so it starts the
+        // stream: mint the id (or take it off the trigger) and hand back the Appointment's first event.
         // Fill this in and delete the throw — the shape is:
-        //     return [new HomeCheckAppointmentProposed(/* … */)];
-        throw new NotImplementedException("TODO: ProposeHomeCheckAppointment — decide which events this slice appends");
+        //     var id = Guid.NewGuid();   // or the identity the trigger already carries
+        //     return Storage.StartStream<Appointment>(id, new HomeCheckAppointmentProposed(/* … */));
+        throw new NotImplementedException("TODO: ProposeHomeCheckAppointment — decide which event starts the stream, and what its id is");
     }
 
 }

@@ -7,8 +7,6 @@ regenerating that slice's file would overwrite the work.
 
 ```bash
 dotnet run --project <scaffolder-runner> -- models/CritterCrush.emodel.yaml out
-python3 models/patch_feature.py models/CritterCrush.emodel.yaml \
-        out/Features/BookingAppointments.feature out/Appointments
 cp out/Appointments/*.cs CritterCrush/Appointments/
 cp out/Features/*.feature CritterCrush.Specs/Features/
 ```
@@ -17,19 +15,21 @@ The runner is eight lines around `SliceScaffolder.ScaffoldAll(model)` — use th
 point and not the individual `Scaffold`/`ScaffoldAggregates`/`ScaffoldFeatures` methods, because
 the pieces are not independent and skipping one leaves a dangling type.
 
-## Why there is a patch step at all
+## There used to be a patch step here
 
-`patch_feature.py` is scaffolding the scaffolder does not do yet. Every rewrite in it is
-mechanical, derived from the model, and tagged with the Bobcat issue that will delete it:
+Regenerating this chapter and running what came out found eight defects in the scaffolder, and
+until they were fixed a `patch_feature.py` sat between the generator and the repository, rewriting
+what the scaffolder should have emitted. It is gone as of Bobcat 0.14.0 — every gap it stood in
+for closed upstream:
 
-| Issue | What the patch stands in for |
+| Issue | What it stood in for |
 |---|---|
 | [#231](https://github.com/JasperFx/bobcat/issues/231) | a collapsed HTTP slice is driven over HTTP, not the bus |
 | [#235](https://github.com/JasperFx/bobcat/issues/235) | `{streamId}` means "the stream this scenario runs against" |
 | [#237](https://github.com/JasperFx/bobcat/issues/237) | an HTTP guard refuses with 400 and throws nothing |
 | [#241](https://github.com/JasperFx/bobcat/issues/241) | a `Given` may arrange an event partially |
 
-When those close, delete the corresponding branch — and when all four have, delete the file.
+The generation step is now the whole of it: model in, code and specs out, nothing in between.
 
 ## What the model has to carry that a board export does not
 

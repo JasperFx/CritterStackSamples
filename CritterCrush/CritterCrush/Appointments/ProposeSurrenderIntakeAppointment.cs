@@ -9,12 +9,14 @@ public record SurrenderIntakeAppointmentProposed(Guid AppointmentId, Guid OwnerI
 /// </summary>
 public static class ProposeSurrenderIntakeAppointmentHandler
 {
-    public static EventsToAppend Handle(SurrenderRequestApproved trigger, [WriteModel] Appointment appointment)
+    public static StartStream Handle(SurrenderRequestApproved trigger)
     {
-        // The decision. Nothing to append is `return [];` — never a nullable event (wolverine#4309).
+        // The decision. Every scenario of this slice arranges no prior events, so it starts the
+        // stream: mint the id (or take it off the trigger) and hand back the Appointment's first event.
         // Fill this in and delete the throw — the shape is:
-        //     return [new SurrenderIntakeAppointmentProposed(/* … */)];
-        throw new NotImplementedException("TODO: ProposeSurrenderIntakeAppointment — decide which events this slice appends");
+        //     var id = Guid.NewGuid();   // or the identity the trigger already carries
+        //     return Storage.StartStream<Appointment>(id, new SurrenderIntakeAppointmentProposed(/* … */));
+        throw new NotImplementedException("TODO: ProposeSurrenderIntakeAppointment — decide which event starts the stream, and what its id is");
     }
 
 }

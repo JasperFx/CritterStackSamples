@@ -7,3 +7,4 @@ global using Wolverine.Persistence.EventSourcing;
 global using Marten;
 global using Marten.Events.Projections;
 global using Marten.Events.Aggregation;
+global using Wolverine.Persistence;

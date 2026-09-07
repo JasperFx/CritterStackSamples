@@ -14,8 +14,10 @@ public record ConfirmAppointmentResponse();
 /// </summary>
 public static class ConfirmAppointmentEndpoint
 {
-    public static ProblemDetails Validate(ConfirmAppointmentRequest request)
+    public static ProblemDetails Validate(ConfirmAppointmentRequest request, [ReadModel] Appointment? appointment)
     {
+        // The model's refusing scenarios arrange prior events, so these refusals are about
+        // appointment's state, not the request's shape. Null means the stream does not exist yet.
         // TODO guard: return new ProblemDetails { Detail = "This appointment was cancelled", Status = 400 };
         return WolverineContinue.NoProblems;
     }
