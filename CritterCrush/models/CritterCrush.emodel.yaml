@@ -78,7 +78,12 @@ slices:
           when:
             command: HomeCheckAssignmentAccepted
             with:
-              assignmentId: "a5510001-0000-0000-0000-000000000001"
+              # The Appointment stream takes the identity the trigger already carries — one
+              # accepted assignment is one appointment — so the act must address the stream the
+              # Given arranged. `{streamId}` is the scaffolder's token for that id (bobcat#235);
+              # a literal here would create a DIFFERENT stream than the scenario arranged, and
+              # the emitted-event assertion would read an empty one.
+              assignmentId: "{streamId}"
               ownerId: "0e5e0001-0000-0000-0000-000000000001"
               shelterId: "5e1e0001-0000-0000-0000-000000000001"
               dogId: "d0670001-0000-0000-0000-000000000001"
@@ -126,8 +131,7 @@ slices:
           when:
             command: FosterPlacementApproved
             with:
-              # The appointment takes the placement's identity, so the act must address the
-              # arranged stream: {streamId} is the scaffolder's token for the Given's id.
+              # Same identity rule as the other two proposals — see above.
               placementId: "{streamId}"
               ownerId: "0e5e0002-0000-0000-0000-000000000002"
               shelterId: "5e1e0001-0000-0000-0000-000000000001"
@@ -174,7 +178,8 @@ slices:
           when:
             command: SurrenderRequestApproved
             with:
-              requestId: "c0110003-0000-0000-0000-000000000003"
+              # Same identity rule as the other two proposals — see above.
+              requestId: "{streamId}"
               ownerId: "0e5e0003-0000-0000-0000-000000000003"
               shelterId: "5e1e0001-0000-0000-0000-000000000001"
               dogId: "d0670003-0000-0000-0000-000000000003"
