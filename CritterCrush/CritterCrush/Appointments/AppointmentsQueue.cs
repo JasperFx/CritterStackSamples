@@ -10,7 +10,87 @@ public class AppointmentsQueue
 // Async lifecycle: register with the daemon RUNNING (AddAsyncDaemon), or this never advances.
 public class AppointmentsQueueProjection : SingleStreamProjection<AppointmentsQueue, Guid>
 {
-    // TODO: Apply methods per source event
+
+    public void Apply(HomeCheckAppointmentProposed homeCheckAppointmentProposed, AppointmentsQueue view)
+    {
+        // Fill this in and delete the throw — the model's scenarios say what the view holds.
+        // Until then the projection stops on this event, so a scenario asserting the read model
+        // fails on its projection wait rather than on a value.
+        throw new NotImplementedException("TODO: AppointmentsQueue — project HomeCheckAppointmentProposed");
+    }
+
+
+    public void Apply(FosterHandoverAppointmentProposed fosterHandoverAppointmentProposed, AppointmentsQueue view)
+    {
+        // Fill this in and delete the throw — the model's scenarios say what the view holds.
+        // Until then the projection stops on this event, so a scenario asserting the read model
+        // fails on its projection wait rather than on a value.
+        throw new NotImplementedException("TODO: AppointmentsQueue — project FosterHandoverAppointmentProposed");
+    }
+
+
+    public void Apply(SurrenderIntakeAppointmentProposed surrenderIntakeAppointmentProposed, AppointmentsQueue view)
+    {
+        // Fill this in and delete the throw — the model's scenarios say what the view holds.
+        // Until then the projection stops on this event, so a scenario asserting the read model
+        // fails on its projection wait rather than on a value.
+        throw new NotImplementedException("TODO: AppointmentsQueue — project SurrenderIntakeAppointmentProposed");
+    }
+
+
+    public void Apply(AppointmentConfirmed appointmentConfirmed, AppointmentsQueue view)
+    {
+        // Fill this in and delete the throw — the model's scenarios say what the view holds.
+        // Until then the projection stops on this event, so a scenario asserting the read model
+        // fails on its projection wait rather than on a value.
+        throw new NotImplementedException("TODO: AppointmentsQueue — project AppointmentConfirmed");
+    }
+
+
+    public void Apply(RescheduleRequested rescheduleRequested, AppointmentsQueue view)
+    {
+        // Fill this in and delete the throw — the model's scenarios say what the view holds.
+        // Until then the projection stops on this event, so a scenario asserting the read model
+        // fails on its projection wait rather than on a value.
+        throw new NotImplementedException("TODO: AppointmentsQueue — project RescheduleRequested");
+    }
+
+
+    public void Apply(AppointmentRescheduled appointmentRescheduled, AppointmentsQueue view)
+    {
+        // Fill this in and delete the throw — the model's scenarios say what the view holds.
+        // Until then the projection stops on this event, so a scenario asserting the read model
+        // fails on its projection wait rather than on a value.
+        throw new NotImplementedException("TODO: AppointmentsQueue — project AppointmentRescheduled");
+    }
+
+
+    public void Apply(AppointmentCompleted appointmentCompleted, AppointmentsQueue view)
+    {
+        // Fill this in and delete the throw — the model's scenarios say what the view holds.
+        // Until then the projection stops on this event, so a scenario asserting the read model
+        // fails on its projection wait rather than on a value.
+        throw new NotImplementedException("TODO: AppointmentsQueue — project AppointmentCompleted");
+    }
+
+
+    public void Apply(AppointmentCancelled appointmentCancelled, AppointmentsQueue view)
+    {
+        // Fill this in and delete the throw — the model's scenarios say what the view holds.
+        // Until then the projection stops on this event, so a scenario asserting the read model
+        // fails on its projection wait rather than on a value.
+        throw new NotImplementedException("TODO: AppointmentsQueue — project AppointmentCancelled");
+    }
+
+
+    public void Apply(AppointmentNoShowRecorded appointmentNoShowRecorded, AppointmentsQueue view)
+    {
+        // Fill this in and delete the throw — the model's scenarios say what the view holds.
+        // Until then the projection stops on this event, so a scenario asserting the read model
+        // fails on its projection wait rather than on a value.
+        throw new NotImplementedException("TODO: AppointmentsQueue — project AppointmentNoShowRecorded");
+    }
+
 }
 
 

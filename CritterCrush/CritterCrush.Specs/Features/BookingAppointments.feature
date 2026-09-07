@@ -2,6 +2,11 @@
 Feature: BookingAppointments
   Triggered by HomeCheckAssignmentAccepted
 
+  # Fixture: derive from CritterStackHttpFixture. At least one act below POSTs to a
+  # collapsed endpoint, and `is posted to` is HttpGrammars' step — CritterStackFixture
+  # alone carries the store vocabulary but not the HTTP one. Routes here are absolute,
+  # so leave the module's route prefix empty.
+
   @slice:ProposeHomeCheckAppointment
   Scenario: Accepting a home check assignment proposes an appointment
     Given no events for Appointment "83328332-8332-8332-8332-833283328332"
@@ -57,6 +62,7 @@ Feature: BookingAppointments
     When ConfirmAppointmentRequest is posted to "/api/appointments/confirmappointment"
       | appointmentId |
       | 77607760-7760-7760-7760-776077607760 |
+    # refused with: "This appointment was cancelled"
     Then the response is 400
     And no events are emitted
 
@@ -133,6 +139,7 @@ Feature: BookingAppointments
     When CancelAppointmentRequest is posted to "/api/appointments/cancelappointment"
       | appointmentId | reason |
       | 12421242-1242-1242-1242-124212421242 | Too late |
+    # refused with: "This appointment is already completed"
     Then the response is 400
     And no events are emitted
 

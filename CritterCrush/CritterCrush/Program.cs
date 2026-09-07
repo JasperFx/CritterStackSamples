@@ -24,20 +24,14 @@ builder.Services.AddMarten(opts =>
         // their own write, and the automations aggregate against committed state.
         opts.Projections.Snapshot<Appointment>(SnapshotLifecycle.Inline);
 
-        // NEITHER IS REGISTERED YET, deliberately. Marten validates a projection at startup, and
-        // a scaffolded one has no Apply methods — registering it stops the host booting and takes
-        // every other slice's specs down with it (bobcat#232). Each registration below belongs to
-        // the slice that fills its projection in, added in the same change.
-        //
-        // AppointmentsQueue is one row per appointment, keyed by the appointment's own stream, so
-        // it is single-stream and Inline — no daemon latency between the write and the assertion:
-        // opts.Projections.Add<AppointmentsQueueProjection>(ProjectionLifecycle.Inline);
-        //
-        // MyAppointments folds one document per OWNER across every appointment stream — a genuine
-        // fan-out, so Async, and the daemon above is load-bearing for it. It has no specs yet
-        // because the shipped grammar cannot address a document keyed by anything but the
-        // scenario's stream id (bobcat#236):
-        // opts.Projections.Add<MyAppointmentsProjection>(ProjectionLifecycle.Async);
+        // Both are ASYNC, including AppointmentsQueue, which is single-stream and would otherwise
+        // be a natural Inline. Inline would run inside every slice's write transaction, so one
+        // unfilled Apply would fail every OTHER slice's command — coupling nine slices to the
+        // progress of one. Async keeps the blast radius to the projection: the daemon stops on the
+        // unfilled event, and only the scenarios asserting that read model fail, on their
+        // projection wait. Scaffolded projections register cleanly as of Bobcat 0.13.0 (#232).
+        opts.Projections.Add<AppointmentsQueueProjection>(ProjectionLifecycle.Async);
+        opts.Projections.Add<MyAppointmentsProjection>(ProjectionLifecycle.Async);
     })
     .IntegrateWithWolverine(m => m.UseFastEventForwarding = true)
     .AddAsyncDaemon(DaemonMode.Solo)
