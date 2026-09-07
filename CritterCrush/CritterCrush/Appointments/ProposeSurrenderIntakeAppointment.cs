@@ -1,6 +1,7 @@
 namespace CritterCrush.Appointments;
 
-public record SurrenderIntakeAppointmentProposed();
+/// <summary>An intake appointment was proposed to the surrendering owner</summary>
+public record SurrenderIntakeAppointmentProposed(Guid AppointmentId, Guid OwnerId, Guid ShelterId, Guid DogId, DateTimeOffset ProposedFor);
 
 /// <summary>
 /// Automation slice: triggered by the SurrenderRequestApproved event, never by a route. Decides and returns —

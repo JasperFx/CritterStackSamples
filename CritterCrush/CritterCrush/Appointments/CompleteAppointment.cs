@@ -1,6 +1,7 @@
 namespace CritterCrush.Appointments;
 
-public record AppointmentCompleted();
+/// <summary>The visit happened and the shelter wrote it up</summary>
+public record AppointmentCompleted(Guid AppointmentId, Guid OwnerId, string Notes, DateTimeOffset CompletedAt);
 
 public record CompleteAppointmentRequest(Guid AppointmentId, string Notes);
 

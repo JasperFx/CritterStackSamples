@@ -1,7 +1,7 @@
 namespace CritterCrush.Appointments;
 
 /// <summary>The owner accepted the proposed time</summary>
-public record AppointmentConfirmed(Guid AppointmentId, DateTimeOffset ConfirmedAt);
+public record AppointmentConfirmed(Guid AppointmentId, Guid OwnerId, DateTimeOffset ConfirmedAt);
 
 public record ConfirmAppointmentRequest(Guid AppointmentId);
 

@@ -1,6 +1,7 @@
 namespace CritterCrush.Appointments;
 
-public record AppointmentRescheduled();
+/// <summary>The shelter moved the appointment to a new time</summary>
+public record AppointmentRescheduled(Guid AppointmentId, Guid OwnerId, DateTimeOffset ScheduledFor, DateTimeOffset RescheduledAt);
 
 public record RescheduleAppointmentRequest(Guid AppointmentId, DateTimeOffset ScheduledFor);
 

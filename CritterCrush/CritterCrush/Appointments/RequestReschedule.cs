@@ -1,8 +1,9 @@
 namespace CritterCrush.Appointments;
 
-public record RescheduleRequested();
+/// <summary>The owner cannot make the proposed time and suggested another</summary>
+public record RescheduleRequested(Guid AppointmentId, Guid OwnerId, string Reason, DateTimeOffset PreferredFor, DateTimeOffset RequestedAt);
 
-public record RequestRescheduleRequest(Guid AppointmentId, string Reason);
+public record RequestRescheduleRequest(Guid AppointmentId, string Reason, DateTimeOffset PreferredFor);
 
 public record RequestRescheduleResponse();
 

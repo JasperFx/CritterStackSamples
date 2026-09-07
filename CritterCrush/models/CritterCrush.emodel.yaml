@@ -1,10 +1,24 @@
 # The declared Event Model for CritterCrush — the BookingAppointments chapter of the K9CRUSH
 # board (Powerworks/K9DatingApp, MIT), imported from the raw emlang export with
-# `bobcat import-event-model` and then curated: domains and aggregates added, automation triggers
-# tightened from free board prose to the actual triggering event, scenario names made sentences.
+# `bobcat import-event-model` and then curated.
 #
 # This file is the source of truth. The code is generated and built FROM it — nothing here
 # describes code that already exists.
+#
+# ---------------------------------------------------------------------------------------------
+# Curation note: an emlang board export carries NO field information at all. Every record it
+# scaffolds is empty and every scenario has nothing to drive, so `elements:` and scenario `with:`
+# values are the whole substance of this file — they are what turns eleven named boxes into a
+# buildable application. Enriching four slices and not the rest produces four real slices and
+# seven hollow ones, which is worse than none, because the hollow ones still compile.
+#
+# Two identifiers ride on nearly every event, deliberately:
+#   * `appointmentId` — the stream id. Every command carries it, and the collapsed endpoint
+#     computes the stream from it via [Identity].
+#   * `ownerId` — MyAppointments folds one document per OWNER across every appointment stream, so
+#     a multi-stream projection can only route an event that carries the id it groups by. Fan-out
+#     routing constrains event shape; that is a modelling consequence, not a workaround.
+# ---------------------------------------------------------------------------------------------
 schema: 1
 model: CritterCrush
 namespace: CritterCrush
@@ -12,6 +26,10 @@ namespace: CritterCrush
 slices:
   # ---- Proposals: three flows elsewhere in the board all end in "somebody needs an appointment".
   # Each is an automation triggered by that flow's event; each starts an Appointment stream.
+  #
+  # None of the three triggers is emitted anywhere in this model — they belong to chapters this
+  # one does not contain — so each declares an inbound `externalSystems:` edge and the scaffold
+  # gives this boundary its own versioned copy of the contract.
 
   - name: ProposeHomeCheckAppointment
     pattern: Automation
@@ -24,14 +42,53 @@ slices:
     events: [HomeCheckAppointmentProposed]
     notes: >
       From chapter 'BookingAppointments', actor 'System'. Triggered by the volunteering flow
-      accepting a home-check assignment.
+      accepting a home-check assignment. This slice STARTS the Appointment stream.
+    elements:
+      Appointment:
+        fields:
+          ownerId: Guid
+          shelterId: Guid
+          dogId: Guid
+          kind: string
+          status: string
+          scheduledFor: DateTimeOffset
+          rescheduleRequested: bool
+      HomeCheckAssignmentAccepted:
+        description: Volunteering accepted a home-check assignment and needs a visit booked
+        fields:
+          assignmentId: Guid
+          ownerId: Guid
+          shelterId: Guid
+          dogId: Guid
+          volunteerId: Guid
+          proposedFor: DateTimeOffset
+      HomeCheckAppointmentProposed:
+        description: A home-check visit was proposed to the owner
+        fields:
+          appointmentId: Guid
+          ownerId: Guid
+          shelterId: Guid
+          dogId: Guid
+          volunteerId: Guid
+          proposedFor: DateTimeOffset
     specifications:
       feature: BookingAppointments
       scenarios:
         - name: Accepting a home check assignment proposes an appointment
-          when: { command: ProposeHomeCheckAppointment }
+          when:
+            command: HomeCheckAssignmentAccepted
+            with:
+              assignmentId: "a5510001-0000-0000-0000-000000000001"
+              ownerId: "0e5e0001-0000-0000-0000-000000000001"
+              shelterId: "5e1e0001-0000-0000-0000-000000000001"
+              dogId: "d0670001-0000-0000-0000-000000000001"
+              volunteerId: "0e1e0001-0000-0000-0000-000000000001"
+              proposedFor: "2026-10-01T15:00:00Z"
           then:
             - event: HomeCheckAppointmentProposed
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                proposedFor: "2026-10-01T15:00:00Z"
 
   - name: ProposeFosterHandoverAppointment
     pattern: Automation
@@ -42,14 +99,44 @@ slices:
     command: ProposeFosterHandoverAppointment
     aggregates: [Appointment]
     events: [FosterHandoverAppointmentProposed]
-    notes: From chapter 'BookingAppointments', actor 'System'.
+    notes: From chapter 'BookingAppointments', actor 'System'. This slice STARTS the Appointment stream.
+    elements:
+      FosterPlacementApproved:
+        description: Fostering approved a placement, so the dog has to change hands
+        fields:
+          placementId: Guid
+          ownerId: Guid
+          shelterId: Guid
+          dogId: Guid
+          fosterId: Guid
+          proposedFor: DateTimeOffset
+      FosterHandoverAppointmentProposed:
+        description: A handover between the shelter and the foster was proposed
+        fields:
+          appointmentId: Guid
+          ownerId: Guid
+          shelterId: Guid
+          dogId: Guid
+          fosterId: Guid
+          proposedFor: DateTimeOffset
     specifications:
       feature: BookingAppointments
       scenarios:
         - name: Approving a foster placement proposes a handover appointment
-          when: { command: ProposeFosterHandoverAppointment }
+          when:
+            command: FosterPlacementApproved
+            with:
+              placementId: "b1ac0002-0000-0000-0000-000000000002"
+              ownerId: "0e5e0002-0000-0000-0000-000000000002"
+              shelterId: "5e1e0001-0000-0000-0000-000000000001"
+              dogId: "d0670002-0000-0000-0000-000000000002"
+              fosterId: "f05e0002-0000-0000-0000-000000000002"
+              proposedFor: "2026-10-02T10:30:00Z"
           then:
             - event: FosterHandoverAppointmentProposed
+              with:
+                fosterId: "f05e0002-0000-0000-0000-000000000002"
+                proposedFor: "2026-10-02T10:30:00Z"
 
   - name: ProposeSurrenderIntakeAppointment
     pattern: Automation
@@ -60,17 +147,49 @@ slices:
     command: ProposeSurrenderIntakeAppointment
     aggregates: [Appointment]
     events: [SurrenderIntakeAppointmentProposed]
-    notes: From chapter 'BookingAppointments', actor 'System'.
+    notes: From chapter 'BookingAppointments', actor 'System'. This slice STARTS the Appointment stream.
+    elements:
+      SurrenderRequestApproved:
+        description: The shelter agreed to take a surrendered dog in
+        fields:
+          requestId: Guid
+          ownerId: Guid
+          shelterId: Guid
+          dogId: Guid
+          proposedFor: DateTimeOffset
+      SurrenderIntakeAppointmentProposed:
+        description: An intake appointment was proposed to the surrendering owner
+        fields:
+          appointmentId: Guid
+          ownerId: Guid
+          shelterId: Guid
+          dogId: Guid
+          proposedFor: DateTimeOffset
     specifications:
       feature: BookingAppointments
       scenarios:
         - name: Approving a surrender request proposes an intake appointment
-          when: { command: ProposeSurrenderIntakeAppointment }
+          when:
+            command: SurrenderRequestApproved
+            with:
+              requestId: "c0110003-0000-0000-0000-000000000003"
+              ownerId: "0e5e0003-0000-0000-0000-000000000003"
+              shelterId: "5e1e0001-0000-0000-0000-000000000001"
+              dogId: "d0670003-0000-0000-0000-000000000003"
+              proposedFor: "2026-10-03T09:00:00Z"
           then:
             - event: SurrenderIntakeAppointmentProposed
+              with:
+                ownerId: "0e5e0003-0000-0000-0000-000000000003"
+                proposedFor: "2026-10-03T09:00:00Z"
 
   # ---- The lifecycle: an owner confirms or asks to move; the shelter reschedules, completes,
   # cancels, or records a no-show.
+  #
+  # `{streamId}` in a scenario `with:` means "the id of the stream this scenario is running
+  # against". The collapsed endpoint computes its stream from the request, so a literal here
+  # would post to a DIFFERENT stream than the Given events were written to, and every
+  # state-dependent refusal would silently pass for the wrong reason (bobcat #235).
 
   - name: ConfirmAppointment
     pattern: Command
@@ -84,21 +203,29 @@ slices:
         fields: { appointmentId: Guid }
       AppointmentConfirmed:
         description: The owner accepted the proposed time
-        fields: { appointmentId: Guid, confirmedAt: DateTimeOffset }
+        fields: { appointmentId: Guid, ownerId: Guid, confirmedAt: DateTimeOffset }
     specifications:
       feature: BookingAppointments
       scenarios:
         - name: A proposed appointment is confirmed
           given:
             - event: HomeCheckAppointmentProposed
-          when: { command: ConfirmAppointment }
+              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001", proposedFor: "2026-10-01T15:00:00Z" }
+          when:
+            command: ConfirmAppointment
+            with: { appointmentId: "{streamId}" }
           then:
             - event: AppointmentConfirmed
+              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001" }
         - name: Confirming an already cancelled appointment is refused
           given:
             - event: HomeCheckAppointmentProposed
+              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001", proposedFor: "2026-10-01T15:00:00Z" }
             - event: AppointmentCancelled
-          when: { command: ConfirmAppointment }
+              with: { reason: "The owner moved away" }
+          when:
+            command: ConfirmAppointment
+            with: { appointmentId: "{streamId}" }
           then:
             - validationFails: "This appointment was cancelled"
 
@@ -111,16 +238,33 @@ slices:
     events: [RescheduleRequested]
     elements:
       RequestReschedule:
-        fields: { appointmentId: Guid, reason: string }
+        fields: { appointmentId: Guid, reason: string, preferredFor: DateTimeOffset }
+      RescheduleRequested:
+        description: The owner cannot make the proposed time and suggested another
+        fields:
+          appointmentId: Guid
+          ownerId: Guid
+          reason: string
+          preferredFor: DateTimeOffset
+          requestedAt: DateTimeOffset
     specifications:
       feature: BookingAppointments
       scenarios:
         - name: An owner asks for a different time
           given:
             - event: HomeCheckAppointmentProposed
-          when: { command: RequestReschedule }
+              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001", proposedFor: "2026-10-01T15:00:00Z" }
+          when:
+            command: RequestReschedule
+            with:
+              appointmentId: "{streamId}"
+              reason: "Working that afternoon"
+              preferredFor: "2026-10-04T18:00:00Z"
           then:
             - event: RescheduleRequested
+              with:
+                reason: "Working that afternoon"
+                preferredFor: "2026-10-04T18:00:00Z"
 
   - name: RescheduleAppointment
     pattern: Command
@@ -132,16 +276,30 @@ slices:
     elements:
       RescheduleAppointment:
         fields: { appointmentId: Guid, scheduledFor: DateTimeOffset }
+      AppointmentRescheduled:
+        description: The shelter moved the appointment to a new time
+        fields:
+          appointmentId: Guid
+          ownerId: Guid
+          scheduledFor: DateTimeOffset
+          rescheduledAt: DateTimeOffset
     specifications:
       feature: BookingAppointments
       scenarios:
         - name: The shelter moves an appointment to a new time
           given:
             - event: HomeCheckAppointmentProposed
+              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001", proposedFor: "2026-10-01T15:00:00Z" }
             - event: RescheduleRequested
-          when: { command: RescheduleAppointment }
+              with: { reason: "Working that afternoon", preferredFor: "2026-10-04T18:00:00Z" }
+          when:
+            command: RescheduleAppointment
+            with:
+              appointmentId: "{streamId}"
+              scheduledFor: "2026-10-04T18:00:00Z"
           then:
             - event: AppointmentRescheduled
+              with: { scheduledFor: "2026-10-04T18:00:00Z" }
 
   - name: CompleteAppointment
     pattern: Command
@@ -153,16 +311,26 @@ slices:
     elements:
       CompleteAppointment:
         fields: { appointmentId: Guid, notes: string }
+      AppointmentCompleted:
+        description: The visit happened and the shelter wrote it up
+        fields: { appointmentId: Guid, ownerId: Guid, notes: string, completedAt: DateTimeOffset }
     specifications:
       feature: BookingAppointments
       scenarios:
         - name: A confirmed appointment is completed
           given:
             - event: HomeCheckAppointmentProposed
+              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001", proposedFor: "2026-10-01T15:00:00Z" }
             - event: AppointmentConfirmed
-          when: { command: CompleteAppointment }
+              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001" }
+          when:
+            command: CompleteAppointment
+            with:
+              appointmentId: "{streamId}"
+              notes: "Garden is fenced, two cats, all good"
           then:
             - event: AppointmentCompleted
+              with: { notes: "Garden is fenced, two cats, all good" }
 
   - name: CancelAppointment
     pattern: Command
@@ -174,21 +342,37 @@ slices:
     elements:
       CancelAppointment:
         fields: { appointmentId: Guid, reason: string }
+      AppointmentCancelled:
+        description: The appointment will not happen
+        fields: { appointmentId: Guid, ownerId: Guid, reason: string, cancelledAt: DateTimeOffset }
     specifications:
       feature: BookingAppointments
       scenarios:
         - name: An appointment is cancelled before it happens
           given:
             - event: HomeCheckAppointmentProposed
-          when: { command: CancelAppointment }
+              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001", proposedFor: "2026-10-01T15:00:00Z" }
+          when:
+            command: CancelAppointment
+            with:
+              appointmentId: "{streamId}"
+              reason: "The owner withdrew the application"
           then:
             - event: AppointmentCancelled
+              with: { reason: "The owner withdrew the application" }
         - name: A completed appointment cannot be cancelled
           given:
             - event: HomeCheckAppointmentProposed
+              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001", proposedFor: "2026-10-01T15:00:00Z" }
             - event: AppointmentConfirmed
+              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001" }
             - event: AppointmentCompleted
-          when: { command: CancelAppointment }
+              with: { notes: "Garden is fenced, two cats, all good" }
+          when:
+            command: CancelAppointment
+            with:
+              appointmentId: "{streamId}"
+              reason: "Too late"
           then:
             - validationFails: "This appointment is already completed"
 
@@ -202,28 +386,72 @@ slices:
     elements:
       RecordAppointmentNoShow:
         fields: { appointmentId: Guid }
+      AppointmentNoShowRecorded:
+        description: Nobody was there when the shelter turned up
+        fields: { appointmentId: Guid, ownerId: Guid, recordedAt: DateTimeOffset }
     specifications:
       feature: BookingAppointments
       scenarios:
         - name: Nobody turned up
           given:
             - event: HomeCheckAppointmentProposed
+              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001", proposedFor: "2026-10-01T15:00:00Z" }
             - event: AppointmentConfirmed
-          when: { command: RecordAppointmentNoShow }
+              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001" }
+          when:
+            command: RecordAppointmentNoShow
+            with: { appointmentId: "{streamId}" }
           then:
             - event: AppointmentNoShowRecorded
+              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001" }
 
-  # ---- The two read models. Both group by an identity that is NOT the stream id, so both are
-  # multi-stream projections.
+  # ---- The two read models.
 
   - name: AppointmentsQueue
     pattern: View
     domain: Appointments
     trigger: { kind: Http, label: Appointments queue }
     projections: [AppointmentsQueueProjection]
-    fanOut: true
     readModels: [AppointmentsQueue]
-    notes: The shelter's work queue — every appointment awaiting action, across all streams.
+    # A View slice has no write model of its own; this names the stream the projection READS.
+    # Without it the arrange step invents an `AppointmentsQueueModel` nothing emits (bobcat #240).
+    aggregates: [Appointment]
+    notes: >
+      The shelter's work queue, one row per appointment, keyed by the appointment's own stream —
+      so it is a SINGLE-stream projection, and the shipped `Then the {readmodel} read model
+      contains` step (which loads by the scenario's stream id) can assert it directly.
+    elements:
+      AppointmentsQueue:
+        description: One queue row per appointment — what the shelter still has to act on
+        fields:
+          ownerId: Guid
+          shelterId: Guid
+          dogId: Guid
+          kind: string
+          status: string
+          scheduledFor: DateTimeOffset
+          awaitingAction: bool
+    specifications:
+      feature: BookingAppointments
+      scenarios:
+        - name: A proposed home check waits in the queue for the owner
+          given:
+            - event: HomeCheckAppointmentProposed
+              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001", proposedFor: "2026-10-01T15:00:00Z" }
+          then:
+            - readModel: AppointmentsQueue
+              contains: { Kind: HomeCheck, Status: Proposed, AwaitingAction: "true" }
+        - name: A completed appointment stops awaiting action
+          given:
+            - event: HomeCheckAppointmentProposed
+              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001", proposedFor: "2026-10-01T15:00:00Z" }
+            - event: AppointmentConfirmed
+              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001" }
+            - event: AppointmentCompleted
+              with: { notes: "Garden is fenced, two cats, all good" }
+          then:
+            - readModel: AppointmentsQueue
+              contains: { Status: Completed, AwaitingAction: "false" }
 
   - name: MyAppointments
     pattern: View
@@ -232,4 +460,22 @@ slices:
     projections: [MyAppointmentsProjection]
     fanOut: true
     readModels: [MyAppointments]
-    notes: One document per owner, folding that owner's appointments from every stream.
+    aggregates: [Appointment]
+    notes: >
+      One document per OWNER, folding that owner's appointments from every stream — a genuine
+      fan-out, which is why every appointment event carries ownerId.
+    elements:
+      MyAppointments:
+        description: What one owner has coming up, across all of their dogs' appointments
+        fields:
+          ownerId: Guid
+          awaitingConfirmation: int
+          confirmed: int
+          nextAppointmentAt: DateTimeOffset
+    hotspots:
+      - >
+        No specifications yet, and not for want of modelling: this document is keyed by ownerId,
+        but `Then the {readmodel} read model contains` loads by the SCENARIO'S STREAM ID, so the
+        shipped grammar cannot address a fan-out document at all (bobcat #236). Binding specs to
+        this slice needs that step to take an identity. Until then the slice derives `unrealized`
+        from having no bound specs, which is the honest answer rather than a faked one.

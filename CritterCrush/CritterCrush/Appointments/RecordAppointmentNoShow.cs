@@ -1,6 +1,7 @@
 namespace CritterCrush.Appointments;
 
-public record AppointmentNoShowRecorded();
+/// <summary>Nobody was there when the shelter turned up</summary>
+public record AppointmentNoShowRecorded(Guid AppointmentId, Guid OwnerId, DateTimeOffset RecordedAt);
 
 public record RecordAppointmentNoShowRequest(Guid AppointmentId);
 

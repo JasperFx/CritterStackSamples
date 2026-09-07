@@ -8,19 +8,9 @@ public class AppointmentsQueue
 
 
 // Async lifecycle: register with the daemon RUNNING (AddAsyncDaemon), or this never advances.
-public class AppointmentsQueueProjection : MultiStreamProjection<AppointmentsQueue, Guid>
+public class AppointmentsQueueProjection : SingleStreamProjection<AppointmentsQueue, Guid>
 {
-    public AppointmentsQueueProjection()
-    {
-        // TODO: the fan-out routing — Identities<SourceEvent>(x => [x.OneId, x.OtherId]);
-    }
-
-
-    public void Apply(HomeCheckAppointmentProposed e, AppointmentsQueue view)
-    {
-        // TODO: project this event onto the view — the model's scenarios say what it must contain
-        throw new NotImplementedException("TODO: AppointmentsQueue — project HomeCheckAppointmentProposed");
-    }
+    // TODO: Apply methods per source event
 }
 
 

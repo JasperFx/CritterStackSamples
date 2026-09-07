@@ -3,6 +3,13 @@ namespace CritterCrush.Appointments;
 public class Appointment
 {
     public Guid Id { get; set; }
+    public Guid OwnerId { get; set; }
+    public Guid ShelterId { get; set; }
+    public Guid DogId { get; set; }
+    public string Kind { get; set; }
+    public string Status { get; set; }
+    public DateTimeOffset ScheduledFor { get; set; }
+    public bool RescheduleRequested { get; set; }
 
     public static Appointment Create(HomeCheckAppointmentProposed homeCheckAppointmentProposed)
     {

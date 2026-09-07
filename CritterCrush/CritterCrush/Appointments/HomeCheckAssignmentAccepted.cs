@@ -5,5 +5,5 @@ namespace CritterCrush.Appointments;
 /// slice in this model emits it — so this is the boundary's own copy of its shape. Version it
 /// rather than edit it: a breaking change is HomeCheckAssignmentAcceptedV2, never a changed field here.
 /// </summary>
-public record HomeCheckAssignmentAccepted();
+public record HomeCheckAssignmentAccepted(Guid AssignmentId, Guid OwnerId, Guid ShelterId, Guid DogId, Guid VolunteerId, DateTimeOffset ProposedFor);
 

@@ -1,6 +1,7 @@
 namespace CritterCrush.Appointments;
 
-public record FosterHandoverAppointmentProposed();
+/// <summary>A handover between the shelter and the foster was proposed</summary>
+public record FosterHandoverAppointmentProposed(Guid AppointmentId, Guid OwnerId, Guid ShelterId, Guid DogId, Guid FosterId, DateTimeOffset ProposedFor);
 
 /// <summary>
 /// Automation slice: triggered by the FosterPlacementApproved event, never by a route. Decides and returns —

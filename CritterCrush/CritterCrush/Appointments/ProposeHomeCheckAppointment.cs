@@ -1,6 +1,7 @@
 namespace CritterCrush.Appointments;
 
-public record HomeCheckAppointmentProposed();
+/// <summary>A home-check visit was proposed to the owner</summary>
+public record HomeCheckAppointmentProposed(Guid AppointmentId, Guid OwnerId, Guid ShelterId, Guid DogId, Guid VolunteerId, DateTimeOffset ProposedFor);
 
 /// <summary>
 /// Automation slice: triggered by the HomeCheckAssignmentAccepted event, never by a route. Decides and returns —

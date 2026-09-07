@@ -1,6 +1,7 @@
 namespace CritterCrush.Appointments;
 
-public record AppointmentCancelled();
+/// <summary>The appointment will not happen</summary>
+public record AppointmentCancelled(Guid AppointmentId, Guid OwnerId, string Reason, DateTimeOffset CancelledAt);
 
 public record CancelAppointmentRequest(Guid AppointmentId, string Reason);
 

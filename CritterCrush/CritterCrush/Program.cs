@@ -21,15 +21,19 @@ builder.Services.AddMarten(opts =>
         // their own write, and the automations aggregate against committed state.
         opts.Projections.Snapshot<Appointment>(SnapshotLifecycle.Inline);
 
-        // Both read models group by an identity that is not the stream id, so both are
-        // multi-stream — and Async means the daemon below is load-bearing.
+        // NEITHER IS REGISTERED YET, deliberately. Marten validates a projection at startup, and
+        // a scaffolded one has no Apply methods — registering it stops the host booting and takes
+        // every other slice's specs down with it (bobcat#232). Each registration below belongs to
+        // the slice that fills its projection in, added in the same change.
         //
-        // NOT REGISTERED YET, deliberately: the model marks both View slices unrealized (no bound
-        // specifications), and Marten validates a projection at startup — an unfilled one has no
-        // slicing rules and no Apply methods, so registering it stops the host booting and takes
-        // every other slice's specs down with it (bobcat#232). Register each one as its slice is
-        // built and its specs bound.
-        // opts.Projections.Add<AppointmentsQueueProjection>(ProjectionLifecycle.Async);
+        // AppointmentsQueue is one row per appointment, keyed by the appointment's own stream, so
+        // it is single-stream and Inline — no daemon latency between the write and the assertion:
+        // opts.Projections.Add<AppointmentsQueueProjection>(ProjectionLifecycle.Inline);
+        //
+        // MyAppointments folds one document per OWNER across every appointment stream — a genuine
+        // fan-out, so Async, and the daemon above is load-bearing for it. It has no specs yet
+        // because the shipped grammar cannot address a document keyed by anything but the
+        // scenario's stream id (bobcat#236):
         // opts.Projections.Add<MyAppointmentsProjection>(ProjectionLifecycle.Async);
     })
     .IntegrateWithWolverine(m => m.UseFastEventForwarding = true)
