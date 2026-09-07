@@ -94,8 +94,7 @@ public class Appointment
 
     public void Apply(AppointmentNoShowRecorded appointmentNoShowRecorded)
     {
-        // TODO: fold this event into the state. Deterministic only —
-        // timestamps belong on the event record, never DateTimeOffset.UtcNow here.
+        Status = "NoShow";
     }
 
 }
