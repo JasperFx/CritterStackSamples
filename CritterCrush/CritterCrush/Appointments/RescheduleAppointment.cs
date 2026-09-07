@@ -3,7 +3,7 @@ namespace CritterCrush.Appointments;
 /// <summary>The shelter moved the appointment to a new time</summary>
 public record AppointmentRescheduled(Guid AppointmentId, Guid OwnerId, DateTimeOffset ScheduledFor, DateTimeOffset RescheduledAt);
 
-public record RescheduleAppointmentRequest(Guid AppointmentId, DateTimeOffset ScheduledFor);
+public record RescheduleAppointment(Guid AppointmentId, DateTimeOffset ScheduledFor);
 
 public record RescheduleAppointmentResponse(Guid AppointmentId, DateTimeOffset ScheduledFor);
 
@@ -14,7 +14,7 @@ public record RescheduleAppointmentResponse(Guid AppointmentId, DateTimeOffset S
 /// </summary>
 public static class RescheduleAppointmentEndpoint
 {
-    public static ProblemDetails Validate(RescheduleAppointmentRequest request, [ReadModel] Appointment? appointment)
+    public static ProblemDetails Validate(RescheduleAppointment command, [ReadModel] Appointment? appointment)
     {
         // Null means the stream does not exist yet: there is nothing to move.
         if (appointment is null)
@@ -27,7 +27,7 @@ public static class RescheduleAppointmentEndpoint
 
     [WolverinePost("/api/appointments/rescheduleappointment")]
     public static (RescheduleAppointmentResponse, EventsToAppend) Post(
-        RescheduleAppointmentRequest request,
+        RescheduleAppointment command,
         [WriteModel] Appointment appointment)
     {
         // The timestamp is taken here, in the decision, and lives on the event — so a rebuild
@@ -35,9 +35,9 @@ public static class RescheduleAppointmentEndpoint
         var rescheduled = new AppointmentRescheduled(
             appointment.Id,
             appointment.OwnerId,
-            request.ScheduledFor,
+            command.ScheduledFor,
             DateTimeOffset.UtcNow);
 
-        return (new RescheduleAppointmentResponse(appointment.Id, request.ScheduledFor), [rescheduled]);
+        return (new RescheduleAppointmentResponse(appointment.Id, command.ScheduledFor), [rescheduled]);
     }
 }

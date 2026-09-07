@@ -43,7 +43,7 @@ Feature: BookingAppointments
     And events for Appointment
       | Event | ownerId | proposedFor |
       | HomeCheckAppointmentProposed | 0e5e0001-0000-0000-0000-000000000001 | 2026-10-01T15:00:00Z |
-    When ConfirmAppointmentRequest is posted to "/api/appointments/confirmappointment"
+    When ConfirmAppointment is posted to "/api/appointments/confirmappointment"
       | appointmentId |
       | 43254325-4325-4325-4325-432543254325 |
     Then AppointmentConfirmed is emitted
@@ -59,7 +59,7 @@ Feature: BookingAppointments
     And events for Appointment
       | Event | reason |
       | AppointmentCancelled | The owner moved away |
-    When ConfirmAppointmentRequest is posted to "/api/appointments/confirmappointment"
+    When ConfirmAppointment is posted to "/api/appointments/confirmappointment"
       | appointmentId |
       | 77607760-7760-7760-7760-776077607760 |
     # refused with: "This appointment was cancelled"
@@ -72,7 +72,7 @@ Feature: BookingAppointments
     And events for Appointment
       | Event | ownerId | proposedFor |
       | HomeCheckAppointmentProposed | 0e5e0001-0000-0000-0000-000000000001 | 2026-10-01T15:00:00Z |
-    When RequestRescheduleRequest is posted to "/api/appointments/requestreschedule"
+    When RequestReschedule is posted to "/api/appointments/requestreschedule"
       | appointmentId | reason | preferredFor |
       | 99549954-9954-9954-9954-995499549954 | Working that afternoon | 2026-10-04T18:00:00Z |
     Then RescheduleRequested is emitted
@@ -88,7 +88,7 @@ Feature: BookingAppointments
     And events for Appointment
       | Event | reason | preferredFor |
       | RescheduleRequested | Working that afternoon | 2026-10-04T18:00:00Z |
-    When RescheduleAppointmentRequest is posted to "/api/appointments/rescheduleappointment"
+    When RescheduleAppointment is posted to "/api/appointments/rescheduleappointment"
       | appointmentId | scheduledFor |
       | 98539853-9853-9853-9853-985398539853 | 2026-10-04T18:00:00Z |
     Then AppointmentRescheduled is emitted
@@ -104,7 +104,7 @@ Feature: BookingAppointments
     And events for Appointment
       | Event | ownerId |
       | AppointmentConfirmed | 0e5e0001-0000-0000-0000-000000000001 |
-    When CompleteAppointmentRequest is posted to "/api/appointments/completeappointment"
+    When CompleteAppointment is posted to "/api/appointments/completeappointment"
       | appointmentId | notes |
       | 36343634-3634-3634-3634-363436343634 | Garden is fenced, two cats, all good |
     Then AppointmentCompleted is emitted
@@ -117,7 +117,7 @@ Feature: BookingAppointments
     And events for Appointment
       | Event | ownerId | proposedFor |
       | HomeCheckAppointmentProposed | 0e5e0001-0000-0000-0000-000000000001 | 2026-10-01T15:00:00Z |
-    When CancelAppointmentRequest is posted to "/api/appointments/cancelappointment"
+    When CancelAppointment is posted to "/api/appointments/cancelappointment"
       | appointmentId | reason |
       | 64106410-6410-6410-6410-641064106410 | The owner withdrew the application |
     Then AppointmentCancelled is emitted
@@ -136,7 +136,7 @@ Feature: BookingAppointments
     And events for Appointment
       | Event | notes |
       | AppointmentCompleted | Garden is fenced, two cats, all good |
-    When CancelAppointmentRequest is posted to "/api/appointments/cancelappointment"
+    When CancelAppointment is posted to "/api/appointments/cancelappointment"
       | appointmentId | reason |
       | 12421242-1242-1242-1242-124212421242 | Too late |
     # refused with: "This appointment is already completed"
@@ -152,7 +152,7 @@ Feature: BookingAppointments
     And events for Appointment
       | Event | ownerId |
       | AppointmentConfirmed | 0e5e0001-0000-0000-0000-000000000001 |
-    When RecordAppointmentNoShowRequest is posted to "/api/appointments/recordappointmentnoshow"
+    When RecordAppointmentNoShow is posted to "/api/appointments/recordappointmentnoshow"
       | appointmentId |
       | 71717171-7171-7171-7171-717171717171 |
     Then AppointmentNoShowRecorded is emitted

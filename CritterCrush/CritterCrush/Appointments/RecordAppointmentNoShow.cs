@@ -3,7 +3,7 @@ namespace CritterCrush.Appointments;
 /// <summary>Nobody was there when the shelter turned up</summary>
 public record AppointmentNoShowRecorded(Guid AppointmentId, Guid OwnerId, DateTimeOffset RecordedAt);
 
-public record RecordAppointmentNoShowRequest(Guid AppointmentId);
+public record RecordAppointmentNoShow(Guid AppointmentId);
 
 public record RecordAppointmentNoShowResponse(Guid AppointmentId, Guid OwnerId, DateTimeOffset RecordedAt);
 
@@ -14,7 +14,7 @@ public record RecordAppointmentNoShowResponse(Guid AppointmentId, Guid OwnerId, 
 /// </summary>
 public static class RecordAppointmentNoShowEndpoint
 {
-    public static ProblemDetails Validate(RecordAppointmentNoShowRequest request, [ReadModel] Appointment? appointment)
+    public static ProblemDetails Validate(RecordAppointmentNoShow command, [ReadModel] Appointment? appointment)
     {
         // Null means the stream does not exist yet: there is no appointment to have missed.
         if (appointment is null)
@@ -26,7 +26,7 @@ public static class RecordAppointmentNoShowEndpoint
     }
 
     [WolverinePost("/api/appointments/recordappointmentnoshow")]
-    public static (RecordAppointmentNoShowResponse, EventsToAppend) Post(RecordAppointmentNoShowRequest request, [WriteModel] Appointment appointment)
+    public static (RecordAppointmentNoShowResponse, EventsToAppend) Post(RecordAppointmentNoShow command, [WriteModel] Appointment appointment)
     {
         // The timestamp lives on the event record so a rebuild folds the same value the
         // original run did.

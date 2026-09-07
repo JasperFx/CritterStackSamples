@@ -3,7 +3,7 @@ namespace CritterCrush.Appointments;
 /// <summary>The owner accepted the proposed time</summary>
 public record AppointmentConfirmed(Guid AppointmentId, Guid OwnerId, DateTimeOffset ConfirmedAt);
 
-public record ConfirmAppointmentRequest(Guid AppointmentId);
+public record ConfirmAppointment(Guid AppointmentId);
 
 public record ConfirmAppointmentResponse(Guid AppointmentId, string Status);
 
@@ -14,7 +14,7 @@ public record ConfirmAppointmentResponse(Guid AppointmentId, string Status);
 /// </summary>
 public static class ConfirmAppointmentEndpoint
 {
-    public static ProblemDetails Validate(ConfirmAppointmentRequest request, [ReadModel] Appointment? appointment)
+    public static ProblemDetails Validate(ConfirmAppointment command, [ReadModel] Appointment? appointment)
     {
         // The model's refusing scenarios arrange prior events, so these refusals are about
         // appointment's state, not the request's shape. Null means the stream does not exist yet.
@@ -32,7 +32,7 @@ public static class ConfirmAppointmentEndpoint
     }
 
     [WolverinePost("/api/appointments/confirmappointment")]
-    public static (ConfirmAppointmentResponse, EventsToAppend) Post(ConfirmAppointmentRequest request, [WriteModel] Appointment appointment)
+    public static (ConfirmAppointmentResponse, EventsToAppend) Post(ConfirmAppointment command, [WriteModel] Appointment appointment)
     {
         // Validate already refused a missing or cancelled appointment, so the decision here is
         // only to record the owner's acceptance. The timestamp lives on the event, not in Apply.

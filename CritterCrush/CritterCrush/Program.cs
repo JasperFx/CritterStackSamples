@@ -1,3 +1,4 @@
+using Bobcat.EventModel;
 using CritterCrush.Appointments;
 using JasperFx;
 using JasperFx.Events.Daemon;
@@ -10,6 +11,12 @@ using Wolverine.Marten;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddWolverineHttp();
+
+// The declared model, alongside the one Wolverine and Marten derive from the code. Both feed the
+// same merged EventModelDescriptor, and where they disagree the merge says so — which is how this
+// application answers "does the code still do what the board said" without anybody reading both.
+builder.Services.AddEventModelFile(
+    Path.Combine(builder.Environment.ContentRootPath, "..", "models", "CritterCrush.emodel.yaml"));
 
 builder.Services.AddMarten(opts =>
     {
