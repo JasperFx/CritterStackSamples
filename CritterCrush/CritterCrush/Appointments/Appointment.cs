@@ -34,8 +34,13 @@ public class Appointment
 
     public void Apply(SurrenderIntakeAppointmentProposed surrenderIntakeAppointmentProposed)
     {
-        // TODO: fold this event into the state. Deterministic only —
-        // timestamps belong on the event record, never DateTimeOffset.UtcNow here.
+        Id = surrenderIntakeAppointmentProposed.AppointmentId;
+        OwnerId = surrenderIntakeAppointmentProposed.OwnerId;
+        ShelterId = surrenderIntakeAppointmentProposed.ShelterId;
+        DogId = surrenderIntakeAppointmentProposed.DogId;
+        Kind = "SurrenderIntake";
+        Status = "Proposed";
+        ScheduledFor = surrenderIntakeAppointmentProposed.ProposedFor;
     }
 
 
