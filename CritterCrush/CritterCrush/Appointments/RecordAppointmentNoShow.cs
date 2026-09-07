@@ -5,7 +5,7 @@ public record AppointmentNoShowRecorded(Guid AppointmentId, Guid OwnerId, DateTi
 
 public record RecordAppointmentNoShowRequest(Guid AppointmentId);
 
-public record RecordAppointmentNoShowResponse();
+public record RecordAppointmentNoShowResponse(Guid AppointmentId, Guid OwnerId, DateTimeOffset RecordedAt);
 
 /// <summary>
 /// The endpoint IS the handler: one transaction, honest status codes. Split a separate
@@ -14,22 +14,24 @@ public record RecordAppointmentNoShowResponse();
 /// </summary>
 public static class RecordAppointmentNoShowEndpoint
 {
-    public static ProblemDetails Validate(RecordAppointmentNoShowRequest request)
+    public static ProblemDetails Validate(RecordAppointmentNoShowRequest request, [ReadModel] Appointment? appointment)
     {
+        // Null means the stream does not exist yet: there is no appointment to have missed.
+        if (appointment is null)
+        {
+            return new ProblemDetails { Detail = "This appointment does not exist", Status = 404 };
+        }
+
         return WolverineContinue.NoProblems;
     }
 
-
     [WolverinePost("/api/appointments/recordappointmentnoshow")]
-    public static (RecordAppointmentNoShowResponse, EventsToAppend) Post(RecordAppointmentNoShowRequest request, [WriteModel] Appointment? appointment)
+    public static (RecordAppointmentNoShowResponse, EventsToAppend) Post(RecordAppointmentNoShowRequest request, [WriteModel] Appointment appointment)
     {
-        // The decision. Nothing to append is `return (..., []);` — never a nullable event (wolverine#4309).
-        // A computed stream id belongs on the request record: [Identity] public Guid ...Id => ...;
-        // Fill this in and delete the throw — the shape is:
-        //     return (new RecordAppointmentNoShowResponse(/* … */), [new AppointmentNoShowRecorded(/* … */)]);
-        throw new NotImplementedException("TODO: RecordAppointmentNoShow — decide which events this slice appends, and what to answer with");
+        // The timestamp lives on the event record so a rebuild folds the same value the
+        // original run did.
+        var recorded = new AppointmentNoShowRecorded(appointment.Id, appointment.OwnerId, DateTimeOffset.UtcNow);
+
+        return (new RecordAppointmentNoShowResponse(recorded.AppointmentId, recorded.OwnerId, recorded.RecordedAt), [recorded]);
     }
-
 }
-
-
