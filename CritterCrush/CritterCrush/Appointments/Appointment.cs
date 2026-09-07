@@ -27,7 +27,7 @@ public class Appointment
     public static Appointment Create(HomeCheckAppointmentProposed proposed)
     {
         var appointment = new Appointment();
-        appointment.Apply(homeCheckAppointmentProposed);
+        appointment.Apply(proposed);
         return appointment;
     }
 
@@ -36,12 +36,12 @@ public class Appointment
     {
         // The stream id is the appointment id; the store assigns Id from the stream, so a scenario
         // that arranges this event partially (no appointmentId) still folds correctly.
-        OwnerId = homeCheckAppointmentProposed.OwnerId;
-        ShelterId = homeCheckAppointmentProposed.ShelterId;
-        DogId = homeCheckAppointmentProposed.DogId;
+        OwnerId = proposed.OwnerId;
+        ShelterId = proposed.ShelterId;
+        DogId = proposed.DogId;
         Kind = "HomeCheck";
-        Status = AppointmentStatus.Proposed;
-        ScheduledFor = homeCheckAppointmentProposed.ProposedFor;
+        Status = AppointmentStatuses.Proposed;
+        ScheduledFor = proposed.ProposedFor;
     }
 
 
@@ -52,7 +52,7 @@ public class Appointment
         ShelterId = proposed.ShelterId;
         DogId = proposed.DogId;
         Kind = "FosterHandover";
-        Status = "Proposed";
+        Status = AppointmentStatuses.Proposed;
         ScheduledFor = proposed.ProposedFor;
     }
 
@@ -64,7 +64,7 @@ public class Appointment
         ShelterId = surrenderIntakeAppointmentProposed.ShelterId;
         DogId = surrenderIntakeAppointmentProposed.DogId;
         Kind = "SurrenderIntake";
-        Status = "Proposed";
+        Status = AppointmentStatuses.Proposed;
         ScheduledFor = surrenderIntakeAppointmentProposed.ProposedFor;
     }
 
