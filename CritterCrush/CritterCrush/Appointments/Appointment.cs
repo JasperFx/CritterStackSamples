@@ -11,10 +11,19 @@ public class Appointment
     public DateTimeOffset ScheduledFor { get; set; }
     public bool RescheduleRequested { get; set; }
 
-    public static Appointment Create(HomeCheckAppointmentProposed homeCheckAppointmentProposed)
+    public static Appointment Create(HomeCheckAppointmentProposed proposed)
     {
-        // TODO: fold the creating event into the initial state
-        return new Appointment();
+        return new Appointment
+        {
+            Id = proposed.AppointmentId,
+            OwnerId = proposed.OwnerId,
+            ShelterId = proposed.ShelterId,
+            DogId = proposed.DogId,
+            Kind = "HomeCheck",
+            Status = "Proposed",
+            ScheduledFor = proposed.ProposedFor,
+            RescheduleRequested = false
+        };
     }
 
 

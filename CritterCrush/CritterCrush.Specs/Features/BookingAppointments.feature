@@ -9,7 +9,10 @@ Feature: BookingAppointments
 
   @slice:ProposeHomeCheckAppointment
   Scenario: Accepting a home check assignment proposes an appointment
-    Given no events for Appointment "83328332-8332-8332-8332-833283328332"
+    # The Appointment stream takes the accepted assignment's id: the trigger carries no
+    # appointment id, and the emitted-event assertion reads this stream, so the arrange step
+    # names the identity the automation will actually start.
+    Given no events for Appointment "a5510001-0000-0000-0000-000000000001"
     When HomeCheckAssignmentAccepted is received
       | assignmentId | ownerId | shelterId | dogId | volunteerId | proposedFor |
       | a5510001-0000-0000-0000-000000000001 | 0e5e0001-0000-0000-0000-000000000001 | 5e1e0001-0000-0000-0000-000000000001 | d0670001-0000-0000-0000-000000000001 | 0e1e0001-0000-0000-0000-000000000001 | 2026-10-01T15:00:00Z |
