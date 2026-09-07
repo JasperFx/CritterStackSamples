@@ -24,7 +24,7 @@ public class Appointment
     public DateTimeOffset ScheduledFor { get; set; }
     public bool RescheduleRequested { get; set; }
 
-    public static Appointment Create(HomeCheckAppointmentProposed homeCheckAppointmentProposed)
+    public static Appointment Create(HomeCheckAppointmentProposed proposed)
     {
         var appointment = new Appointment();
         appointment.Apply(homeCheckAppointmentProposed);
@@ -32,7 +32,7 @@ public class Appointment
     }
 
 
-    public void Apply(HomeCheckAppointmentProposed homeCheckAppointmentProposed)
+    public void Apply(HomeCheckAppointmentProposed proposed)
     {
         // The stream id is the appointment id; the store assigns Id from the stream, so a scenario
         // that arranges this event partially (no appointmentId) still folds correctly.
@@ -79,14 +79,14 @@ public class Appointment
     }
 
 
-    public void Apply(AppointmentCompleted appointmentCompleted)
+    public void Apply(AppointmentCompleted completed)
     {
         Status = "Completed";
         RescheduleRequested = false;
     }
 
 
-    public void Apply(AppointmentCancelled appointmentCancelled)
+    public void Apply(AppointmentCancelled cancelled)
     {
         Status = AppointmentStatus.Cancelled;
     }
