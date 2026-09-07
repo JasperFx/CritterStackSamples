@@ -3,6 +3,7 @@ using Bobcat.Alba;
 using Bobcat.CritterStack;
 using Bobcat.Runtime;
 using JasperFx.Events.EventModeling;
+using Marten;
 
 // The declared model, the host, and the specs all merge by this one name.
 [assembly: EventModelName("CritterCrush")]
@@ -25,7 +26,15 @@ public static class SuiteConfiguration
         // reliably differs between worktrees, so it names the schema.
         Environment.SetEnvironmentVariable("Marten__SchemaName", schemaName());
 
-        runner.Suite.AddResource(new AlbaResource<Program>(reset: host => host.ResetEventStoresAsync()));
+        // Marten's daemon-aware reset, not Bobcat's store-agnostic ResetEventStoresAsync. The
+        // store-agnostic one truncates the event store underneath a RUNNING daemon: the async
+        // agents keep the floor they read at start-up, so after the first scenario they either
+        // believe they are already caught up with the next scenario's events (nothing projected,
+        // no progress written) or write progress the truncated table no longer matches
+        // (ProgressionProgressOutOfOrderException, agent stopped). Either way every `Then the
+        // {readmodel} read model contains` step times out. This one pauses the coordinator,
+        // resets, and resumes, so each scenario's agents start from an empty floor.
+        runner.Suite.AddResource(new AlbaResource<Program>(reset: host => host.ResetAllMartenDataAsync()));
     }
 
     private static string schemaName()
