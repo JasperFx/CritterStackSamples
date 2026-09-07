@@ -4,7 +4,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <!-- ⚠️ A STAGED, UNPUBLISHED version. See Directory.Build.props: this is the release-cycle
          staging mechanism, not a permanent state. Flip to the published 1.1 and delete this island. -->
-    <CritterWatchVersion>1.1.0-embedded.3</CritterWatchVersion>
+    <CritterWatchVersion>1.1.0-embedded.4</CritterWatchVersion>
   </PropertyGroup>
 
   <ItemGroup Label="CritterWatch (LOCAL FEED — unpublished embedded build)">

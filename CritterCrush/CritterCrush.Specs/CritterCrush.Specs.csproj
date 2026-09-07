@@ -12,11 +12,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Bobcat" Version="0.10.0" />
-    <PackageReference Include="Bobcat.Mtp" Version="0.10.0" />
-    <PackageReference Include="Bobcat.Generators" Version="0.10.0" />
-    <PackageReference Include="Bobcat.CritterStack" Version="0.10.0" />
-    <PackageReference Include="Bobcat.Alba" Version="0.10.0" />
+    <PackageReference Include="Bobcat" Version="0.11.0" />
+    <PackageReference Include="Bobcat.Mtp" Version="0.11.0" />
+    <PackageReference Include="Bobcat.Generators" Version="0.11.0" />
+    <PackageReference Include="Bobcat.CritterStack" Version="0.11.0" />
+    <PackageReference Include="Bobcat.Alba" Version="0.11.0" />
     <AdditionalFiles Include="Features/**/*.feature" />
   </ItemGroup>
 
