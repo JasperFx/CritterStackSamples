@@ -1,5 +1,5 @@
 @domain:Shipments
-Feature: BookingShipments
+Feature: Booking Shipments
   Triggered by a shipper
 
   @slice:BookShipment
@@ -7,7 +7,7 @@ Feature: BookingShipments
     When BookShipment is received
       | ShipmentId                           | Origin | Destination | Carrier | WeightKg |
       | 7760a001-0000-0000-0000-000000000001 | Dallas | Austin      | acme    | 12.5     |
-    Then the ShipmentTracking.Data.Shipment with id "7760a001-0000-0000-0000-000000000001" has
+    Then the Shipment with id "7760a001-0000-0000-0000-000000000001" has
       | Origin | Destination | Carrier | Status |
       | Dallas | Austin      | acme    | Booked |
     And ShipmentBooked is sent

@@ -1,38 +1,48 @@
-# ShipmentTracking specs — a Bobcat calibration run, not a finished suite
+# ShipmentTracking specs — a Bobcat calibration run
 
 This project exists to answer one question: **what does Bobcat need in order to describe a
 Wolverine application that is not event sourced?** ShipmentTracking was chosen for breadth — Polecat
 documents, declarative persistence, cascading messages, a delivery saga, an outbox, `IRevisioned`
 optimistic concurrency — and deliberately *not* for fit.
 
-## State: three specs discover and execute, none pass
+It found six issues ([bobcat#269–#274](https://github.com/JasperFx/bobcat/issues/270)), all fixed in
+**Bobcat 0.18.0**. This project is now written entirely in shipped vocabulary.
 
-The host really comes up — real Wolverine, real RabbitMQ, real Polecat on SQL Server 2025, ~11s —
-and the scenarios really run. Every failure is a filed Bobcat issue rather than a defect in the
-application or a mistake in the spec:
+## State: 2 of 3 scenarios pass
 
-| Failing scenario | Issue |
+| Scenario | |
 |---|---|
-| Booking a shipment stores it and cascades | [#270](https://github.com/JasperFx/bobcat/issues/270) — no shipped vocabulary for documents |
-| The booking endpoint accepts and does not handle inline | [#271](https://github.com/JasperFx/bobcat/issues/271) — the HTTP act and `Then {message} is sent` do not compose |
-| Cancelling a booked shipment marks it cancelled | [#270](https://github.com/JasperFx/bobcat/issues/270) |
+| Booking a shipment stores it and cascades | **passes** |
+| Cancelling a booked shipment marks it cancelled | **passes** |
+| The booking endpoint accepts and does not handle inline | fails — see below |
 
-The application's own xUnit suite covers all of this and passes 33/33. Nothing here is evidence
-that ShipmentTracking is broken.
+The remaining failure is **this suite's problem, not Bobcat's**. The per-scenario reset
+(`ResetAllPolecatDataAsync`) clears the document store, but messages the previous scenario's
+cascade already put on RabbitMQ survive it. They then land inside the *next* scenario's tracked
+session and fail with `RequiredDataMissingException: Unknown Shipment …` naming the **previous**
+scenario's id. Reproducible, not flaky.
 
-## What is a workaround and should be deleted
+Bobcat 0.18.0 is what makes that diagnosable at all: the failure message distinguishes "the HTTP
+call completed but its cascade did not" from "no act ran", and quotes the exception
+([#271](https://github.com/JasperFx/bobcat/issues/271)).
 
-- **`DocumentGrammars.cs`** — the whole module. Four of ten shipped steps apply to a document
-  application; this supplies arrange-a-document and assert-a-document. It is the working sketch
-  attached to [#270](https://github.com/JasperFx/bobcat/issues/270).
-- **`bindRow` inside it** — a poorer copy of Bobcat's `RecordBuilding`, which is `internal`
+## What 0.18.0 removed from this project
+
+Every workaround the first pass needed is gone:
+
+- **`DocumentGrammars.cs` — deleted.** 0.18.0 ships the document lane with a `{document}` capture
+  ([#270](https://github.com/JasperFx/bobcat/issues/270)); the shipped steps are textually identical
+  to the ones sketched here.
+- **The hand-rolled record binder — deleted.** `RecordBuilding` is public
   ([#272](https://github.com/JasperFx/bobcat/issues/272)).
-- **`loadAsync` inside it** — reflection, because `LoadAsync` is generic-only and a `{type}`-captured
-  step has only a `Type`.
-- **`UseContentRoot` in `SuiteConfiguration`** — the Alba resource resolved a doubled content root
+- **`[FixtureTitle]` — deleted.** Feature titles are spaced (`Feature: Booking Shipments`) so the
+  camel-hump convention binds them to `BookingShipments`, which is what
+  [#273](https://github.com/JasperFx/bobcat/issues/273) made the diagnostic explain.
+- **The explicit `UseContentRoot` — deleted**, in favour of `AlbaResource<Program>`, which resolves
+  the root itself. This repository's solution file sits in a directory named after the project,
+  which is precisely the shape that misleads `WebApplicationFactory`'s fallback; 0.18.0 now
+  diagnoses that instead of printing a bare path
   ([#274](https://github.com/JasperFx/bobcat/issues/274)).
-- **`[FixtureTitle]` on the fixtures** — the convention naming did not match here; see the note on
-  [#273](https://github.com/JasperFx/bobcat/issues/273).
 
 ## Running it
 
@@ -43,4 +53,6 @@ docker compose up -d          # from ShipmentTracking/
 dotnet run --project Specs
 ```
 
-The specs use their own database (`ShipmentTracking_Specs`), separate from the xUnit suite's.
+The specs use their own database (`ShipmentTracking_Specs`), separate from the xUnit suite's. The
+application's own 33-test xUnit suite covers this behaviour and passes; nothing here is evidence
+that ShipmentTracking is broken.
