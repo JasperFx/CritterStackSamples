@@ -37,6 +37,9 @@
     <Compile Remove="Tests/**" />
     <Content Remove="Tests/**" />
     <None Remove="Tests/**" />
+    <Compile Remove="Specs/**" />
+    <Content Remove="Specs/**" />
+    <None Remove="Specs/**" />
     <Compile Remove="AppHost/**" />
     <Content Remove="AppHost/**" />
     <None Remove="AppHost/**" />

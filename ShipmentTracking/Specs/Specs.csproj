@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>ShipmentTracking.Specs</AssemblyName>
+    <RootNamespace>ShipmentTracking.Specs</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Bobcat" Version="0.17.1" />
+    <PackageReference Include="Bobcat.Mtp" Version="0.17.1" />
+    <PackageReference Include="Bobcat.Generators" Version="0.17.1" />
+    <PackageReference Include="Bobcat.CritterStack" Version="0.17.1" />
+    <PackageReference Include="Bobcat.Alba" Version="0.17.1" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.0" />
+    <AdditionalFiles Include="Features/**/*.feature" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ShipmentTracking.csproj" />
+  </ItemGroup>
+
+</Project>
