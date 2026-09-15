@@ -6,6 +6,26 @@ Feature: BookingAppointments
   # alone carries the store vocabulary but not the HTTP one. Routes here are absolute,
   # so leave the module's route prefix empty.
 
+  @arrangement
+  Scenario: home check appointment proposed
+    Given HomeCheckAppointmentProposed occurred
+      | ownerId                              | proposedFor          |
+      | 0e5e0001-0000-0000-0000-000000000001 | 2026-10-01T15:00:00Z |
+
+  @arrangement
+  Scenario: home check appointment proposed, then appointment confirmed
+    Given the arrangement "home check appointment proposed"
+    And AppointmentConfirmed occurred
+      | ownerId                              |
+      | 0e5e0001-0000-0000-0000-000000000001 |
+
+  @arrangement
+  Scenario: home check appointment proposed, then appointment confirmed, then appointment completed
+    Given the arrangement "home check appointment proposed, then appointment confirmed"
+    And AppointmentCompleted occurred
+      | notes                                |
+      | Garden is fenced, two cats, all good |
+
   @slice:ProposeHomeCheckAppointment
   Scenario: Accepting a home check assignment proposes an appointment
     Triggered by HomeCheckAssignmentAccepted
@@ -43,9 +63,7 @@ Feature: BookingAppointments
   Scenario: A proposed appointment is confirmed
     Triggered by My appointments
     Given no events for Appointment "43254325-4325-4325-4325-432543254325"
-    And HomeCheckAppointmentProposed occurred
-      | ownerId                              | proposedFor          |
-      | 0e5e0001-0000-0000-0000-000000000001 | 2026-10-01T15:00:00Z |
+    And the arrangement "home check appointment proposed"
     When ConfirmAppointment is posted to "/api/appointments/confirmappointment"
       | appointmentId                        |
       | 43254325-4325-4325-4325-432543254325 |
@@ -57,9 +75,7 @@ Feature: BookingAppointments
   Scenario: Confirming an already cancelled appointment is refused
     Triggered by My appointments
     Given no events for Appointment "77607760-7760-7760-7760-776077607760"
-    And HomeCheckAppointmentProposed occurred
-      | ownerId                              | proposedFor          |
-      | 0e5e0001-0000-0000-0000-000000000001 | 2026-10-01T15:00:00Z |
+    And the arrangement "home check appointment proposed"
     And AppointmentCancelled occurred
       | reason               |
       | The owner moved away |
@@ -74,9 +90,7 @@ Feature: BookingAppointments
   Scenario: An owner asks for a different time
     Triggered by My appointments
     Given no events for Appointment "99549954-9954-9954-9954-995499549954"
-    And HomeCheckAppointmentProposed occurred
-      | ownerId                              | proposedFor          |
-      | 0e5e0001-0000-0000-0000-000000000001 | 2026-10-01T15:00:00Z |
+    And the arrangement "home check appointment proposed"
     When RequestReschedule is posted to "/api/appointments/requestreschedule"
       | appointmentId                        | reason                 | preferredFor         |
       | 99549954-9954-9954-9954-995499549954 | Working that afternoon | 2026-10-04T18:00:00Z |
@@ -88,9 +102,7 @@ Feature: BookingAppointments
   Scenario: The shelter moves an appointment to a new time
     Triggered by Appointments queue
     Given no events for Appointment "98539853-9853-9853-9853-985398539853"
-    And HomeCheckAppointmentProposed occurred
-      | ownerId                              | proposedFor          |
-      | 0e5e0001-0000-0000-0000-000000000001 | 2026-10-01T15:00:00Z |
+    And the arrangement "home check appointment proposed"
     And RescheduleRequested occurred
       | reason                 | preferredFor         |
       | Working that afternoon | 2026-10-04T18:00:00Z |
@@ -105,12 +117,7 @@ Feature: BookingAppointments
   Scenario: A confirmed appointment is completed
     Triggered by Appointments queue
     Given no events for Appointment "36343634-3634-3634-3634-363436343634"
-    And HomeCheckAppointmentProposed occurred
-      | ownerId                              | proposedFor          |
-      | 0e5e0001-0000-0000-0000-000000000001 | 2026-10-01T15:00:00Z |
-    And AppointmentConfirmed occurred
-      | ownerId                              |
-      | 0e5e0001-0000-0000-0000-000000000001 |
+    And the arrangement "home check appointment proposed, then appointment confirmed"
     When CompleteAppointment is posted to "/api/appointments/completeappointment"
       | appointmentId                        | notes                                |
       | 36343634-3634-3634-3634-363436343634 | Garden is fenced, two cats, all good |
@@ -122,9 +129,7 @@ Feature: BookingAppointments
   Scenario: An appointment is cancelled before it happens
     Triggered by My appointments
     Given no events for Appointment "64106410-6410-6410-6410-641064106410"
-    And HomeCheckAppointmentProposed occurred
-      | ownerId                              | proposedFor          |
-      | 0e5e0001-0000-0000-0000-000000000001 | 2026-10-01T15:00:00Z |
+    And the arrangement "home check appointment proposed"
     When CancelAppointment is posted to "/api/appointments/cancelappointment"
       | appointmentId                        | reason                             |
       | 64106410-6410-6410-6410-641064106410 | The owner withdrew the application |
@@ -136,15 +141,7 @@ Feature: BookingAppointments
   Scenario: A completed appointment cannot be cancelled
     Triggered by My appointments
     Given no events for Appointment "12421242-1242-1242-1242-124212421242"
-    And HomeCheckAppointmentProposed occurred
-      | ownerId                              | proposedFor          |
-      | 0e5e0001-0000-0000-0000-000000000001 | 2026-10-01T15:00:00Z |
-    And AppointmentConfirmed occurred
-      | ownerId                              |
-      | 0e5e0001-0000-0000-0000-000000000001 |
-    And AppointmentCompleted occurred
-      | notes                                |
-      | Garden is fenced, two cats, all good |
+    And the arrangement "home check appointment proposed, then appointment confirmed, then appointment completed"
     When CancelAppointment is posted to "/api/appointments/cancelappointment"
       | appointmentId                        | reason   |
       | 12421242-1242-1242-1242-124212421242 | Too late |
@@ -156,12 +153,7 @@ Feature: BookingAppointments
   Scenario: Nobody turned up
     Triggered by Appointments queue
     Given no events for Appointment "71717171-7171-7171-7171-717171717171"
-    And HomeCheckAppointmentProposed occurred
-      | ownerId                              | proposedFor          |
-      | 0e5e0001-0000-0000-0000-000000000001 | 2026-10-01T15:00:00Z |
-    And AppointmentConfirmed occurred
-      | ownerId                              |
-      | 0e5e0001-0000-0000-0000-000000000001 |
+    And the arrangement "home check appointment proposed, then appointment confirmed"
     When RecordAppointmentNoShow is posted to "/api/appointments/recordappointmentnoshow"
       | appointmentId                        |
       | 71717171-7171-7171-7171-717171717171 |
@@ -173,9 +165,7 @@ Feature: BookingAppointments
   Scenario: A proposed home check waits in the queue for the owner
     Triggered by Appointments queue
     Given no events for Appointment "94349434-9434-9434-9434-943494349434"
-    And HomeCheckAppointmentProposed occurred
-      | ownerId                              | proposedFor          |
-      | 0e5e0001-0000-0000-0000-000000000001 | 2026-10-01T15:00:00Z |
+    And the arrangement "home check appointment proposed"
     Then the AppointmentsQueue read model contains
       | Kind      | Status   | AwaitingAction |
       | HomeCheck | Proposed | true           |
@@ -184,15 +174,7 @@ Feature: BookingAppointments
   Scenario: A completed appointment stops awaiting action
     Triggered by Appointments queue
     Given no events for Appointment "51395139-5139-5139-5139-513951395139"
-    And HomeCheckAppointmentProposed occurred
-      | ownerId                              | proposedFor          |
-      | 0e5e0001-0000-0000-0000-000000000001 | 2026-10-01T15:00:00Z |
-    And AppointmentConfirmed occurred
-      | ownerId                              |
-      | 0e5e0001-0000-0000-0000-000000000001 |
-    And AppointmentCompleted occurred
-      | notes                                |
-      | Garden is fenced, two cats, all good |
+    And the arrangement "home check appointment proposed, then appointment confirmed, then appointment completed"
     Then the AppointmentsQueue read model contains
       | Status    | AwaitingAction |
       | Completed | false          |
