@@ -1,0 +1,93 @@
+# The declared Event Model for CritterCrush — the curated format (bobcat#201).
+# `model:` matches opts.ServiceName and [assembly: EventModelName]; every specification
+# identity below ({feature}/{scenario}) is reproduced exactly by a scenario in
+# CritterCrush.Specs/Features, which is what binds spec evidence onto these slices.
+schema: 1
+model: CritterCrush
+namespace: CritterCrush
+
+slices:
+  - name: CreateDogProfile
+    pattern: Command
+    domain: Profiles
+    trigger: { kind: Http, label: Dog owner registers a dog }
+    command: CreateDogProfile
+    aggregates: [DogProfile]
+    events: [DogProfileCreated]
+    specifications:
+      feature: DogProfiles
+      scenarios:
+        - name: Creating a profile starts its stream
+          when:
+            command: CreateDogProfile
+            with: { Name: Biscuit, Breed: Corgi, AgeInMonths: "24" }
+          then:
+            - event: DogProfileCreated
+
+  - name: ViewDogProfile
+    pattern: View
+    domain: Profiles
+    trigger: { kind: Http, label: Profile page }
+    readModels: [DogProfile]
+    notes: Reads the entity's own Inline snapshot back by id — no projector of its own.
+
+  - name: SwipeOnDog
+    pattern: Command
+    domain: Discovery
+    trigger: { kind: Http, label: Discovery feed }
+    command: SwipeOnDog
+    aggregates: [SwipePair]
+    events: [DogLiked, DogPassed]
+    hotspots:
+      - A pass after a like leaves the like standing — change-your-mind semantics are undefined.
+    notes: >
+      Decides only "is this swipe recordable". The mutual-match consequence is the
+      DetectMutualMatch automation. One stream per unordered dog pair (SwipePair.IdFor).
+    specifications:
+      feature: Swiping
+      scenarios:
+        - name: A like is recorded
+          when: { command: SwipeOnDog, with: { Liked: "true" } }
+          then:
+            - event: DogLiked
+        - name: Swiping the same dog twice is a clean no-op
+          given: [ { event: DogLiked } ]
+          when: { command: SwipeOnDog, with: { Liked: "true" } }
+          then:
+            - event: DogLiked
+        - name: A pass is recorded without a like
+          when: { command: SwipeOnDog, with: { Liked: "false" } }
+          then:
+            - event: DogPassed
+        - name: Swiping yourself is refused
+          when: { command: SwipeOnDog, with: { SwiperDogId: same, TargetDogId: same } }
+          then:
+            - validationFails: "A dog cannot swipe on itself" 
+
+  - name: DetectMutualMatch
+    pattern: Automation
+    domain: Discovery
+    trigger: { kind: MessageHandler, label: DogLiked }
+    events: [MutualMatchDetected]
+    aggregates: [SwipePair]
+    hotspots:
+      - Notifying both owners of the match is a further automation, not built yet.
+    specifications:
+      feature: Swiping
+      scenarios:
+        - name: A mutual like produces a match
+          given: [ { event: DogLiked } ]
+          when: { command: SwipeOnDog, with: { Liked: "true" } }
+          then:
+            - event: MutualMatchDetected
+
+  - name: MatchList
+    pattern: View
+    domain: Discovery
+    trigger: { kind: Http, label: Matches page }
+    projections: [MatchListProjection]
+    fanOut: true
+    readModels: [MatchList]
+    notes: >
+      Async multi-stream fan-out — one MutualMatchDetected updates both dogs' documents;
+      the async daemon owns it and reads are eventually consistent.
