@@ -178,3 +178,28 @@ Feature: BookingAppointments
     Then the AppointmentsQueue read model contains
       | Status    | AwaitingAction |
       | Completed | false          |
+
+  @slice:MyAppointments
+  Scenario: An owner sees a proposed appointment waiting to be confirmed
+    Triggered by My appointments
+    Given no events for Appointment "95469546-9546-9546-9546-954695469546"
+    And HomeCheckAppointmentProposed occurred
+      | ownerId                              | proposedFor          |
+      | 0e5e0004-0000-0000-0000-000000000004 | 2026-10-05T14:00:00Z |
+    Then the MyAppointments read model with id "0e5e0004-0000-0000-0000-000000000004" contains
+      | AwaitingConfirmation | Confirmed | NextAppointmentAt    |
+      | 1                    | 0         | 2026-10-05T14:00:00Z |
+
+  @slice:MyAppointments
+  Scenario: Confirming moves an appointment off the owner's waiting list
+    Triggered by My appointments
+    Given no events for Appointment "38673867-3867-3867-3867-386738673867"
+    And HomeCheckAppointmentProposed occurred
+      | ownerId                              | proposedFor          |
+      | 0e5e0005-0000-0000-0000-000000000005 | 2026-10-06T09:30:00Z |
+    And AppointmentConfirmed occurred
+      | ownerId                              |
+      | 0e5e0005-0000-0000-0000-000000000005 |
+    Then the MyAppointments read model with id "0e5e0005-0000-0000-0000-000000000005" contains
+      | AwaitingConfirmation | Confirmed |
+      | 0                    | 1         |

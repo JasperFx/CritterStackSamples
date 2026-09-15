@@ -479,10 +479,38 @@ slices:
           awaitingConfirmation: int
           confirmed: int
           nextAppointmentAt: DateTimeOffset
+    specifications:
+      feature: BookingAppointments
+      scenarios:
+        # `id:` is what makes these expressible at all (bobcat#236, shipped): the assertion names
+        # the OWNER, while the scenario's own stream is the appointment. If the projection were
+        # keyed by its stream the lookup below would find nothing, so these scenarios prove the
+        # fan-out ROUTING even though one scenario can only arrange one stream.
+        - name: An owner sees a proposed appointment waiting to be confirmed
+          given:
+            - event: HomeCheckAppointmentProposed
+              with: { ownerId: "0e5e0004-0000-0000-0000-000000000004", proposedFor: "2026-10-05T14:00:00Z" }
+          then:
+            - readModel: MyAppointments
+              id: "0e5e0004-0000-0000-0000-000000000004"
+              contains: { AwaitingConfirmation: "1", Confirmed: "0", NextAppointmentAt: "2026-10-05T14:00:00Z" }
+        - name: Confirming moves an appointment off the owner's waiting list
+          given:
+            - event: HomeCheckAppointmentProposed
+              with: { ownerId: "0e5e0005-0000-0000-0000-000000000005", proposedFor: "2026-10-06T09:30:00Z" }
+            - event: AppointmentConfirmed
+              with: { ownerId: "0e5e0005-0000-0000-0000-000000000005" }
+          then:
+            - readModel: MyAppointments
+              id: "0e5e0005-0000-0000-0000-000000000005"
+              contains: { AwaitingConfirmation: "0", Confirmed: "1" }
     hotspots:
       - >
-        No specifications yet, and not for want of modelling: this document is keyed by ownerId,
-        but `Then the {readmodel} read model contains` loads by the SCENARIO'S STREAM ID, so the
-        shipped grammar cannot address a fan-out document at all (bobcat #236). Binding specs to
-        this slice needs that step to take an identity. Until then the slice derives `unrealized`
-        from having no bound specs, which is the honest answer rather than a faked one.
+        The fan-out itself is still unspecified: TWO appointments on different streams folding
+        into one owner's document is the reason this projection is multi-stream, and a scenario
+        cannot arrange it. bobcat#236 gave the ASSERTION an id, which is what the two scenarios
+        above use; the ARRANGEMENT still has no way to name a stream, because a curated `given:`
+        is an event and its fields and the scaffolder emits one `Given no events for …` per
+        scenario. The shipped Gherkin grammar can already express it by hand — a second
+        `Given no events for Appointment "…"` re-points the stream — so this is a gap in the
+        curated format and its scaffolder, not in the runtime. Filed as bobcat#311.
