@@ -31,6 +31,7 @@ docker compose down
 | [PaymentsMonolith](PaymentsMonolith/) | [devmentors/Inflow](https://github.com/devmentors/Inflow) | Virtual payments — 4 modules (Users, Customers, Wallets, Payments) | Schema-per-module, cascading events across modules, `ValidateAsync` |
 | [BookingMonolith](BookingMonolith/) | [meysamhadeli/booking-modular-monolith](https://github.com/meysamhadeli/booking-modular-monolith) | Travel booking — replaces EventStoreDB + MongoDB with Marten | Marten event store, inline snapshots, multiple `[Entity]` batch loading |
 | [BankAccountES](BankAccountES/) | Inspired by [andreschaffer/event-sourcing-cqrs-examples](https://github.com/andreschaffer/event-sourcing-cqrs-examples) | Bank accounts — pure Marten event sourcing from scratch | `[AggregateHandler]`, `[WriteAggregate]`, inline projections, `Validate` against aggregate state |
+| [LibraryQuickstart](LibraryQuickstart/) | [Cratis Chronicle quickstart](https://blog.cratis.io/blog/event-sourcing-in-dotnet-with-chronicle/) | Library books — Chronicle's "zero to first projection" quickstart rebuilt on Marten, then Wolverine | `Evolve()` read models, inline snapshots, `ISubscription`, `[Aggregate]` + `Validate`, fast event forwarding, Testcontainers |
 | [MoreSpeakers](MoreSpeakers/) | [cwoodruff/morespeakers-com](https://github.com/cwoodruff/morespeakers-com) | Speaker mentorship platform — Marten as document DB | Nested collections, multiple `[Entity]` batch queries, mentorship lifecycle |
 
 ## Common Patterns Across Samples

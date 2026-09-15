@@ -1,21 +1,28 @@
-using Fisher;
-
 namespace InventoryService;
 
-/// <summary>A document that belongs to the HOST application, not to CritterWatch.</summary>
+/// <summary>The host application's own document — the thing the console must not touch.</summary>
 public class Product
 {
-    public Guid Id { get; set; }
+    public string Id { get; set; } = "";
     public string Name { get; set; } = "";
     public int OnHand { get; set; }
 }
 
-/// <summary>An ordinary command handled by an ordinary handler in the host's own assembly.</summary>
-public record ReceiveStock(Guid ProductId, string Name, int Quantity);
+/// <summary>Receive stock for a product.</summary>
+public record ReceiveStock(string ProductId, string Name, int Quantity);
 
 public static class ReceiveStockHandler
 {
-    public static async Task Handle(ReceiveStock command, IDocumentSession session)
+    /// <summary>
+    /// An ordinary Wolverine handler on the HOST's own store.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ This handler is the point of the sample as much as the console is: it must keep running
+    /// against the host's own Fisher store while the embedded console runs beside it. If embedding a
+    /// console changed where a host's own handlers write, embedded mode would be unusable — so
+    /// <c>InventoryIsolationTests</c> asserts this document lands in the host's file and nowhere else.
+    /// </remarks>
+    public static async Task HandleAsync(ReceiveStock command, IDocumentSession session)
     {
         var product = await session.LoadAsync<Product>(command.ProductId)
                       ?? new Product { Id = command.ProductId, Name = command.Name };

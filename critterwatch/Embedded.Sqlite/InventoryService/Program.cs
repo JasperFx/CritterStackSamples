@@ -6,59 +6,55 @@ using Wolverine;
 using Wolverine.Fisher;
 using Wolverine.Http;
 
-// =============================================================================================
-// InventoryService — an ordinary application that EMBEDS the CritterWatch console.
+// ============================================================================
+// Embedded CritterWatch on SQLite — an ordinary ASP.NET Core app that mounts the
+// monitoring console inside itself.
 //
-// There is no second process, no broker, and no database server: Fisher writes SQLite files, so this
-// whole sample is `git clone` then F5. That is the point of embedded mode — the console is a
-// development-time window into the app you are already running.
-// =============================================================================================
+// No broker. No database server. No containers. Two SQLite files under the OS temp
+// directory, created on first run. `dotnet run` and open the console.
+// ============================================================================
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Two SQLite files, and the separation is the whole demonstration:
-//   inventory.db   — the HOST's documents. CritterWatch never writes here.
-//   critterwatch.db — the console's own store.
-var hostDb = Path.Combine(AppContext.BaseDirectory, "inventory.db");
-var consoleDb = Path.Combine(AppContext.BaseDirectory, "critterwatch.db");
+var hostDatabase = Path.Combine(Path.GetTempPath(), "critterwatch-embedded-sample", "inventory.db");
+var consoleDatabase = Path.Combine(Path.GetTempPath(), "critterwatch-embedded-sample", "critterwatch.db");
+Directory.CreateDirectory(Path.GetDirectoryName(hostDatabase)!);
 
-// The host's OWN store. Nothing here mentions CritterWatch.
-builder.Services.AddFisher(opts =>
-{
-    opts.ConnectionString = $"Data Source={hostDb}";
-}).IntegrateWithWolverine();
+// The application's OWN store. Nothing here knows about CritterWatch.
+//
+// ⚠️ .IntegrateWithWolverine() on YOUR OWN store is a prerequisite of embedded mode, and not an
+// obvious one: only the primary store's integration registers the machinery the console's ancillary
+// store is routed through. Without it the host fails at startup with a message naming the CONSOLE's
+// store, which points at the wrong half (CritterWatch #1209).
+builder.Services
+    .AddFisher(m => m.Connection($"Data Source={hostDatabase}"))
+    .IntegrateWithWolverine();
 
 builder.Host.UseWolverine(opts =>
 {
-    opts.ServiceName = "InventoryService";
-
-    // begin-snippet: embedded-registration
-    // ONE call. The console registers its own ancillary store, routes its own handlers and HTTP
-    // endpoints to it, and leaves this application's runtime alone — same service name, same handler
-    // discovery, same listeners.
-    opts.AddCritterWatchEmbedded($"Data Source={consoleDb}");
-    // end-snippet
+    // One call. The console registers its own store, its own handlers, and monitoring of THIS host.
+    opts.AddCritterWatchEmbedded($"Data Source={consoleDatabase}");
 });
 
 var app = builder.Build();
 
-// The host's own routes. These must keep working, and keep 404ing where they always did.
-app.MapGet("/inventory/{id:guid}", async (Guid id, IQuerySession session) =>
-    await session.LoadAsync<Product>(id) is { } p ? Results.Ok(p) : Results.NotFound());
+// The host's own endpoints, unaffected by the console.
+app.MapPost("/inventory/receive", (ReceiveStock command, IMessageBus bus) => bus.InvokeAsync(command));
 
-app.MapPost("/inventory/receive", async (ReceiveStock command, IMessageBus bus) =>
+app.MapGet("/inventory/{id}", async (string id, IQuerySession session) =>
 {
-    await bus.InvokeAsync(command);
-    return Results.Accepted();
+    var product = await session.LoadAsync<Product>(id);
+    return product is null ? Results.NotFound() : Results.Ok(product);
 });
 
-// begin-snippet: embedded-mounting
-// Mounts the console's UI under /critterwatch. It does NOT install a root SPA fallback and does NOT
-// map health endpoints — this application's route table stays its own.
+// One call. Mounts the console's API and SPA under /critterwatch.
+//
+// ⚠️ It does NOT take over the host's route table: an unmatched host route still 404s, and the
+// console's SPA fallback answers only under its own prefix. InventoryIsolationTests asserts that,
+// because "the console swallowed my 404s" is the kind of regression a sample exists to catch.
 app.UseCritterWatchEmbedded();
-// end-snippet
 
-app.Run();
+await app.RunAsync();
 
-// Exposed so the test project can boot this exact application rather than a copy of it.
+/// <summary>Exposed so the test project can boot this exact host with WebApplicationFactory.</summary>
 public partial class Program;
