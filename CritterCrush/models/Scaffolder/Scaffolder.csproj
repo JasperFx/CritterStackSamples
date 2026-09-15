@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The regeneration runner models/README.md describes. It is IN the solution on purpose: this
+       repository has no CI, so the only thing standing between a scaffolding API change and a
+       README that quietly stopped working is that `dotnet build CritterCrush.sln` compiles this. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Bobcat.EventModel" Version="0.20.0" />
+    <PackageReference Include="Bobcat.EventModel.Scaffolding" Version="0.20.0" />
+  </ItemGroup>
+
+</Project>

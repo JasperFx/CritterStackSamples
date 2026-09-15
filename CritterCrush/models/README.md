@@ -6,14 +6,27 @@ token cost, and is safe to throw away and regenerate — until a slice is filled
 regenerating that slice's file would overwrite the work.
 
 ```bash
-dotnet run --project <scaffolder-runner> -- models/CritterCrush.emodel.yaml out
-cp out/Appointments/*.cs CritterCrush/Appointments/
+dotnet run --project models/Scaffolder -- models/CritterCrush.emodel.yaml out --arrangements
 cp out/Features/*.feature CritterCrush.Specs/Features/
+cp out/Appointments/*.cs CritterCrush/Appointments/   # ONLY for slices still unimplemented
 ```
 
-The runner is eight lines around `SliceScaffolder.ScaffoldAll(model)` — use that single entry
-point and not the individual `Scaffold`/`ScaffoldAggregates`/`ScaffoldFeatures` methods, because
-the pieces are not independent and skipping one leaves a dangling type.
+The runner is `models/Scaffolder`, and it really is eight lines around
+`SliceScaffolder.ScaffoldAll(model)` — use that single entry point and not the individual
+`Scaffold`/`ScaffoldAggregates`/`ScaffoldFeatures` methods, because the pieces are not independent
+and skipping one leaves a dangling type. It is in `CritterCrush.sln` deliberately: this repository
+has no CI, so the only thing standing between a scaffolding API change and a README that quietly
+stopped working is that building the solution compiles it.
+
+⚠️ **`--arrangements` is not optional for this chapter**, whatever its name suggests. The committed
+`BookingAppointments.feature` was generated with it (bobcat#259): ten of thirteen scenarios shared
+the same arranged history and it is now three named `@arrangement` scenarios they reference by
+name. Regenerate without the flag and that history is silently inlined back into every scenario —
+a file that still passes and reads considerably worse. As of 2026-09-15 the command above
+reproduces the committed feature **byte for byte**.
+
+⚠️ **Copy `.cs` files back only for slices that are still unimplemented.** Regenerating a filled-in
+slice overwrites the work; the `.feature` is the file that is always safe to take.
 
 ## There used to be a patch step here
 
