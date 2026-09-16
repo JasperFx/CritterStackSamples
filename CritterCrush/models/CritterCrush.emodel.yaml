@@ -56,7 +56,6 @@ slices:
     domain: Scheduling
     chapter: BookingAppointments
     trigger: { kind: MessageHandler, label: HomeCheckAssignmentAccepted }
-    command: ProposeHomeCheckAppointment
     aggregates: [Appointment]
     events: [HomeCheckAppointmentProposed]
     notes: >
@@ -121,7 +120,6 @@ slices:
     trigger: { kind: MessageHandler, label: DogPlacedInFoster }
     externalSystems:
       - { name: Fostering, direction: Inbound }
-    command: ProposeFosterHandoverAppointment
     aggregates: [Appointment]
     events: [FosterHandoverAppointmentProposed]
     notes: >
@@ -169,7 +167,6 @@ slices:
     trigger: { kind: MessageHandler, label: SurrenderRequestReviewed }
     externalSystems:
       - { name: Surrenders, direction: Inbound }
-    command: ProposeSurrenderIntakeAppointment
     aggregates: [Appointment]
     events: [SurrenderIntakeAppointmentProposed]
     hotspots:
