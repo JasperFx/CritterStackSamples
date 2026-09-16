@@ -9,23 +9,27 @@ filled against Bobcat specs whose identities the model declared.
 
 The board is the K9CRUSH Event Model from
 [Powerworks/K9DatingApp](https://github.com/Powerworks/K9DatingApp) (MIT) — 28 chapters and 161
-slices of raw `emlang` YAML. The **BookingAppointments** chapter was chosen for its shape: six
-commands, three automations and two views exercise every Event Modeling slice pattern between them.
+slices of raw `emlang` YAML. **Two** of those chapters are built here:
+
+| Chapter | Slices | Why this one |
+|---|---|---|
+| **BookingAppointments** | 6 commands, 3 automations, 2 views | Exercises every Event Modeling slice pattern between them |
+| **VolunteeringAndHomeChecks** | 7 commands, 1 view | It *emits the event BookingAppointments waits for*. With both in the model, that trigger stops being an integration contract and becomes a link — which is the only way to exercise cross-chapter structure at all |
 
 ```
 Spec/K9CRUSH.emlang.v3.2026-07-31.yaml   (the board's own export, 161 slices)
-        │  bobcat import-event-model      ← 11 slices, 9 bound specs, no warnings
+        │  bobcat import-event-model      ← 11 + 8 slices, no warnings
         ▼
 models/CritterCrush.emodel.yaml           ← CURATED: the aggregate, the field shapes, the
         │                                    routing ids, the edge cases, the hotspots
         │  models/Scaffolder  (Bobcat.EventModel.Scaffolding)
         ▼
-CritterCrush/Scheduling/*.cs              ← 18 files: every mechanical decision made,
+CritterCrush/{Scheduling,Volunteering}/    ← 30 files: every mechanical decision made,
 CritterCrush.Specs/Features/*.feature        every judgment a named TODO
-models/booking-appointments-plan.yaml     ← the Stoat plan, derived from the same model
+models/crittercrush-plan.yaml             ← the Stoat plan, derived from the same model
         │  the critterstack-sdd skills fill the judgment
         ▼
-20 scenarios green
+37 scenarios green
 ```
 
 The board export is **not** committed here. It belongs to the upstream repository and is fetched
@@ -54,10 +58,11 @@ appointment nobody asked to move, and what happens when one source entity needs 
 
 ## Reading the current state
 
-Eleven slices, every one specified and built, **20 scenarios green**. Three of the eighteen
-scaffolded files ship exactly as the generator emitted them — the inbound integration contracts for
-the three trigger events this chapter does not own — and the other twelve were filled in by hand.
-Every `.feature` still regenerates from the model **byte for byte**; see `models/README.md`.
+Nineteen slices across two chapters, every one specified and built, **37 scenarios green**. All six
+`.feature` files regenerate from the model **byte for byte**; see `models/README.md`. Two of the
+thirty scaffolded files ship exactly as the generator emitted them — the inbound integration
+contracts for the two trigger events no chapter here owns — and two files are hand-written additions
+the scaffold has no opinion about (the shared 404 refusals).
 
 Two of those scenarios are worth singling out, because each was deliberately broken to prove it can
 fail before it was believed:
@@ -70,6 +75,30 @@ fail before it was believed:
 - **`An appointment cancelled before anyone confirmed it leaves the awaiting count`** is what makes
   `wasConfirmed` load-bearing. Decrement the naive counter instead and this scenario alone goes red
   (`Confirmed: expected 0, was -1`).
+- **`Accepting an assignment books the home check as an appointment`** is the only scenario that
+  crosses the chapter boundary at runtime: a POST to Volunteering, and an assertion on an
+  Appointments read model two hops later. Put `[WolverineIgnore]` on the appointments automation and
+  exactly two scenarios redden — this one, and the automation's own.
+
+## Where the two chapters meet
+
+`AcceptHomeCheckAssignment` (Volunteering) emits `HomeCheckAssignmentAccepted`;
+`ProposeHomeCheckAppointment` (Scheduling) handles it. Because both chapters are in one model the
+trigger resolves as **Emitted** rather than **Inbound**, so the emitting slice owns the record and
+the consuming slice declares no external system — the scaffolder stops writing a second copy of the
+contract, and the cross-namespace reference in `GlobalUsings.cs` is the code-side shape of the link.
+
+One decision had to change shape to survive this. BookingAppointments makes an appointment's stream
+id the source entity's id, which is what lets its automations be specified at all — and Marten's
+stream id space is **global across aggregate types**, so the moment a `HomeCheck` stream took the
+same id, `StartStream<Appointment>` would collide. Hence `assignmentId` is the *assignment's* own
+identity, minted when a volunteer accepts, and not the home check's stream id. An assignment is
+genuinely its own thing (the board draws "Home Check Assigned" as its own step, and a reassignment is
+a second assignment), and the id is fixed once written, so redelivery still lands on one appointment.
+
+The two chapters also demonstrate the two **View** shapes on purpose: Appointments' two views are
+multi-stream fan-outs keyed by an owner and a shelter, while Volunteering's one view is
+single-stream, one document per application folded from that application's own stream.
 
 ## Running it
 
@@ -82,7 +111,7 @@ dotnet run --project CritterCrush
 
 ⚠️ **`dotnet test CritterCrush.Specs` collects zero tests here and exits 0** — a green that ran
 nothing. The specs are a Microsoft.Testing.Platform executable; run the binary. `--filter-feature
-BookingAppointments` narrows it.
+BookingAppointments` narrows it to one feature.
 
 The spec project has **no hand-written `Main`**: Bobcat's generator emits the entry point and calls
 `[BobcatConfiguration]` (see `SuiteConfiguration.cs`).

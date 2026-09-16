@@ -1,14 +1,16 @@
 # DERIVED from CritterCrush.emodel.yaml by models/Scaffolder — do not hand-edit.
 # Regenerate with the --plan flag whenever the model changes.
 schema: 1
-plan: crittercrush-bookingappointments
-title: CritterCrush — the BookingAppointments chapter, built from the model
+plan: crittercrush
+title: CritterCrush — 2 chapters, built from the model
 nodes:
   - id: propose-home-check-appointment
     kind: slice
     slice: ProposeHomeCheckAppointment
     pattern: automation
     domain: Scheduling
+    depends_on:
+      - accept-home-check-assignment
     specs:
       - BookingAppointments/An accepted home check assignment proposes a visit
   - id: propose-foster-handover-appointment
@@ -118,3 +120,83 @@ nodes:
     specs:
       - MyAppointments/An owner sees an appointment awaiting their confirmation
       - MyAppointments/An owner's page spans every appointment stream they have
+  - id: apply-to-volunteer
+    kind: slice
+    slice: ApplyToVolunteer
+    pattern: command
+    domain: Volunteering
+    specs:
+      - Volunteering/Somebody applies to volunteer
+      - Volunteering/Applying twice is refused
+  - id: review-volunteer-application
+    kind: slice
+    slice: ReviewVolunteerApplication
+    pattern: command
+    domain: Volunteering
+    depends_on:
+      - apply-to-volunteer
+    specs:
+      - Volunteering/An admin reviews a submitted application
+      - Volunteering/An application already decided is not reviewed again
+  - id: approve-volunteer
+    kind: slice
+    slice: ApproveVolunteer
+    pattern: command
+    domain: Volunteering
+    depends_on:
+      - apply-to-volunteer
+    specs:
+      - Volunteering/A reviewed applicant is approved
+      - Volunteering/An applicant nobody reviewed is not approved
+  - id: reject-volunteer-application
+    kind: slice
+    slice: RejectVolunteerApplication
+    pattern: command
+    domain: Volunteering
+    depends_on:
+      - apply-to-volunteer
+    specs:
+      - Volunteering/A reviewed applicant is rejected with a reason
+      - Volunteering/An approved volunteer is not then rejected
+  - id: request-home-check
+    kind: slice
+    slice: RequestHomeCheck
+    pattern: command
+    domain: Volunteering
+    specs:
+      - HomeChecks/An admin requests a home check
+      - HomeChecks/Requesting the same home check twice is refused
+  - id: accept-home-check-assignment
+    kind: slice
+    slice: AcceptHomeCheckAssignment
+    pattern: command
+    domain: Volunteering
+    depends_on:
+      - request-home-check
+    specs:
+      - HomeChecks/A volunteer accepts an assignment and proposes a time
+      - HomeChecks/Accepting an assignment books the home check as an appointment
+      - HomeChecks/An assignment already accepted is not accepted again
+  - id: submit-home-check-report
+    kind: slice
+    slice: SubmitHomeCheckReport
+    pattern: command
+    domain: Volunteering
+    depends_on:
+      - request-home-check
+    specs:
+      - HomeChecks/A volunteer reports on a visit they accepted
+      - HomeChecks/A visit nobody accepted cannot be reported on
+  - id: volunteer-applications-queue
+    kind: slice
+    slice: VolunteerApplicationsQueue
+    pattern: view
+    domain: Volunteering
+    depends_on:
+      - apply-to-volunteer
+      - approve-volunteer
+      - reject-volunteer-application
+      - review-volunteer-application
+    specs:
+      - VolunteerApplicationsQueue/A new application shows as submitted
+      - VolunteerApplicationsQueue/An approved application shows the decision

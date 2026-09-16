@@ -30,6 +30,8 @@ builder.Services.AddMarten(opts =>
         // The write model read back by id gets an Inline snapshot: a caller's next GET sees
         // their own write, and the automations aggregate against committed state.
         opts.Projections.Snapshot<Appointment>(SnapshotLifecycle.Inline);
+        opts.Projections.Snapshot<VolunteerApplication>(SnapshotLifecycle.Inline);
+        opts.Projections.Snapshot<HomeCheck>(SnapshotLifecycle.Inline);
 
         // Both are ASYNC. Both are also multi-stream — the queue folds every appointment stream in
         // a shelter into one document, the page every stream an owner has — so neither could be an
@@ -40,6 +42,10 @@ builder.Services.AddMarten(opts =>
         // projection wait. Scaffolded projections register cleanly as of Bobcat 0.13.0 (#232).
         opts.Projections.Add<AppointmentsQueueProjection>(ProjectionLifecycle.Async);
         opts.Projections.Add<MyAppointmentsProjection>(ProjectionLifecycle.Async);
+
+        // Volunteering's one view is SINGLE-stream — one document per application, folded from that
+        // application's own stream — and still async, for the same blast-radius reason.
+        opts.Projections.Add<VolunteerApplicationsQueueProjection>(ProjectionLifecycle.Async);
     })
     .IntegrateWithWolverine(m => m.UseFastEventForwarding = true)
     .AddAsyncDaemon(DaemonMode.Solo)

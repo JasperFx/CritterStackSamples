@@ -32,8 +32,8 @@ Feature: BookingAppointments
     Triggered by HomeCheckAssignmentAccepted
     Given no events for Appointment "53355335-5335-5335-5335-533553355335"
     When HomeCheckAssignmentAccepted is received
-      | assignmentId                         | ownerId                              | shelterId                            | proposedFor          |
-      | 53355335-5335-5335-5335-533553355335 | 0e5e0001-0000-0000-0000-000000000001 | 5e110001-0000-0000-0000-000000000001 | 2026-10-01T15:00:00Z |
+      | assignmentId                         | ownerId                              | shelterId                            | volunteerOwnerId                     | proposedFor          |
+      | 53355335-5335-5335-5335-533553355335 | 0e5e0001-0000-0000-0000-000000000001 | 5e110001-0000-0000-0000-000000000001 | 0e5e0099-0000-0000-0000-000000000099 | 2026-10-01T15:00:00Z |
     Then HomeCheckAppointmentProposed is emitted
       | ownerId                              | kind      | sourceId                             | scheduledFor         |
       | 0e5e0001-0000-0000-0000-000000000001 | HomeCheck | 53355335-5335-5335-5335-533553355335 | 2026-10-01T15:00:00Z |

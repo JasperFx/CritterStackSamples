@@ -1,15 +1,16 @@
 # Regenerating CritterCrush from its event model
 
 `CritterCrush.emodel.yaml` is the source of truth. Everything under `CritterCrush/Scheduling/`,
-`CritterCrush.Specs/Features/` and `booking-appointments-plan.yaml` is emitted from it by
+`CritterCrush/Volunteering/`, `CritterCrush.Specs/Features/` and `crittercrush-plan.yaml` is emitted from it by
 `Bobcat.EventModel.Scaffolding`, at zero token cost, and is safe to throw away and regenerate —
 until a slice is filled in, at which point regenerating that slice's file would overwrite the work.
 
 ```bash
 dotnet run --project models/Scaffolder -- models/CritterCrush.emodel.yaml out \
-    --arrangements --plan models/booking-appointments-plan.yaml
+    --arrangements --plan models/crittercrush-plan.yaml
 cp out/Features/*.feature CritterCrush.Specs/Features/
-cp out/Scheduling/*.cs CritterCrush/Scheduling/   # ONLY for slices still unimplemented
+cp out/Scheduling/*.cs CritterCrush/Scheduling/       # ONLY for slices still unimplemented
+cp out/Volunteering/*.cs CritterCrush/Volunteering/   # likewise
 ```
 
 The runner is `models/Scaffolder`, a few lines around `SliceScaffolder.ScaffoldAll(model)` — use
@@ -20,11 +21,11 @@ scaffolding API change and a README that quietly stopped working is that buildin
 compiles it.
 
 ⚠️ **`--arrangements` is not optional for this chapter**, whatever its name suggests. The committed
-`BookingAppointments.feature` was generated with it (bobcat#259): twelve of fifteen scenarios shared
+`BookingAppointments.feature` was generated with it (bobcat#259): twelve of sixteen scenarios shared
 the same arranged history and it is now three named `@arrangement` scenarios they reference by name.
 Regenerate without the flag and that history is silently inlined back into every scenario — a file
 that still passes and reads considerably worse. As of 2026-09-16 the command above reproduces all
-three committed features **byte for byte**.
+six committed features **byte for byte**.
 
 ⚠️ **Copy `.cs` files back only for slices that are still unimplemented.** Regenerating a filled-in
 slice overwrites the work; the `.feature` is the file that is always safe to take.
@@ -41,8 +42,13 @@ The dependency edges are derived too, and only two rules produce them, because a
 mechanical builds a cycle — `ConfirmAppointment` arranges a cancellation in its refusal scenario
 while `CancelAppointment` arranges a confirmation in its own:
 
-- a **command or automation** depends on whoever emits the event that *starts* its stream
+- a **command** depends on whoever emits the event that *starts* its stream
+- an **automation** depends on whoever emits its *trigger* — it has no `given:`, so the rule above
+  never sees it, and this is the edge that crosses a chapter boundary
 - a **view** depends on whoever emits what it *consumes*
+
+The plan is named for its chapter when the model has exactly one, and for the model when it has
+several: the first slice's chapter is not the subject of a two-chapter plan.
 
 Validate the output with Stoat's own strict parser, which rejects unknown keys, dangling edges and
 cycles. Note the wire vocabulary is underscored — `depends_on`, not `dependsOn`.
@@ -54,8 +60,8 @@ scaffolds empty records and scenarios with nothing to drive. `elements:` field h
 `with:` values are the substance; curating four slices and not the other seven produces four real
 slices and seven hollow ones, which is worse than none, because the hollow ones still compile.
 
-Two traps found re-deriving this chapter on Bobcat 0.22.0, both of which the scaffold surfaced and
-neither of which the model author noticed:
+Four traps found re-deriving these chapters on Bobcat 0.22.0, every one surfaced by the scaffold or
+the specs rather than by the model author:
 
 - **Declare an event's `elements:` on the slice that EMITS it**, not on a slice that merely arranges
   it. Fields declared on the wrong slice are ignored, and the generated record keeps only the keys
@@ -66,6 +72,24 @@ neither of which the model author noticed:
   say — becomes `string`, silently. There is no collection field in this format; if a projection
   needs per-item state, put what it needs on the event instead, which is where an event-sourced
   design wanted it anyway.
+- **A consuming slice needs its trigger's `fields:` declared on it too**, even though the emitting
+  slice owns the record. `elements:` resolves per slice, and `CreatesTheStream` reads the trigger's
+  fields through that same per-slice lookup — an empty list reads as "identifiable", which flips a
+  `StartStream` automation into a `[WriteModel]` bind that fails at dispatch and, because HTTP
+  endpoints are discovered eagerly, takes the whole host down with it. bobcat#321. The copy is
+  duplication nothing checks, so when a contract gains a field, grep for the type name.
+- **A creating command whose stream id is not named `{Aggregate}Id` needs `[Identity]`** (from the
+  `JasperFx` namespace). The scaffold recommends it in a comment, which does not boot a host: without
+  it Wolverine cannot resolve the aggregate and refuses at discovery, so all 37 scenarios report
+  `did not run` for one slice's mistake.
+
+## The diagnostic that earns its keep
+
+`BOBCAT012` caught the one mistake nothing else would have. When Volunteering came into the model,
+Scheduling's now-redundant `HomeCheckAssignmentAccepted.cs` was still on disk, so the step text
+`HomeCheckAssignmentAccepted is received` resolved to two types — and the generator said exactly
+that, naming both namespaces, at build time. Deleting the consumer's stale copy of a contract is
+easy to forget, and this is what remembers.
 
 ## There used to be a patch step here
 

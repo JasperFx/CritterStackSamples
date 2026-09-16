@@ -19,14 +19,21 @@ internal static class StoatPlan
             foreach (var @event in slice.Events) emitters.TryAdd(@event, NodeId(slice.Name));
         }
 
-        var chapter = model.Slices.Select(x => x.Chapter).FirstOrDefault(x => x is not null) ?? model.Model;
+        // One chapter names the plan after it; several do not, because the first slice's chapter is
+        // not the plan's subject.
+        var chapters = model.Slices.Select(x => x.Chapter).Where(x => x is not null).Distinct().ToList();
+        var subject = chapters.Count == 1 ? chapters[0]! : null;
 
         var writer = new StringBuilder();
         writer.AppendLine("# DERIVED from CritterCrush.emodel.yaml by models/Scaffolder — do not hand-edit.");
         writer.AppendLine("# Regenerate with the --plan flag whenever the model changes.");
         writer.AppendLine("schema: 1");
-        writer.AppendLine($"plan: {model.Model.ToLowerInvariant()}-{chapter.ToLowerInvariant()}");
-        writer.AppendLine($"title: {model.Model} — the {chapter} chapter, built from the model");
+        writer.AppendLine(subject is null
+            ? $"plan: {model.Model.ToLowerInvariant()}"
+            : $"plan: {model.Model.ToLowerInvariant()}-{subject.ToLowerInvariant()}");
+        writer.AppendLine(subject is null
+            ? $"title: {model.Model} — {chapters.Count} chapters, built from the model"
+            : $"title: {model.Model} — the {subject} chapter, built from the model");
         writer.AppendLine("nodes:");
 
         foreach (var slice in model.Slices)
@@ -41,12 +48,17 @@ internal static class StoatPlan
             // arranges a cancellation in its refusal scenario while Cancel arranges a confirmation
             // in its own. So a command depends on whoever emits the event that STARTS its stream,
             // and a view on whoever emits what it consumes.
+            var trigger = slice.Pattern == "Automation" && slice.Trigger?.Label is { } label
+                ? new[] { emitters.GetValueOrDefault(label) }
+                : [];
+
             var dependsOn = (slice.Pattern == "View"
                     ? slice.ConsumedEvents.Select(e => emitters.GetValueOrDefault(e))
                     : slice.Specifications?.Scenarios
                         .Select(s => s.Given.FirstOrDefault()?.Event)
                         .Where(e => e is not null)
                         .Select(e => emitters.GetValueOrDefault(e!)) ?? [])
+                .Concat(trigger)
                 .Where(x => x is not null && x != NodeId(slice.Name))
                 .Distinct()
                 .OrderBy(x => x, StringComparer.Ordinal)

@@ -56,8 +56,6 @@ slices:
     domain: Scheduling
     chapter: BookingAppointments
     trigger: { kind: MessageHandler, label: HomeCheckAssignmentAccepted }
-    externalSystems:
-      - { name: Volunteering, direction: Inbound }
     command: ProposeHomeCheckAppointment
     aggregates: [Appointment]
     events: [HomeCheckAppointmentProposed]
@@ -75,12 +73,18 @@ slices:
           scheduledFor: DateTimeOffset
           status: string
           rescheduleRequested: bool
+      # Declared here too, and NOT redundantly: `elements:` resolves per slice, so without this
+      # copy the scaffolder sees a trigger with no fields, reads that as "identifiable", and emits
+      # a [WriteModel] bind for a message carrying no appointment id — a slice that fails at
+      # dispatch. The RECORD comes from the slice that emits it (AcceptHomeCheckAssignment); this
+      # copy exists only so the shape decision is made on what the trigger actually carries.
+      # bobcat#321.
       HomeCheckAssignmentAccepted:
-        description: Volunteering accepted a home-check assignment and needs a visit booked
         fields:
           assignmentId: Guid
           ownerId: Guid
           shelterId: Guid
+          volunteerOwnerId: Guid
           proposedFor: DateTimeOffset
       HomeCheckAppointmentProposed:
         description: A home-check visit was proposed and awaits the owner's confirmation
@@ -100,6 +104,7 @@ slices:
               assignmentId: "{streamId}"
               ownerId: "0e5e0001-0000-0000-0000-000000000001"
               shelterId: "5e110001-0000-0000-0000-000000000001"
+              volunteerOwnerId: "0e5e0099-0000-0000-0000-000000000099"
               proposedFor: "2026-10-01T15:00:00Z"
           then:
             - event: HomeCheckAppointmentProposed
@@ -810,3 +815,537 @@ slices:
                 AwaitingConfirmation: "1"
                 Confirmed: "1"
                 Closed: "0"
+
+  # ================================================================================================
+  # CHAPTER: VolunteeringAndHomeChecks
+  #
+  # The chapter that raises the trigger BookingAppointments waits for. With it in the model,
+  # HomeCheckAssignmentAccepted stops being an inbound integration contract and becomes an Emitted
+  # origin — the slice below owns its record, and the appointments automation just handles it.
+  #
+  # Unlike BookingAppointments, this chapter's board steps DO carry props (areas of interest, a
+  # rejection reason, a report outcome, and the queue's sample row), so rather less of what follows
+  # is invention.
+  #
+  # Two aggregates, deliberately, because they have separate lifecycles and separate identities:
+  # a VolunteerApplication is a person asking to help, and a HomeCheck is one visit to one home.
+  #
+  # ONE DECISION CARRIED OVER, AND WHY IT HAD TO CHANGE SHAPE. BookingAppointments makes the
+  # appointment's stream id the source entity's id, which is what lets its automations be specified
+  # at all. That works only while nothing else owns those ids — and Marten's stream id space is
+  # global across aggregate types, so the moment a HomeCheck stream took the same id, StartStream
+  # would collide. Hence `assignmentId` below is the ASSIGNMENT's own identity, minted when a
+  # volunteer accepts, and not the HomeCheck's stream id. An assignment is genuinely its own thing
+  # (the board draws "Home Check Assigned" as its own step, and a reassignment is a second
+  # assignment), the id is fixed once the event is written so redelivery stays idempotent, and
+  # nothing collides.
+  #
+  # The creating commands here carry their own stream id as `{streamId}`, which is the easy case:
+  # a client-supplied id makes a stream-creating command specifiable with no tricks. The
+  # appointments automations could not do that, because their trigger is somebody else's contract.
+  # ================================================================================================
+
+  - name: ApplyToVolunteer
+    pattern: Command
+    domain: Volunteering
+    chapter: VolunteeringAndHomeChecks
+    trigger: { kind: Http, label: Volunteer Program }
+    command: ApplyToVolunteer
+    aggregates: [VolunteerApplication]
+    events: [VolunteerApplicationSubmitted]
+    hotspots:
+      - >
+        The board lists areas of interest as "Transport | Fundraising | Events | Administration |
+        HomeChecks | FosterSupport" — which reads as a SET a person picks from, while its own sample
+        row shows a single value. The curated format has no collection field, so this model carries
+        one area and says so here rather than pretending. If it is really a set, it belongs on the
+        event as a set and this slice changes shape.
+      - >
+        One application per person, because the applicant's id IS the application's stream. Someone
+        rejected in March and re-applying in September has nowhere to put the second application.
+    notes: >
+      From chapter 'VolunteeringAndHomeChecks', actor 'Volunteer'. Starts the VolunteerApplication
+      stream, keyed by the applicant.
+    elements:
+      VolunteerApplication:
+        description: One person's request to help, and what became of it
+        fields:
+          applicantOwnerId: Guid
+          areasOfInterest: string
+          status: string
+      ApplyToVolunteer:
+        fields:
+          applicantOwnerId: Guid
+          areasOfInterest: string
+      VolunteerApplicationSubmitted:
+        description: Somebody asked to volunteer
+        fields:
+          applicantOwnerId: Guid
+          areasOfInterest: string
+    specifications:
+      feature: Volunteering
+      scenarios:
+        - name: Somebody applies to volunteer
+          when:
+            command: ApplyToVolunteer
+            with:
+              applicantOwnerId: "{streamId}"
+              areasOfInterest: HomeChecks
+          then:
+            - event: VolunteerApplicationSubmitted
+              with: { areasOfInterest: HomeChecks }
+        - name: Applying twice is refused
+          given:
+            - event: VolunteerApplicationSubmitted
+              with: { areasOfInterest: HomeChecks }
+          when:
+            command: ApplyToVolunteer
+            with:
+              applicantOwnerId: "{streamId}"
+              areasOfInterest: Transport
+          then:
+            - validationFails: You have already applied to volunteer
+
+  - name: ReviewVolunteerApplication
+    pattern: Command
+    domain: Volunteering
+    chapter: VolunteeringAndHomeChecks
+    trigger: { kind: Http, label: Volunteer Applications Queue }
+    command: ReviewVolunteerApplication
+    aggregates: [VolunteerApplication]
+    events: [VolunteerApplicationReviewed]
+    notes: >
+      From chapter 'VolunteeringAndHomeChecks', actor 'Admin'. Reviewing is not deciding — approval
+      and rejection are their own slices, which is how the board draws it.
+    elements:
+      ReviewVolunteerApplication:
+        fields:
+          applicantOwnerId: Guid
+      VolunteerApplicationReviewed:
+        description: An admin read the application and it now awaits a decision
+        fields:
+          applicantOwnerId: Guid
+    specifications:
+      feature: Volunteering
+      scenarios:
+        - name: An admin reviews a submitted application
+          given:
+            - event: VolunteerApplicationSubmitted
+              with: { areasOfInterest: HomeChecks }
+          when:
+            command: ReviewVolunteerApplication
+            with: { applicantOwnerId: "{streamId}" }
+          then:
+            - event: VolunteerApplicationReviewed
+        - name: An application already decided is not reviewed again
+          given:
+            - event: VolunteerApplicationSubmitted
+              with: { areasOfInterest: HomeChecks }
+            - event: VolunteerApplicationReviewed
+            - event: VolunteerApproved
+          when:
+            command: ReviewVolunteerApplication
+            with: { applicantOwnerId: "{streamId}" }
+          then:
+            - validationFails: This application has already been decided
+
+  - name: ApproveVolunteer
+    pattern: Command
+    domain: Volunteering
+    chapter: VolunteeringAndHomeChecks
+    trigger: { kind: Http, label: Approve Volunteer }
+    command: ApproveVolunteer
+    aggregates: [VolunteerApplication]
+    events: [VolunteerApproved]
+    notes: >
+      From chapter 'VolunteeringAndHomeChecks', actor 'Admin'. Approval marks the person eligible to
+      be assigned home checks — the board's restraint, quoted: "A Volunteer is a Member playing a
+      role, not a new OwnerRole … role via cross-module event, not a general AssignRole endpoint".
+    elements:
+      ApproveVolunteer:
+        fields:
+          applicantOwnerId: Guid
+      VolunteerApproved:
+        description: The applicant may now be assigned home checks
+        fields:
+          applicantOwnerId: Guid
+    specifications:
+      feature: Volunteering
+      scenarios:
+        - name: A reviewed applicant is approved
+          given:
+            - event: VolunteerApplicationSubmitted
+              with: { areasOfInterest: HomeChecks }
+            - event: VolunteerApplicationReviewed
+          when:
+            command: ApproveVolunteer
+            with: { applicantOwnerId: "{streamId}" }
+          then:
+            - event: VolunteerApproved
+        - name: An applicant nobody reviewed is not approved
+          given:
+            - event: VolunteerApplicationSubmitted
+              with: { areasOfInterest: HomeChecks }
+          when:
+            command: ApproveVolunteer
+            with: { applicantOwnerId: "{streamId}" }
+          then:
+            - validationFails: This application has not been reviewed
+
+  - name: RejectVolunteerApplication
+    pattern: Command
+    domain: Volunteering
+    chapter: VolunteeringAndHomeChecks
+    trigger: { kind: Http, label: Reject Volunteer Application }
+    command: RejectVolunteerApplication
+    aggregates: [VolunteerApplication]
+    events: [VolunteerApplicationRejected]
+    notes: From chapter 'VolunteeringAndHomeChecks', actor 'Admin'.
+    elements:
+      RejectVolunteerApplication:
+        fields:
+          applicantOwnerId: Guid
+          reason: string
+      VolunteerApplicationRejected:
+        description: The applicant will not be volunteering
+        fields:
+          applicantOwnerId: Guid
+          reason: string
+    specifications:
+      feature: Volunteering
+      scenarios:
+        - name: A reviewed applicant is rejected with a reason
+          given:
+            - event: VolunteerApplicationSubmitted
+              with: { areasOfInterest: HomeChecks }
+            - event: VolunteerApplicationReviewed
+          when:
+            command: RejectVolunteerApplication
+            with:
+              applicantOwnerId: "{streamId}"
+              reason: Outside our current coverage area
+          then:
+            - event: VolunteerApplicationRejected
+              with: { reason: Outside our current coverage area }
+        - name: An approved volunteer is not then rejected
+          given:
+            - event: VolunteerApplicationSubmitted
+              with: { areasOfInterest: HomeChecks }
+            - event: VolunteerApplicationReviewed
+            - event: VolunteerApproved
+          when:
+            command: RejectVolunteerApplication
+            with:
+              applicantOwnerId: "{streamId}"
+              reason: Outside our current coverage area
+          then:
+            - validationFails: This application has already been decided
+
+  # ---- Home checks -------------------------------------------------------------------------------
+  # A separate aggregate with a separate lifecycle: requested, assigned and accepted, reported on.
+  # The acceptance is the event BookingAppointments waits for.
+
+  - name: RequestHomeCheck
+    pattern: Command
+    domain: Volunteering
+    chapter: VolunteeringAndHomeChecks
+    trigger: { kind: Http, label: Request Home Check }
+    command: RequestHomeCheck
+    aggregates: [HomeCheck]
+    events: [HomeCheckRequested]
+    externalSystems:
+      - { name: ShelterAdoption, direction: Inbound }
+    hotspots:
+      - >
+        The board arranges "Application Reviewed" — an event ShelterReviewsApplication owns — before
+        this command, as context rather than as a rule: its own comment calls the home check
+        "deliberately advisory, not a hard precondition on Approve/Reject". So `applicationId` is
+        carried as data and nothing here enforces that the adoption application was reviewed.
+    notes: >
+      From chapter 'VolunteeringAndHomeChecks', actor 'Admin'. Starts the HomeCheck stream. The
+      caller supplies the id, which is what makes a creating command specifiable without deriving
+      its stream from somebody else's identity.
+    elements:
+      HomeCheck:
+        description: One visit to one home, and who is doing it
+        fields:
+          applicationId: Guid
+          ownerId: Guid
+          shelterId: Guid
+          volunteerOwnerId: Guid
+          status: string
+      RequestHomeCheck:
+        fields:
+          homeCheckId: Guid
+          applicationId: Guid
+          ownerId: Guid
+          shelterId: Guid
+      HomeCheckRequested:
+        description: A home check is needed and awaits a volunteer
+        fields:
+          applicationId: Guid
+          ownerId: Guid
+          shelterId: Guid
+    specifications:
+      feature: HomeChecks
+      scenarios:
+        - name: An admin requests a home check
+          when:
+            command: RequestHomeCheck
+            with:
+              homeCheckId: "{streamId}"
+              applicationId: "a99a0001-0000-0000-0000-000000000001"
+              ownerId: "0e5e0011-0000-0000-0000-000000000011"
+              shelterId: "5e110001-0000-0000-0000-000000000001"
+          then:
+            - event: HomeCheckRequested
+              with:
+                applicationId: "a99a0001-0000-0000-0000-000000000001"
+                ownerId: "0e5e0011-0000-0000-0000-000000000011"
+        - name: Requesting the same home check twice is refused
+          given:
+            - event: HomeCheckRequested
+              with:
+                applicationId: "a99a0001-0000-0000-0000-000000000001"
+                ownerId: "0e5e0011-0000-0000-0000-000000000011"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+          when:
+            command: RequestHomeCheck
+            with:
+              homeCheckId: "{streamId}"
+              applicationId: "a99a0001-0000-0000-0000-000000000001"
+              ownerId: "0e5e0011-0000-0000-0000-000000000011"
+              shelterId: "5e110001-0000-0000-0000-000000000001"
+          then:
+            - validationFails: This home check has already been requested
+
+  - name: AcceptHomeCheckAssignment
+    pattern: Command
+    domain: Volunteering
+    chapter: VolunteeringAndHomeChecks
+    trigger: { kind: Http, label: Home Check Assigned }
+    command: AcceptHomeCheckAssignment
+    aggregates: [HomeCheck]
+    events: [HomeCheckAssignmentAccepted]
+    hotspots:
+      - >
+        The board arranges BOTH "Home Check Requested" and "Volunteer Approved" before this command —
+        two aggregates in one scenario. This model cannot say that: a curated `given:` entry can name
+        a `stream:` (bobcat#311) but not an AGGREGATE, so every arranged event lands on this slice's
+        own HomeCheck stream. Enforcing "only an approved volunteer may accept" would therefore be a
+        guard no scenario could arrange, so it is deliberately NOT implemented — an unspecifiable
+        guard is worse than a recorded gap. Filed as bobcat#320.
+    notes: >
+      From chapter 'VolunteeringAndHomeChecks', actor 'Volunteer'. The event this emits is what
+      BookingAppointments' ProposeHomeCheckAppointment handles — the cross-chapter link, and the
+      reason that slice declares no inbound external system any more.
+
+      `assignmentId` is the ASSIGNMENT's own identity, minted here. It is deliberately not the
+      HomeCheck's stream id: BookingAppointments uses it as the Appointment's stream id, and Marten's
+      stream id space is global across aggregate types, so reusing this stream's id would collide.
+    elements:
+      AcceptHomeCheckAssignment:
+        fields:
+          homeCheckId: Guid
+          volunteerOwnerId: Guid
+          proposedFor: DateTimeOffset
+      HomeCheckAssignmentAccepted:
+        description: A volunteer took the assignment and proposed a time to visit
+        fields:
+          assignmentId: Guid
+          ownerId: Guid
+          shelterId: Guid
+          volunteerOwnerId: Guid
+          proposedFor: DateTimeOffset
+    specifications:
+      feature: HomeChecks
+      scenarios:
+        - name: A volunteer accepts an assignment and proposes a time
+          given:
+            - event: HomeCheckRequested
+              with:
+                applicationId: "a99a0002-0000-0000-0000-000000000002"
+                ownerId: "0e5e0012-0000-0000-0000-000000000012"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+          when:
+            command: AcceptHomeCheckAssignment
+            with:
+              homeCheckId: "{streamId}"
+              volunteerOwnerId: "0e5e0099-0000-0000-0000-000000000099"
+              proposedFor: "2026-10-01T15:00:00Z"
+          then:
+            - event: HomeCheckAssignmentAccepted
+              with:
+                ownerId: "0e5e0012-0000-0000-0000-000000000012"
+                volunteerOwnerId: "0e5e0099-0000-0000-0000-000000000099"
+                proposedFor: "2026-10-01T15:00:00Z"
+        - name: Accepting an assignment books the home check as an appointment
+          given:
+            - event: HomeCheckRequested
+              with:
+                applicationId: "a99a0004-0000-0000-0000-000000000004"
+                ownerId: "0e5e0014-0000-0000-0000-000000000014"
+                shelterId: "5e110004-0000-0000-0000-000000000004"
+          when:
+            command: AcceptHomeCheckAssignment
+            with:
+              homeCheckId: "{streamId}"
+              volunteerOwnerId: "0e5e0099-0000-0000-0000-000000000099"
+              proposedFor: "2026-10-01T15:00:00Z"
+          then:
+            - readModel: MyAppointments
+              id: "0e5e0014-0000-0000-0000-000000000014"
+              contains:
+                AwaitingConfirmation: "1"
+                Confirmed: "0"
+                Closed: "0"
+        - name: An assignment already accepted is not accepted again
+          given:
+            - event: HomeCheckRequested
+              with:
+                applicationId: "a99a0002-0000-0000-0000-000000000002"
+                ownerId: "0e5e0012-0000-0000-0000-000000000012"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+            - event: HomeCheckAssignmentAccepted
+              with:
+                ownerId: "0e5e0012-0000-0000-0000-000000000012"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                volunteerOwnerId: "0e5e0099-0000-0000-0000-000000000099"
+                proposedFor: "2026-10-01T15:00:00Z"
+          when:
+            command: AcceptHomeCheckAssignment
+            with:
+              homeCheckId: "{streamId}"
+              volunteerOwnerId: "0e5e0098-0000-0000-0000-000000000098"
+              proposedFor: "2026-10-02T15:00:00Z"
+          then:
+            - validationFails: This home check is already assigned
+
+  - name: SubmitHomeCheckReport
+    pattern: Command
+    domain: Volunteering
+    chapter: VolunteeringAndHomeChecks
+    trigger: { kind: Http, label: Submit Home Check Report }
+    command: SubmitHomeCheckReport
+    aggregates: [HomeCheck]
+    events: [HomeCheckReportSubmitted]
+    externalSystems:
+      - { name: ShelterAdoption, direction: Outbound }
+    notes: >
+      From chapter 'VolunteeringAndHomeChecks', actor 'Volunteer'. The board's v3 note says the
+      report's only real consumer today is ShelterReviewsApplication, and advisory there — so the
+      report leaves this boundary and no slice here handles it.
+    elements:
+      SubmitHomeCheckReport:
+        fields:
+          homeCheckId: Guid
+          outcome: string
+          notes: string
+      HomeCheckReportSubmitted:
+        description: The volunteer visited and wrote it up
+        fields:
+          applicationId: Guid
+          ownerId: Guid
+          shelterId: Guid
+          outcome: string
+          notes: string
+    specifications:
+      feature: HomeChecks
+      scenarios:
+        - name: A volunteer reports on a visit they accepted
+          given:
+            - event: HomeCheckRequested
+              with:
+                applicationId: "a99a0003-0000-0000-0000-000000000003"
+                ownerId: "0e5e0013-0000-0000-0000-000000000013"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+            - event: HomeCheckAssignmentAccepted
+              with:
+                ownerId: "0e5e0013-0000-0000-0000-000000000013"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                volunteerOwnerId: "0e5e0099-0000-0000-0000-000000000099"
+                proposedFor: "2026-10-01T15:00:00Z"
+          when:
+            command: SubmitHomeCheckReport
+            with:
+              homeCheckId: "{streamId}"
+              outcome: Pass
+              notes: Secure garden, calm household, good fit for a shy dog
+          then:
+            - event: HomeCheckReportSubmitted
+              with:
+                outcome: Pass
+                notes: Secure garden, calm household, good fit for a shy dog
+        - name: A visit nobody accepted cannot be reported on
+          given:
+            - event: HomeCheckRequested
+              with:
+                applicationId: "a99a0003-0000-0000-0000-000000000003"
+                ownerId: "0e5e0013-0000-0000-0000-000000000013"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+          when:
+            command: SubmitHomeCheckReport
+            with:
+              homeCheckId: "{streamId}"
+              outcome: Pass
+              notes: Secure garden, calm household, good fit for a shy dog
+          then:
+            - validationFails: Nobody has accepted this home check
+
+  # The OTHER view shape, deliberately: one document per application, folded from that
+  # application's own stream. No `fanOut:`, so `Then the {readmodel} read model contains` loads by
+  # the scenario's stream rather than by a routing id — the contrast with BookingAppointments' two
+  # multi-stream views is the point.
+  - name: VolunteerApplicationsQueue
+    pattern: View
+    domain: Volunteering
+    chapter: VolunteeringAndHomeChecks
+    trigger: { kind: Http, label: Volunteer Applications Queue }
+    aggregates: [VolunteerApplication]
+    projections: [VolunteerApplicationsQueueProjection]
+    readModels: [VolunteerApplicationsQueue]
+    consumedEvents:
+      - VolunteerApplicationSubmitted
+      - VolunteerApplicationReviewed
+      - VolunteerApproved
+      - VolunteerApplicationRejected
+    notes: >
+      From chapter 'VolunteeringAndHomeChecks', actor 'Admin'. The board gives this one a sample row
+      — volunteerApplicationId, applicantOwnerId, areasOfInterest, status — so the shape here is the
+      board's, not an invention. One row per application; the queue is a query over rows.
+    elements:
+      VolunteerApplicationsQueue:
+        description: One application as an admin sees it
+        fields:
+          applicantOwnerId: Guid
+          areasOfInterest: string
+          status: string
+    specifications:
+      feature: VolunteerApplicationsQueue
+      scenarios:
+        - name: A new application shows as submitted
+          given:
+            - event: VolunteerApplicationSubmitted
+              with:
+                applicantOwnerId: "0e5e0021-0000-0000-0000-000000000021"
+                areasOfInterest: HomeChecks
+          then:
+            - readModel: VolunteerApplicationsQueue
+              contains:
+                AreasOfInterest: HomeChecks
+                Status: Submitted
+        - name: An approved application shows the decision
+          given:
+            - event: VolunteerApplicationSubmitted
+              with:
+                applicantOwnerId: "0e5e0022-0000-0000-0000-000000000022"
+                areasOfInterest: FosterSupport
+            - event: VolunteerApplicationReviewed
+              with: { applicantOwnerId: "0e5e0022-0000-0000-0000-000000000022" }
+            - event: VolunteerApproved
+              with: { applicantOwnerId: "0e5e0022-0000-0000-0000-000000000022" }
+          then:
+            - readModel: VolunteerApplicationsQueue
+              contains:
+                AreasOfInterest: FosterSupport
+                Status: Approved
