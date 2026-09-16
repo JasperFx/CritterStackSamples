@@ -1,39 +1,60 @@
 # The declared Event Model for CritterCrush — the BookingAppointments chapter of the K9CRUSH
-# board (Powerworks/K9DatingApp, MIT), imported from the raw emlang export with
-# `bobcat import-event-model` and then curated.
+# board (Powerworks/K9DatingApp, MIT), imported with `bobcat import-event-model` and then curated.
 #
-# This file is the source of truth. The code is generated and built FROM it — nothing here
+# This file is the source of truth. The code and the specs are generated FROM it; nothing here
 # describes code that already exists.
 #
-# ---------------------------------------------------------------------------------------------
-# Curation note: an emlang board export carries NO field information at all. Every record it
-# scaffolds is empty and every scenario has nothing to drive, so `elements:` and scenario `with:`
-# values are the whole substance of this file — they are what turns eleven named boxes into a
-# buildable application. Enriching four slices and not the rest produces four real slices and
-# seven hollow ones, which is worse than none, because the hollow ones still compile.
+# ------------------------------------------------------------------------------------------------
+# What the import could not know, and this curation decides
 #
-# Two identifiers ride on nearly every event, deliberately:
-#   * `appointmentId` — the stream id. Every command carries it, and the collapsed endpoint
-#     computes the stream from it via [Identity].
-#   * `ownerId` — MyAppointments folds one document per OWNER across every appointment stream, so
-#     a multi-stream projection can only route an event that carries the id it groups by. Fan-out
-#     routing constrains event shape; that is a modelling consequence, not a workaround.
-# ---------------------------------------------------------------------------------------------
+# An emlang board export carries NO field information — the board's own comment says the props were
+# "intentionally omitted rather than invented". So every `elements:` block and every scenario `with:`
+# value below is curation, and it is the whole substance of the file: without it eleven named boxes
+# compile into eleven hollow slices.
+#
+# Four decisions are worth naming, because each is a judgment the board did not make:
+#
+#   * ONE aggregate, purpose-tagged. The board asked for it in prose — "a single generic,
+#     purpose-tagged Appointment concept (HomeCheck | FosterHandover | SurrenderIntake, linking back
+#     to the source entity id) reused across three automation entry points rather than three separate
+#     booking flows". So `kind` + `sourceId`, not three parallel aggregates and not three id fields.
+#
+#   * ownerId and shelterId ride on EVERY event. Both views fold many appointment streams into one
+#     document — MyAppointments keyed by owner, AppointmentsQueue by shelter — and a multi-stream
+#     projection can only route an event that carries the id it groups by. Fan-out routing constrains
+#     event shape; that is a modelling consequence, not a workaround.
+#
+#   * appointmentId is the stream id, and every command carries it as `{streamId}` so the act
+#     addresses the stream the Given arranged. Without it a refusal scenario passes by inspecting an
+#     empty aggregate and refusing nothing.
+#
+#   * The APPOINTMENT STREAM IS THE THING THAT ASKED FOR IT — the appointment's stream id is the
+#     triggering assignment / foster application / surrender request. Nothing upstream invents an
+#     appointment id, and a redelivered trigger collides on StartStream instead of quietly booking a
+#     second visit, which is what "design for at-least-once delivery" has to mean for a slice that
+#     creates a stream. The scenarios say so with `{streamId}` on the trigger's own id field: the act
+#     then reaches the stream the Given arranged, which is also the only way an emitted-event
+#     assertion can see it at all.
+#
+#   * The three trigger events keep the BOARD's names — HomeCheckAssignmentAccepted,
+#     DogPlacedInFoster, SurrenderRequestReviewed — not tidier synonyms. They are contracts owned by
+#     chapters this model does not contain, so renaming them here would silently fork the contract.
+# ------------------------------------------------------------------------------------------------
 schema: 1
 model: CritterCrush
 namespace: CritterCrush
 
 slices:
-  # ---- Proposals: three flows elsewhere in the board all end in "somebody needs an appointment".
-  # Each is an automation triggered by that flow's event; each starts an Appointment stream.
-  #
-  # None of the three triggers is emitted anywhere in this model — they belong to chapters this
-  # one does not contain — so each declares an inbound `externalSystems:` edge and the scaffold
-  # gives this boundary its own versioned copy of the contract.
+  # ---- Proposals ---------------------------------------------------------------------------------
+  # Three flows elsewhere on the board each end in "somebody needs an appointment". Each is an
+  # Automation that STARTS an Appointment stream, and each trigger is raised by a chapter this model
+  # does not contain — hence the inbound `externalSystems:` edge, which makes this slice's own file
+  # the declared owner of that contract instead of leaving the trigger Dangling.
 
   - name: ProposeHomeCheckAppointment
     pattern: Automation
-    domain: Appointments
+    domain: Scheduling
+    chapter: BookingAppointments
     trigger: { kind: MessageHandler, label: HomeCheckAssignmentAccepted }
     externalSystems:
       - { name: Volunteering, direction: Inbound }
@@ -41,17 +62,18 @@ slices:
     aggregates: [Appointment]
     events: [HomeCheckAppointmentProposed]
     notes: >
-      From chapter 'BookingAppointments', actor 'System'. Triggered by the volunteering flow
-      accepting a home-check assignment. This slice STARTS the Appointment stream.
+      From chapter 'BookingAppointments', actor 'System'. A volunteer accepted a home-check
+      assignment, so the visit needs booking. This slice STARTS the Appointment stream.
     elements:
       Appointment:
+        description: One booked visit, whatever flow asked for it
         fields:
           ownerId: Guid
           shelterId: Guid
-          dogId: Guid
           kind: string
-          status: string
+          sourceId: Guid
           scheduledFor: DateTimeOffset
+          status: string
           rescheduleRequested: bool
       HomeCheckAssignmentAccepted:
         description: Volunteering accepted a home-check assignment and needs a visit booked
@@ -59,458 +81,732 @@ slices:
           assignmentId: Guid
           ownerId: Guid
           shelterId: Guid
-          dogId: Guid
-          volunteerId: Guid
           proposedFor: DateTimeOffset
       HomeCheckAppointmentProposed:
-        description: A home-check visit was proposed to the owner
+        description: A home-check visit was proposed and awaits the owner's confirmation
         fields:
-          appointmentId: Guid
           ownerId: Guid
           shelterId: Guid
-          dogId: Guid
-          volunteerId: Guid
-          proposedFor: DateTimeOffset
+          kind: string
+          sourceId: Guid
+          scheduledFor: DateTimeOffset
     specifications:
       feature: BookingAppointments
       scenarios:
-        - name: Accepting a home check assignment proposes an appointment
+        - name: An accepted home check assignment proposes a visit
           when:
-            command: HomeCheckAssignmentAccepted
+            command: ProposeHomeCheckAppointment
             with:
-              # The Appointment stream takes the identity the trigger already carries — one
-              # accepted assignment is one appointment — so the act must address the stream the
-              # Given arranged. `{streamId}` is the scaffolder's token for that id (bobcat#235);
-              # a literal here would create a DIFFERENT stream than the scenario arranged, and
-              # the emitted-event assertion would read an empty one.
               assignmentId: "{streamId}"
               ownerId: "0e5e0001-0000-0000-0000-000000000001"
-              shelterId: "5e1e0001-0000-0000-0000-000000000001"
-              dogId: "d0670001-0000-0000-0000-000000000001"
-              volunteerId: "0e1e0001-0000-0000-0000-000000000001"
+              shelterId: "5e110001-0000-0000-0000-000000000001"
               proposedFor: "2026-10-01T15:00:00Z"
           then:
             - event: HomeCheckAppointmentProposed
               with:
                 ownerId: "0e5e0001-0000-0000-0000-000000000001"
-                proposedFor: "2026-10-01T15:00:00Z"
+                kind: HomeCheck
+                sourceId: "{streamId}"
+                scheduledFor: "2026-10-01T15:00:00Z"
 
   - name: ProposeFosterHandoverAppointment
     pattern: Automation
-    domain: Appointments
-    trigger: { kind: MessageHandler, label: FosterPlacementApproved }
+    domain: Scheduling
+    chapter: BookingAppointments
+    trigger: { kind: MessageHandler, label: DogPlacedInFoster }
     externalSystems:
       - { name: Fostering, direction: Inbound }
     command: ProposeFosterHandoverAppointment
     aggregates: [Appointment]
     events: [FosterHandoverAppointmentProposed]
-    notes: From chapter 'BookingAppointments', actor 'System'. This slice STARTS the Appointment stream.
+    notes: >
+      From chapter 'BookingAppointments', actor 'System'. A dog was placed in foster, so the handover
+      needs booking. This slice STARTS the Appointment stream.
     elements:
-      FosterPlacementApproved:
-        description: Fostering approved a placement, so the dog has to change hands
+      DogPlacedInFoster:
+        description: Fostering placed a dog and needs the handover booked
         fields:
-          placementId: Guid
+          fosterApplicationId: Guid
           ownerId: Guid
           shelterId: Guid
-          dogId: Guid
-          fosterId: Guid
           proposedFor: DateTimeOffset
       FosterHandoverAppointmentProposed:
-        description: A handover between the shelter and the foster was proposed
+        description: A foster handover was proposed and awaits the foster carer's confirmation
         fields:
-          appointmentId: Guid
           ownerId: Guid
           shelterId: Guid
-          dogId: Guid
-          fosterId: Guid
-          proposedFor: DateTimeOffset
+          kind: string
+          sourceId: Guid
+          scheduledFor: DateTimeOffset
     specifications:
       feature: BookingAppointments
       scenarios:
-        - name: Approving a foster placement proposes a handover appointment
+        - name: A dog placed in foster proposes a handover
           when:
-            command: FosterPlacementApproved
+            command: ProposeFosterHandoverAppointment
             with:
-              # Same identity rule as the other two proposals — see above.
-              placementId: "{streamId}"
+              fosterApplicationId: "{streamId}"
               ownerId: "0e5e0002-0000-0000-0000-000000000002"
-              shelterId: "5e1e0001-0000-0000-0000-000000000001"
-              dogId: "d0670002-0000-0000-0000-000000000002"
-              fosterId: "f05e0002-0000-0000-0000-000000000002"
+              shelterId: "5e110001-0000-0000-0000-000000000001"
               proposedFor: "2026-10-02T10:30:00Z"
           then:
             - event: FosterHandoverAppointmentProposed
               with:
-                fosterId: "f05e0002-0000-0000-0000-000000000002"
-                proposedFor: "2026-10-02T10:30:00Z"
+                ownerId: "0e5e0002-0000-0000-0000-000000000002"
+                kind: FosterHandover
+                sourceId: "{streamId}"
+                scheduledFor: "2026-10-02T10:30:00Z"
 
   - name: ProposeSurrenderIntakeAppointment
     pattern: Automation
-    domain: Appointments
-    trigger: { kind: MessageHandler, label: SurrenderRequestApproved }
+    domain: Scheduling
+    chapter: BookingAppointments
+    trigger: { kind: MessageHandler, label: SurrenderRequestReviewed }
     externalSystems:
-      - { name: Surrender, direction: Inbound }
+      - { name: Surrenders, direction: Inbound }
     command: ProposeSurrenderIntakeAppointment
     aggregates: [Appointment]
     events: [SurrenderIntakeAppointmentProposed]
-    notes: From chapter 'BookingAppointments', actor 'System'. This slice STARTS the Appointment stream.
+    hotspots:
+      - >
+        One source entity can hold only one appointment, because the source id IS the appointment's
+        stream id. A surrender needing a second intake visit — the first one a no-show, say — has
+        nowhere to put it. The alternative is a minted id, which costs idempotency on redelivery;
+        this model chose idempotency and wrote the cost down.
+      - >
+        The board's trigger is "Surrender Request Reviewed", and a review can plainly end either way —
+        but the board declares no outcome field, so this model cannot say whether a REJECTED review
+        also books an intake. Today every reviewed request books one. Resolving it means asking the
+        Surrenders chapter to carry the outcome on its contract, which is a change to somebody else's
+        event, not to this slice.
+    notes: >
+      From chapter 'BookingAppointments', actor 'System'. A surrender request was reviewed, so the
+      intake needs booking. This slice STARTS the Appointment stream.
     elements:
-      SurrenderRequestApproved:
-        description: The shelter agreed to take a surrendered dog in
+      SurrenderRequestReviewed:
+        description: Surrenders reviewed an owner's request and needs the intake booked
         fields:
-          requestId: Guid
+          surrenderRequestId: Guid
           ownerId: Guid
           shelterId: Guid
-          dogId: Guid
           proposedFor: DateTimeOffset
       SurrenderIntakeAppointmentProposed:
-        description: An intake appointment was proposed to the surrendering owner
+        description: A surrender intake was proposed and awaits the owner's confirmation
         fields:
-          appointmentId: Guid
           ownerId: Guid
           shelterId: Guid
-          dogId: Guid
-          proposedFor: DateTimeOffset
+          kind: string
+          sourceId: Guid
+          scheduledFor: DateTimeOffset
     specifications:
       feature: BookingAppointments
       scenarios:
-        - name: Approving a surrender request proposes an intake appointment
+        - name: A reviewed surrender request proposes an intake
           when:
-            command: SurrenderRequestApproved
+            command: ProposeSurrenderIntakeAppointment
             with:
-              # Same identity rule as the other two proposals — see above.
-              requestId: "{streamId}"
+              surrenderRequestId: "{streamId}"
               ownerId: "0e5e0003-0000-0000-0000-000000000003"
-              shelterId: "5e1e0001-0000-0000-0000-000000000001"
-              dogId: "d0670003-0000-0000-0000-000000000003"
+              shelterId: "5e110001-0000-0000-0000-000000000001"
               proposedFor: "2026-10-03T09:00:00Z"
           then:
             - event: SurrenderIntakeAppointmentProposed
               with:
                 ownerId: "0e5e0003-0000-0000-0000-000000000003"
-                proposedFor: "2026-10-03T09:00:00Z"
+                kind: SurrenderIntake
+                sourceId: "{streamId}"
+                scheduledFor: "2026-10-03T09:00:00Z"
 
-  # ---- The lifecycle: an owner confirms or asks to move; the shelter reschedules, completes,
-  # cancels, or records a no-show.
-  #
-  # `{streamId}` in a scenario `with:` means "the id of the stream this scenario is running
-  # against". The collapsed endpoint computes its stream from the request, so a literal here
-  # would post to a DIFFERENT stream than the Given events were written to, and every
-  # state-dependent refusal would silently pass for the wrong reason (bobcat #235).
+  # ---- The shared lifecycle ----------------------------------------------------------------------
+  # Whatever proposed it, an appointment is confirmed, possibly moved, and then closed exactly once.
+  # Six HTTP-triggered commands over one stream. Each carries appointmentId as "{streamId}" so the
+  # act reaches the stream the Given arranged — without it a refusal scenario passes by inspecting an
+  # empty aggregate and refusing nothing.
 
   - name: ConfirmAppointment
     pattern: Command
-    domain: Appointments
-    trigger: { kind: Http, label: My appointments }
+    domain: Scheduling
+    chapter: BookingAppointments
+    trigger: { kind: Http, label: Confirm Appointment }
     command: ConfirmAppointment
     aggregates: [Appointment]
     events: [AppointmentConfirmed]
+    notes: From chapter 'BookingAppointments', actor 'Shelter Staff'.
     elements:
       ConfirmAppointment:
-        fields: { appointmentId: Guid }
+        fields:
+          appointmentId: Guid
       AppointmentConfirmed:
-        description: The owner accepted the proposed time
-        fields: { appointmentId: Guid, ownerId: Guid, confirmedAt: DateTimeOffset }
+        description: The counterparty accepted the proposed time
+        fields:
+          ownerId: Guid
+          shelterId: Guid
+          confirmedAt: DateTimeOffset
     specifications:
       feature: BookingAppointments
       scenarios:
         - name: A proposed appointment is confirmed
           given:
             - event: HomeCheckAppointmentProposed
-              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001", proposedFor: "2026-10-01T15:00:00Z" }
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                kind: HomeCheck
+                scheduledFor: "2026-10-01T15:00:00Z"
           when:
             command: ConfirmAppointment
             with: { appointmentId: "{streamId}" }
           then:
             - event: AppointmentConfirmed
               with: { ownerId: "0e5e0001-0000-0000-0000-000000000001" }
-        - name: Confirming an already cancelled appointment is refused
+        - name: A cancelled appointment cannot be confirmed
           given:
             - event: HomeCheckAppointmentProposed
-              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001", proposedFor: "2026-10-01T15:00:00Z" }
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                kind: HomeCheck
+                scheduledFor: "2026-10-01T15:00:00Z"
             - event: AppointmentCancelled
-              with: { reason: "The owner moved away" }
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                wasConfirmed: "false"
+                reason: The volunteer withdrew
           when:
             command: ConfirmAppointment
             with: { appointmentId: "{streamId}" }
           then:
-            - validationFails: "This appointment was cancelled"
+            - validationFails: This appointment was cancelled
 
   - name: RequestReschedule
     pattern: Command
-    domain: Appointments
-    trigger: { kind: Http, label: My appointments }
+    domain: Scheduling
+    chapter: BookingAppointments
+    trigger: { kind: Http, label: Request Reschedule }
     command: RequestReschedule
     aggregates: [Appointment]
-    events: [RescheduleRequested]
+    events: [AppointmentRescheduleRequested]
+    notes: >
+      From chapter 'BookingAppointments', actor 'Member'. The counterparty asks for a different time;
+      the shelter still owns the move itself.
     elements:
       RequestReschedule:
-        fields: { appointmentId: Guid, reason: string, preferredFor: DateTimeOffset }
-      RescheduleRequested:
-        description: The owner cannot make the proposed time and suggested another
         fields:
           appointmentId: Guid
-          ownerId: Guid
+          requestedFor: DateTimeOffset
           reason: string
-          preferredFor: DateTimeOffset
-          requestedAt: DateTimeOffset
+      AppointmentRescheduleRequested:
+        description: The counterparty asked for a different time
+        fields:
+          ownerId: Guid
+          shelterId: Guid
+          requestedFor: DateTimeOffset
+          reason: string
     specifications:
       feature: BookingAppointments
       scenarios:
-        - name: An owner asks for a different time
+        - name: A member asks to move a confirmed appointment
           given:
             - event: HomeCheckAppointmentProposed
-              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001", proposedFor: "2026-10-01T15:00:00Z" }
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                kind: HomeCheck
+                scheduledFor: "2026-10-01T15:00:00Z"
+            - event: AppointmentConfirmed
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
           when:
             command: RequestReschedule
             with:
               appointmentId: "{streamId}"
-              reason: "Working that afternoon"
-              preferredFor: "2026-10-04T18:00:00Z"
+              requestedFor: "2026-10-05T15:00:00Z"
+              reason: Working that afternoon
           then:
-            - event: RescheduleRequested
+            - event: AppointmentRescheduleRequested
               with:
-                reason: "Working that afternoon"
-                preferredFor: "2026-10-04T18:00:00Z"
+                requestedFor: "2026-10-05T15:00:00Z"
+                reason: Working that afternoon
+        - name: A completed appointment cannot be rescheduled
+          given:
+            - event: HomeCheckAppointmentProposed
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                kind: HomeCheck
+                scheduledFor: "2026-10-01T15:00:00Z"
+            - event: AppointmentConfirmed
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+            - event: AppointmentCompleted
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                completedAt: "2026-10-01T16:00:00Z"
+          when:
+            command: RequestReschedule
+            with:
+              appointmentId: "{streamId}"
+              requestedFor: "2026-10-05T15:00:00Z"
+              reason: Working that afternoon
+          then:
+            - validationFails: This appointment is already closed
 
   - name: RescheduleAppointment
     pattern: Command
-    domain: Appointments
-    trigger: { kind: Http, label: Appointments queue }
+    domain: Scheduling
+    chapter: BookingAppointments
+    trigger: { kind: Http, label: Reschedule Appointment }
     command: RescheduleAppointment
     aggregates: [Appointment]
     events: [AppointmentRescheduled]
+    hotspots:
+      - >
+        The board draws Reschedule only downstream of Request Reschedule, so this model refuses a
+        move nobody asked for. Whether the shelter may move an appointment unilaterally — a vet
+        running late, a volunteer calling in sick — is undecided, and the board cannot settle it.
+    notes: From chapter 'BookingAppointments', actor 'Shelter Staff'.
     elements:
       RescheduleAppointment:
-        fields: { appointmentId: Guid, scheduledFor: DateTimeOffset }
+        fields:
+          appointmentId: Guid
+          scheduledFor: DateTimeOffset
       AppointmentRescheduled:
         description: The shelter moved the appointment to a new time
         fields:
-          appointmentId: Guid
           ownerId: Guid
+          shelterId: Guid
           scheduledFor: DateTimeOffset
-          rescheduledAt: DateTimeOffset
     specifications:
       feature: BookingAppointments
       scenarios:
-        - name: The shelter moves an appointment to a new time
+        - name: The shelter moves an appointment a member asked to move
           given:
             - event: HomeCheckAppointmentProposed
-              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001", proposedFor: "2026-10-01T15:00:00Z" }
-            - event: RescheduleRequested
-              with: { reason: "Working that afternoon", preferredFor: "2026-10-04T18:00:00Z" }
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                kind: HomeCheck
+                scheduledFor: "2026-10-01T15:00:00Z"
+            - event: AppointmentConfirmed
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+            - event: AppointmentRescheduleRequested
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                requestedFor: "2026-10-05T15:00:00Z"
+                reason: Working that afternoon
           when:
             command: RescheduleAppointment
             with:
               appointmentId: "{streamId}"
-              scheduledFor: "2026-10-04T18:00:00Z"
+              scheduledFor: "2026-10-05T15:00:00Z"
           then:
             - event: AppointmentRescheduled
-              with: { scheduledFor: "2026-10-04T18:00:00Z" }
+              with:
+                scheduledFor: "2026-10-05T15:00:00Z"
+        - name: An appointment nobody asked to move is not moved
+          given:
+            - event: HomeCheckAppointmentProposed
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                kind: HomeCheck
+                scheduledFor: "2026-10-01T15:00:00Z"
+            - event: AppointmentConfirmed
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+          when:
+            command: RescheduleAppointment
+            with:
+              appointmentId: "{streamId}"
+              scheduledFor: "2026-10-05T15:00:00Z"
+          then:
+            - validationFails: Nobody asked to move this appointment
 
   - name: CompleteAppointment
     pattern: Command
-    domain: Appointments
-    trigger: { kind: Http, label: Appointments queue }
+    domain: Scheduling
+    chapter: BookingAppointments
+    trigger: { kind: Http, label: Complete Appointment }
     command: CompleteAppointment
     aggregates: [Appointment]
     events: [AppointmentCompleted]
+    notes: From chapter 'BookingAppointments', actor 'Shelter Staff'.
     elements:
       CompleteAppointment:
-        fields: { appointmentId: Guid, notes: string }
+        fields:
+          appointmentId: Guid
       AppointmentCompleted:
-        description: The visit happened and the shelter wrote it up
-        fields: { appointmentId: Guid, ownerId: Guid, notes: string, completedAt: DateTimeOffset }
+        description: The visit happened
+        fields:
+          ownerId: Guid
+          shelterId: Guid
+          completedAt: DateTimeOffset
     specifications:
       feature: BookingAppointments
       scenarios:
         - name: A confirmed appointment is completed
           given:
             - event: HomeCheckAppointmentProposed
-              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001", proposedFor: "2026-10-01T15:00:00Z" }
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                kind: HomeCheck
+                scheduledFor: "2026-10-01T15:00:00Z"
             - event: AppointmentConfirmed
-              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001" }
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
           when:
             command: CompleteAppointment
-            with:
-              appointmentId: "{streamId}"
-              notes: "Garden is fenced, two cats, all good"
+            with: { appointmentId: "{streamId}" }
           then:
             - event: AppointmentCompleted
-              with: { notes: "Garden is fenced, two cats, all good" }
+              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001" }
+        - name: An appointment nobody confirmed is not completed
+          given:
+            - event: HomeCheckAppointmentProposed
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                kind: HomeCheck
+                scheduledFor: "2026-10-01T15:00:00Z"
+          when:
+            command: CompleteAppointment
+            with: { appointmentId: "{streamId}" }
+          then:
+            - validationFails: This appointment has not been confirmed
 
   - name: CancelAppointment
     pattern: Command
-    domain: Appointments
-    trigger: { kind: Http, label: My appointments }
+    domain: Scheduling
+    chapter: BookingAppointments
+    trigger: { kind: Http, label: Cancel Appointment }
     command: CancelAppointment
     aggregates: [Appointment]
     events: [AppointmentCancelled]
+    notes: From chapter 'BookingAppointments', actor 'Shelter Staff'.
     elements:
       CancelAppointment:
-        fields: { appointmentId: Guid, reason: string }
+        fields:
+          appointmentId: Guid
+          reason: string
       AppointmentCancelled:
-        description: The appointment will not happen
-        fields: { appointmentId: Guid, ownerId: Guid, reason: string, cancelledAt: DateTimeOffset }
+        description: >
+          The appointment will not happen. `wasConfirmed` is carried because the counting views
+          cannot otherwise know which of their buckets this appointment was sitting in, and the
+          aggregate is the only place that knows — a projection has no prior state to consult.
+        fields:
+          ownerId: Guid
+          shelterId: Guid
+          wasConfirmed: bool
+          reason: string
     specifications:
       feature: BookingAppointments
       scenarios:
-        - name: An appointment is cancelled before it happens
+        - name: A confirmed appointment is cancelled
           given:
             - event: HomeCheckAppointmentProposed
-              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001", proposedFor: "2026-10-01T15:00:00Z" }
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                kind: HomeCheck
+                scheduledFor: "2026-10-01T15:00:00Z"
+            - event: AppointmentConfirmed
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
           when:
             command: CancelAppointment
             with:
               appointmentId: "{streamId}"
-              reason: "The owner withdrew the application"
+              reason: The volunteer withdrew
           then:
             - event: AppointmentCancelled
-              with: { reason: "The owner withdrew the application" }
+              with: { wasConfirmed: "true", reason: The volunteer withdrew }
         - name: A completed appointment cannot be cancelled
           given:
             - event: HomeCheckAppointmentProposed
-              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001", proposedFor: "2026-10-01T15:00:00Z" }
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                kind: HomeCheck
+                scheduledFor: "2026-10-01T15:00:00Z"
             - event: AppointmentConfirmed
-              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001" }
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
             - event: AppointmentCompleted
-              with: { notes: "Garden is fenced, two cats, all good" }
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                completedAt: "2026-10-01T16:00:00Z"
           when:
             command: CancelAppointment
             with:
               appointmentId: "{streamId}"
-              reason: "Too late"
+              reason: The volunteer withdrew
           then:
-            - validationFails: "This appointment is already completed"
+            - validationFails: This appointment is already closed
 
   - name: RecordAppointmentNoShow
     pattern: Command
-    domain: Appointments
-    trigger: { kind: Http, label: Appointments queue }
+    domain: Scheduling
+    chapter: BookingAppointments
+    trigger: { kind: Http, label: Record Appointment No-Show }
     command: RecordAppointmentNoShow
     aggregates: [Appointment]
     events: [AppointmentNoShowRecorded]
+    notes: From chapter 'BookingAppointments', actor 'Shelter Staff'.
     elements:
       RecordAppointmentNoShow:
-        fields: { appointmentId: Guid }
+        fields:
+          appointmentId: Guid
       AppointmentNoShowRecorded:
-        description: Nobody was there when the shelter turned up
-        fields: { appointmentId: Guid, ownerId: Guid, recordedAt: DateTimeOffset }
+        description: The counterparty never arrived
+        fields:
+          ownerId: Guid
+          shelterId: Guid
+          recordedAt: DateTimeOffset
     specifications:
       feature: BookingAppointments
       scenarios:
-        - name: Nobody turned up
+        - name: A no-show is recorded against a confirmed appointment
           given:
             - event: HomeCheckAppointmentProposed
-              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001", proposedFor: "2026-10-01T15:00:00Z" }
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                kind: HomeCheck
+                scheduledFor: "2026-10-01T15:00:00Z"
             - event: AppointmentConfirmed
-              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001" }
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
           when:
             command: RecordAppointmentNoShow
             with: { appointmentId: "{streamId}" }
           then:
             - event: AppointmentNoShowRecorded
               with: { ownerId: "0e5e0001-0000-0000-0000-000000000001" }
+        - name: A completed appointment cannot be marked a no-show
+          given:
+            - event: HomeCheckAppointmentProposed
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                kind: HomeCheck
+                scheduledFor: "2026-10-01T15:00:00Z"
+            - event: AppointmentConfirmed
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+            - event: AppointmentCompleted
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                completedAt: "2026-10-01T16:00:00Z"
+          when:
+            command: RecordAppointmentNoShow
+            with: { appointmentId: "{streamId}" }
+          then:
+            - validationFails: This appointment is already closed
 
-  # ---- The two read models.
+  # ---- The two views -----------------------------------------------------------------------------
+  # Both fold MANY appointment streams into ONE document — the queue by shelter, the page by owner —
+  # so both are multi-stream, and both need an identity the event itself carries.
+  #
+  # `consumedEvents:` is declared in full rather than left as the import found it. The import fills
+  # it from the `e:` steps preceding a `v:` on the board, which gave the queue three proposals and
+  # gave MyAppointments nothing at all (the board puts the two `v:` steps side by side, so the second
+  # inherits no events — the import says so). Type lists merge by EQUALITY, not union, so a view that
+  # declares fewer events than its projection applies is a SourceDisagreement, correctly: the view is
+  # under-specified. Every event that moves an appointment between these counts is listed — and only
+# those: a reschedule, requested or carried out, moves an appointment between no two counts, so
+# neither view consumes one. Declaring an event a projection never applies is the same
+# disagreement in the other direction.
 
   - name: AppointmentsQueue
     pattern: View
-    domain: Appointments
-    trigger: { kind: Http, label: Appointments queue }
+    domain: Scheduling
+    chapter: BookingAppointments
+    trigger: { kind: Http, label: Appointments Queue }
+    aggregates: [Appointment]
     projections: [AppointmentsQueueProjection]
     readModels: [AppointmentsQueue]
-    # A View slice has no write model of its own; this names the stream the projection READS.
-    # Without it the arrange step invents an `AppointmentsQueueModel` nothing emits (bobcat #240).
-    aggregates: [Appointment]
+    fanOut: true
+    consumedEvents:
+      - HomeCheckAppointmentProposed
+      - FosterHandoverAppointmentProposed
+      - SurrenderIntakeAppointmentProposed
+      - AppointmentConfirmed
+      - AppointmentCompleted
+      - AppointmentCancelled
+      - AppointmentNoShowRecorded
     notes: >
-      The shelter's work queue, one row per appointment, keyed by the appointment's own stream —
-      so it is a SINGLE-stream projection, and the shipped `Then the {readmodel} read model
-      contains` step (which loads by the scenario's stream id) can assert it directly.
+      From chapter 'BookingAppointments', actor 'Shelter Staff'. One document per SHELTER, counting
+      the shelter's appointments by where they are in the lifecycle. Eventually consistent — the
+      async daemon owns it.
     elements:
       AppointmentsQueue:
-        description: One queue row per appointment — what the shelter still has to act on
+        description: What one shelter still has to deal with
         fields:
-          ownerId: Guid
           shelterId: Guid
-          dogId: Guid
-          kind: string
-          status: string
-          scheduledFor: DateTimeOffset
-          awaitingAction: bool
+          awaitingConfirmation: int
+          confirmed: int
+          closed: int
     specifications:
-      feature: BookingAppointments
+      feature: AppointmentsQueue
       scenarios:
-        - name: A proposed home check waits in the queue for the owner
+        - name: The queue counts appointments from every stream in the shelter
           given:
             - event: HomeCheckAppointmentProposed
-              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001", proposedFor: "2026-10-01T15:00:00Z" }
-          then:
-            - readModel: AppointmentsQueue
-              contains: { Kind: HomeCheck, Status: Proposed, AwaitingAction: "true" }
-        - name: A completed appointment stops awaiting action
-          given:
-            - event: HomeCheckAppointmentProposed
-              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001", proposedFor: "2026-10-01T15:00:00Z" }
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                kind: HomeCheck
+                scheduledFor: "2026-10-01T15:00:00Z"
             - event: AppointmentConfirmed
-              with: { ownerId: "0e5e0001-0000-0000-0000-000000000001" }
-            - event: AppointmentCompleted
-              with: { notes: "Garden is fenced, two cats, all good" }
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+            - event: SurrenderIntakeAppointmentProposed
+              stream: a second appointment at the same shelter
+              with:
+                ownerId: "0e5e0003-0000-0000-0000-000000000003"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                kind: SurrenderIntake
+                scheduledFor: "2026-10-03T09:00:00Z"
           then:
             - readModel: AppointmentsQueue
-              contains: { Status: Completed, AwaitingAction: "false" }
+              id: "5e110001-0000-0000-0000-000000000001"
+              contains:
+                AwaitingConfirmation: "1"
+                Confirmed: "1"
+                Closed: "0"
+        - name: An appointment cancelled before anyone confirmed it leaves the awaiting count
+          given:
+            - event: HomeCheckAppointmentProposed
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110003-0000-0000-0000-000000000003"
+                kind: HomeCheck
+                scheduledFor: "2026-10-01T15:00:00Z"
+            - event: AppointmentCancelled
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110003-0000-0000-0000-000000000003"
+                wasConfirmed: "false"
+                reason: The volunteer withdrew
+          then:
+            - readModel: AppointmentsQueue
+              id: "5e110003-0000-0000-0000-000000000003"
+              contains:
+                AwaitingConfirmation: "0"
+                Confirmed: "0"
+                Closed: "1"
+        - name: A completed appointment leaves the queue
+          given:
+            - event: HomeCheckAppointmentProposed
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110002-0000-0000-0000-000000000002"
+                kind: HomeCheck
+                scheduledFor: "2026-10-01T15:00:00Z"
+            - event: AppointmentConfirmed
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110002-0000-0000-0000-000000000002"
+            - event: AppointmentCompleted
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110002-0000-0000-0000-000000000002"
+                completedAt: "2026-10-01T16:00:00Z"
+          then:
+            - readModel: AppointmentsQueue
+              id: "5e110002-0000-0000-0000-000000000002"
+              contains:
+                AwaitingConfirmation: "0"
+                Confirmed: "0"
+                Closed: "1"
 
   - name: MyAppointments
     pattern: View
-    domain: Appointments
-    trigger: { kind: Http, label: My appointments }
-    projections: [MyAppointmentsProjection]
-    fanOut: true
-    readModels: [MyAppointments]
+    domain: Scheduling
+    chapter: BookingAppointments
+    trigger: { kind: Http, label: My Appointments }
     aggregates: [Appointment]
+    projections: [MyAppointmentsProjection]
+    readModels: [MyAppointments]
+    fanOut: true
+    consumedEvents:
+      - HomeCheckAppointmentProposed
+      - FosterHandoverAppointmentProposed
+      - SurrenderIntakeAppointmentProposed
+      - AppointmentConfirmed
+      - AppointmentCompleted
+      - AppointmentCancelled
+      - AppointmentNoShowRecorded
     notes: >
-      One document per OWNER, folding that owner's appointments from every stream — a genuine
-      fan-out, which is why every appointment event carries ownerId.
+      From chapter 'BookingAppointments', actor 'Member'. One document per OWNER. An owner reached by
+      two different flows — a home check and a surrender intake — has two appointment streams and one
+      page, which is the whole reason this projection is multi-stream rather than a snapshot.
     elements:
       MyAppointments:
-        description: What one owner has coming up, across all of their dogs' appointments
+        description: Every appointment one person has, wherever it came from
         fields:
           ownerId: Guid
           awaitingConfirmation: int
           confirmed: int
-          nextAppointmentAt: DateTimeOffset
+          closed: int
     specifications:
-      feature: BookingAppointments
+      feature: MyAppointments
       scenarios:
-        # `id:` is what makes these expressible at all (bobcat#236, shipped): the assertion names
-        # the OWNER, while the scenario's own stream is the appointment. If the projection were
-        # keyed by its stream the lookup below would find nothing, so these scenarios prove the
-        # fan-out ROUTING even though one scenario can only arrange one stream.
-        - name: An owner sees a proposed appointment waiting to be confirmed
+        - name: An owner sees an appointment awaiting their confirmation
           given:
             - event: HomeCheckAppointmentProposed
-              with: { ownerId: "0e5e0004-0000-0000-0000-000000000004", proposedFor: "2026-10-05T14:00:00Z" }
+              with:
+                ownerId: "0e5e0004-0000-0000-0000-000000000004"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                kind: HomeCheck
+                scheduledFor: "2026-10-01T15:00:00Z"
           then:
             - readModel: MyAppointments
               id: "0e5e0004-0000-0000-0000-000000000004"
-              contains: { AwaitingConfirmation: "1", Confirmed: "0", NextAppointmentAt: "2026-10-05T14:00:00Z" }
-        - name: Confirming moves an appointment off the owner's waiting list
+              contains:
+                AwaitingConfirmation: "1"
+                Confirmed: "0"
+                Closed: "0"
+        - name: An owner's page spans every appointment stream they have
           given:
             - event: HomeCheckAppointmentProposed
-              with: { ownerId: "0e5e0005-0000-0000-0000-000000000005", proposedFor: "2026-10-06T09:30:00Z" }
+              with:
+                ownerId: "0e5e0005-0000-0000-0000-000000000005"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                kind: HomeCheck
+                scheduledFor: "2026-10-01T15:00:00Z"
             - event: AppointmentConfirmed
-              with: { ownerId: "0e5e0005-0000-0000-0000-000000000005" }
+              with:
+                ownerId: "0e5e0005-0000-0000-0000-000000000005"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+            - event: SurrenderIntakeAppointmentProposed
+              stream: the same owner's surrender intake
+              with:
+                ownerId: "0e5e0005-0000-0000-0000-000000000005"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                kind: SurrenderIntake
+                scheduledFor: "2026-10-03T09:00:00Z"
           then:
             - readModel: MyAppointments
               id: "0e5e0005-0000-0000-0000-000000000005"
-              contains: { AwaitingConfirmation: "0", Confirmed: "1" }
-    hotspots:
-      - >
-        The fan-out itself is still unspecified: TWO appointments on different streams folding
-        into one owner's document is the reason this projection is multi-stream, and a scenario
-        cannot arrange it. bobcat#236 gave the ASSERTION an id, which is what the two scenarios
-        above use; the ARRANGEMENT still has no way to name a stream, because a curated `given:`
-        is an event and its fields and the scaffolder emits one `Given no events for …` per
-        scenario. The shipped Gherkin grammar can already express it by hand — a second
-        `Given no events for Appointment "…"` re-points the stream — so this is a gap in the
-        curated format and its scaffolder, not in the runtime. Filed as bobcat#311.
+              contains:
+                AwaitingConfirmation: "1"
+                Confirmed: "1"
+                Closed: "0"

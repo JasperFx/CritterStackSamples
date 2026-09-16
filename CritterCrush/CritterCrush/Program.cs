@@ -1,5 +1,5 @@
 using Bobcat.EventModel;
-using CritterCrush.Appointments;
+using CritterCrush.Scheduling;
 using JasperFx;
 using JasperFx.Events.Daemon;
 using JasperFx.Events.Projections;
@@ -31,8 +31,9 @@ builder.Services.AddMarten(opts =>
         // their own write, and the automations aggregate against committed state.
         opts.Projections.Snapshot<Appointment>(SnapshotLifecycle.Inline);
 
-        // Both are ASYNC, including AppointmentsQueue, which is single-stream and would otherwise
-        // be a natural Inline. Inline would run inside every slice's write transaction, so one
+        // Both are ASYNC. Both are also multi-stream — the queue folds every appointment stream in
+        // a shelter into one document, the page every stream an owner has — so neither could be an
+        // Inline snapshot anyway. Inline would run inside every slice's write transaction, so one
         // unfilled Apply would fail every OTHER slice's command — coupling nine slices to the
         // progress of one. Async keeps the blast radius to the projection: the daemon stops on the
         // unfilled event, and only the scenarios asserting that read model fail, on their

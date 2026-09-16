@@ -14,12 +14,14 @@ using Bobcat.EventModel.Scaffolding;
 
 if (args.Length < 2)
 {
-    Console.Error.WriteLine("usage: dotnet run --project models/Scaffolder -- <model.yaml> <out-dir> [--arrangements]");
+    Console.Error.WriteLine("usage: dotnet run --project models/Scaffolder -- <model.yaml> <out-dir> [--arrangements] [--plan <plan.yaml>]");
     return 2;
 }
 
 var (modelPath, outDir) = (args[0], args[1]);
 var arrangements = args.Contains("--arrangements");
+var planIndex = Array.IndexOf(args, "--plan");
+var planPath = planIndex >= 0 && planIndex + 1 < args.Length ? args[planIndex + 1] : null;
 
 var reading = CuratedModelReader.Read(File.ReadAllText(modelPath));
 foreach (var problem in reading.Problems) Console.Error.WriteLine($"problem: {problem}");
@@ -43,6 +45,15 @@ foreach (var (path, content) in files.OrderBy(x => x.Key, StringComparer.Ordinal
     Directory.CreateDirectory(Path.GetDirectoryName(target)!);
     File.WriteAllText(target, content);
     Console.WriteLine(path);
+}
+
+// The Stoat plan is derived too, for the reason the last hand-written one rotted: every scenario
+// name is a spec identity, and a re-scaffold that renames a scenario leaves a gate nothing can ever
+// open. Deriving it means the plan cannot disagree with the model it came from.
+if (planPath is not null)
+{
+    File.WriteAllText(planPath, StoatPlan.From(reading.File));
+    Console.WriteLine($"plan -> {planPath}");
 }
 
 Console.WriteLine();

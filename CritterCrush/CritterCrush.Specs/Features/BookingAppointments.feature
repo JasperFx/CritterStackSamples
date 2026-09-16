@@ -1,4 +1,5 @@
-@domain:Appointments
+@domain:Scheduling
+@chapter:BookingAppointments
 Feature: BookingAppointments
 
   # Fixture: derive from CritterStackHttpFixture. At least one act below POSTs to a
@@ -9,62 +10,62 @@ Feature: BookingAppointments
   @arrangement
   Scenario: home check appointment proposed
     Given HomeCheckAppointmentProposed occurred
-      | ownerId                              | proposedFor          |
-      | 0e5e0001-0000-0000-0000-000000000001 | 2026-10-01T15:00:00Z |
+      | ownerId                              | shelterId                            | kind      | scheduledFor         |
+      | 0e5e0001-0000-0000-0000-000000000001 | 5e110001-0000-0000-0000-000000000001 | HomeCheck | 2026-10-01T15:00:00Z |
 
   @arrangement
   Scenario: home check appointment proposed, then appointment confirmed
     Given the arrangement "home check appointment proposed"
     And AppointmentConfirmed occurred
-      | ownerId                              |
-      | 0e5e0001-0000-0000-0000-000000000001 |
+      | ownerId                              | shelterId                            |
+      | 0e5e0001-0000-0000-0000-000000000001 | 5e110001-0000-0000-0000-000000000001 |
 
   @arrangement
   Scenario: home check appointment proposed, then appointment confirmed, then appointment completed
     Given the arrangement "home check appointment proposed, then appointment confirmed"
     And AppointmentCompleted occurred
-      | notes                                |
-      | Garden is fenced, two cats, all good |
+      | ownerId                              | shelterId                            | completedAt          |
+      | 0e5e0001-0000-0000-0000-000000000001 | 5e110001-0000-0000-0000-000000000001 | 2026-10-01T16:00:00Z |
 
   @slice:ProposeHomeCheckAppointment
-  Scenario: Accepting a home check assignment proposes an appointment
+  Scenario: An accepted home check assignment proposes a visit
     Triggered by HomeCheckAssignmentAccepted
-    Given no events for Appointment "83328332-8332-8332-8332-833283328332"
+    Given no events for Appointment "53355335-5335-5335-5335-533553355335"
     When HomeCheckAssignmentAccepted is received
-      | assignmentId                         | ownerId                              | shelterId                            | dogId                                | volunteerId                          | proposedFor          |
-      | 83328332-8332-8332-8332-833283328332 | 0e5e0001-0000-0000-0000-000000000001 | 5e1e0001-0000-0000-0000-000000000001 | d0670001-0000-0000-0000-000000000001 | 0e1e0001-0000-0000-0000-000000000001 | 2026-10-01T15:00:00Z |
+      | assignmentId                         | ownerId                              | shelterId                            | proposedFor          |
+      | 53355335-5335-5335-5335-533553355335 | 0e5e0001-0000-0000-0000-000000000001 | 5e110001-0000-0000-0000-000000000001 | 2026-10-01T15:00:00Z |
     Then HomeCheckAppointmentProposed is emitted
-      | ownerId                              | proposedFor          |
-      | 0e5e0001-0000-0000-0000-000000000001 | 2026-10-01T15:00:00Z |
+      | ownerId                              | kind      | sourceId                             | scheduledFor         |
+      | 0e5e0001-0000-0000-0000-000000000001 | HomeCheck | 53355335-5335-5335-5335-533553355335 | 2026-10-01T15:00:00Z |
 
   @slice:ProposeFosterHandoverAppointment
-  Scenario: Approving a foster placement proposes a handover appointment
-    Triggered by FosterPlacementApproved
-    Given no events for Appointment "66166616-6616-6616-6616-661666166616"
-    When FosterPlacementApproved is received
-      | placementId                          | ownerId                              | shelterId                            | dogId                                | fosterId                             | proposedFor          |
-      | 66166616-6616-6616-6616-661666166616 | 0e5e0002-0000-0000-0000-000000000002 | 5e1e0001-0000-0000-0000-000000000001 | d0670002-0000-0000-0000-000000000002 | f05e0002-0000-0000-0000-000000000002 | 2026-10-02T10:30:00Z |
+  Scenario: A dog placed in foster proposes a handover
+    Triggered by DogPlacedInFoster
+    Given no events for Appointment "44364436-4436-4436-4436-443644364436"
+    When DogPlacedInFoster is received
+      | fosterApplicationId                  | ownerId                              | shelterId                            | proposedFor          |
+      | 44364436-4436-4436-4436-443644364436 | 0e5e0002-0000-0000-0000-000000000002 | 5e110001-0000-0000-0000-000000000001 | 2026-10-02T10:30:00Z |
     Then FosterHandoverAppointmentProposed is emitted
-      | fosterId                             | proposedFor          |
-      | f05e0002-0000-0000-0000-000000000002 | 2026-10-02T10:30:00Z |
+      | ownerId                              | kind           | sourceId                             | scheduledFor         |
+      | 0e5e0002-0000-0000-0000-000000000002 | FosterHandover | 44364436-4436-4436-4436-443644364436 | 2026-10-02T10:30:00Z |
 
   @slice:ProposeSurrenderIntakeAppointment
-  Scenario: Approving a surrender request proposes an intake appointment
-    Triggered by SurrenderRequestApproved
-    Given no events for Appointment "47544754-4754-4754-4754-475447544754"
-    When SurrenderRequestApproved is received
-      | requestId                            | ownerId                              | shelterId                            | dogId                                | proposedFor          |
-      | 47544754-4754-4754-4754-475447544754 | 0e5e0003-0000-0000-0000-000000000003 | 5e1e0001-0000-0000-0000-000000000001 | d0670003-0000-0000-0000-000000000003 | 2026-10-03T09:00:00Z |
+  Scenario: A reviewed surrender request proposes an intake
+    Triggered by SurrenderRequestReviewed
+    Given no events for Appointment "96369636-9636-9636-9636-963696369636"
+    When SurrenderRequestReviewed is received
+      | surrenderRequestId                   | ownerId                              | shelterId                            | proposedFor          |
+      | 96369636-9636-9636-9636-963696369636 | 0e5e0003-0000-0000-0000-000000000003 | 5e110001-0000-0000-0000-000000000001 | 2026-10-03T09:00:00Z |
     Then SurrenderIntakeAppointmentProposed is emitted
-      | ownerId                              | proposedFor          |
-      | 0e5e0003-0000-0000-0000-000000000003 | 2026-10-03T09:00:00Z |
+      | ownerId                              | kind            | sourceId                             | scheduledFor         |
+      | 0e5e0003-0000-0000-0000-000000000003 | SurrenderIntake | 96369636-9636-9636-9636-963696369636 | 2026-10-03T09:00:00Z |
 
   @slice:ConfirmAppointment
   Scenario: A proposed appointment is confirmed
-    Triggered by My appointments
+    Triggered by Confirm Appointment
     Given no events for Appointment "43254325-4325-4325-4325-432543254325"
     And the arrangement "home check appointment proposed"
-    When ConfirmAppointment is posted to "/api/appointments/confirmappointment"
+    When ConfirmAppointment is posted to "/api/scheduling/confirmappointment"
       | appointmentId                        |
       | 43254325-4325-4325-4325-432543254325 |
     Then AppointmentConfirmed is emitted
@@ -72,134 +73,139 @@ Feature: BookingAppointments
       | 0e5e0001-0000-0000-0000-000000000001 |
 
   @slice:ConfirmAppointment
-  Scenario: Confirming an already cancelled appointment is refused
-    Triggered by My appointments
-    Given no events for Appointment "77607760-7760-7760-7760-776077607760"
+  Scenario: A cancelled appointment cannot be confirmed
+    Triggered by Confirm Appointment
+    Given no events for Appointment "57115711-5711-5711-5711-571157115711"
     And the arrangement "home check appointment proposed"
     And AppointmentCancelled occurred
-      | reason               |
-      | The owner moved away |
-    When ConfirmAppointment is posted to "/api/appointments/confirmappointment"
+      | ownerId                              | shelterId                            | wasConfirmed | reason                 |
+      | 0e5e0001-0000-0000-0000-000000000001 | 5e110001-0000-0000-0000-000000000001 | false        | The volunteer withdrew |
+    When ConfirmAppointment is posted to "/api/scheduling/confirmappointment"
       | appointmentId                        |
-      | 77607760-7760-7760-7760-776077607760 |
+      | 57115711-5711-5711-5711-571157115711 |
     # refused with: "This appointment was cancelled"
     Then the response is 400
     And no events are emitted
 
   @slice:RequestReschedule
-  Scenario: An owner asks for a different time
-    Triggered by My appointments
-    Given no events for Appointment "99549954-9954-9954-9954-995499549954"
-    And the arrangement "home check appointment proposed"
-    When RequestReschedule is posted to "/api/appointments/requestreschedule"
-      | appointmentId                        | reason                 | preferredFor         |
-      | 99549954-9954-9954-9954-995499549954 | Working that afternoon | 2026-10-04T18:00:00Z |
-    Then RescheduleRequested is emitted
-      | reason                 | preferredFor         |
-      | Working that afternoon | 2026-10-04T18:00:00Z |
+  Scenario: A member asks to move a confirmed appointment
+    Triggered by Request Reschedule
+    Given no events for Appointment "12791279-1279-1279-1279-127912791279"
+    And the arrangement "home check appointment proposed, then appointment confirmed"
+    When RequestReschedule is posted to "/api/scheduling/requestreschedule"
+      | appointmentId                        | requestedFor         | reason                 |
+      | 12791279-1279-1279-1279-127912791279 | 2026-10-05T15:00:00Z | Working that afternoon |
+    Then AppointmentRescheduleRequested is emitted
+      | requestedFor         | reason                 |
+      | 2026-10-05T15:00:00Z | Working that afternoon |
+
+  @slice:RequestReschedule
+  Scenario: A completed appointment cannot be rescheduled
+    Triggered by Request Reschedule
+    Given no events for Appointment "92449244-9244-9244-9244-924492449244"
+    And the arrangement "home check appointment proposed, then appointment confirmed, then appointment completed"
+    When RequestReschedule is posted to "/api/scheduling/requestreschedule"
+      | appointmentId                        | requestedFor         | reason                 |
+      | 92449244-9244-9244-9244-924492449244 | 2026-10-05T15:00:00Z | Working that afternoon |
+    # refused with: "This appointment is already closed"
+    Then the response is 400
+    And no events are emitted
 
   @slice:RescheduleAppointment
-  Scenario: The shelter moves an appointment to a new time
-    Triggered by Appointments queue
-    Given no events for Appointment "98539853-9853-9853-9853-985398539853"
-    And the arrangement "home check appointment proposed"
-    And RescheduleRequested occurred
-      | reason                 | preferredFor         |
-      | Working that afternoon | 2026-10-04T18:00:00Z |
-    When RescheduleAppointment is posted to "/api/appointments/rescheduleappointment"
+  Scenario: The shelter moves an appointment a member asked to move
+    Triggered by Reschedule Appointment
+    Given no events for Appointment "42534253-4253-4253-4253-425342534253"
+    And the arrangement "home check appointment proposed, then appointment confirmed"
+    And AppointmentRescheduleRequested occurred
+      | ownerId                              | shelterId                            | requestedFor         | reason                 |
+      | 0e5e0001-0000-0000-0000-000000000001 | 5e110001-0000-0000-0000-000000000001 | 2026-10-05T15:00:00Z | Working that afternoon |
+    When RescheduleAppointment is posted to "/api/scheduling/rescheduleappointment"
       | appointmentId                        | scheduledFor         |
-      | 98539853-9853-9853-9853-985398539853 | 2026-10-04T18:00:00Z |
+      | 42534253-4253-4253-4253-425342534253 | 2026-10-05T15:00:00Z |
     Then AppointmentRescheduled is emitted
       | scheduledFor         |
-      | 2026-10-04T18:00:00Z |
+      | 2026-10-05T15:00:00Z |
+
+  @slice:RescheduleAppointment
+  Scenario: An appointment nobody asked to move is not moved
+    Triggered by Reschedule Appointment
+    Given no events for Appointment "81218121-8121-8121-8121-812181218121"
+    And the arrangement "home check appointment proposed, then appointment confirmed"
+    When RescheduleAppointment is posted to "/api/scheduling/rescheduleappointment"
+      | appointmentId                        | scheduledFor         |
+      | 81218121-8121-8121-8121-812181218121 | 2026-10-05T15:00:00Z |
+    # refused with: "Nobody asked to move this appointment"
+    Then the response is 400
+    And no events are emitted
 
   @slice:CompleteAppointment
   Scenario: A confirmed appointment is completed
-    Triggered by Appointments queue
+    Triggered by Complete Appointment
     Given no events for Appointment "36343634-3634-3634-3634-363436343634"
     And the arrangement "home check appointment proposed, then appointment confirmed"
-    When CompleteAppointment is posted to "/api/appointments/completeappointment"
-      | appointmentId                        | notes                                |
-      | 36343634-3634-3634-3634-363436343634 | Garden is fenced, two cats, all good |
+    When CompleteAppointment is posted to "/api/scheduling/completeappointment"
+      | appointmentId                        |
+      | 36343634-3634-3634-3634-363436343634 |
     Then AppointmentCompleted is emitted
-      | notes                                |
-      | Garden is fenced, two cats, all good |
+      | ownerId                              |
+      | 0e5e0001-0000-0000-0000-000000000001 |
+
+  @slice:CompleteAppointment
+  Scenario: An appointment nobody confirmed is not completed
+    Triggered by Complete Appointment
+    Given no events for Appointment "30843084-3084-3084-3084-308430843084"
+    And the arrangement "home check appointment proposed"
+    When CompleteAppointment is posted to "/api/scheduling/completeappointment"
+      | appointmentId                        |
+      | 30843084-3084-3084-3084-308430843084 |
+    # refused with: "This appointment has not been confirmed"
+    Then the response is 400
+    And no events are emitted
 
   @slice:CancelAppointment
-  Scenario: An appointment is cancelled before it happens
-    Triggered by My appointments
-    Given no events for Appointment "64106410-6410-6410-6410-641064106410"
-    And the arrangement "home check appointment proposed"
-    When CancelAppointment is posted to "/api/appointments/cancelappointment"
-      | appointmentId                        | reason                             |
-      | 64106410-6410-6410-6410-641064106410 | The owner withdrew the application |
+  Scenario: A confirmed appointment is cancelled
+    Triggered by Cancel Appointment
+    Given no events for Appointment "71257125-7125-7125-7125-712571257125"
+    And the arrangement "home check appointment proposed, then appointment confirmed"
+    When CancelAppointment is posted to "/api/scheduling/cancelappointment"
+      | appointmentId                        | reason                 |
+      | 71257125-7125-7125-7125-712571257125 | The volunteer withdrew |
     Then AppointmentCancelled is emitted
-      | reason                             |
-      | The owner withdrew the application |
+      | wasConfirmed | reason                 |
+      | true         | The volunteer withdrew |
 
   @slice:CancelAppointment
   Scenario: A completed appointment cannot be cancelled
-    Triggered by My appointments
+    Triggered by Cancel Appointment
     Given no events for Appointment "12421242-1242-1242-1242-124212421242"
     And the arrangement "home check appointment proposed, then appointment confirmed, then appointment completed"
-    When CancelAppointment is posted to "/api/appointments/cancelappointment"
-      | appointmentId                        | reason   |
-      | 12421242-1242-1242-1242-124212421242 | Too late |
-    # refused with: "This appointment is already completed"
+    When CancelAppointment is posted to "/api/scheduling/cancelappointment"
+      | appointmentId                        | reason                 |
+      | 12421242-1242-1242-1242-124212421242 | The volunteer withdrew |
+    # refused with: "This appointment is already closed"
     Then the response is 400
     And no events are emitted
 
   @slice:RecordAppointmentNoShow
-  Scenario: Nobody turned up
-    Triggered by Appointments queue
-    Given no events for Appointment "71717171-7171-7171-7171-717171717171"
+  Scenario: A no-show is recorded against a confirmed appointment
+    Triggered by Record Appointment No-Show
+    Given no events for Appointment "70877087-7087-7087-7087-708770877087"
     And the arrangement "home check appointment proposed, then appointment confirmed"
-    When RecordAppointmentNoShow is posted to "/api/appointments/recordappointmentnoshow"
+    When RecordAppointmentNoShow is posted to "/api/scheduling/recordappointmentnoshow"
       | appointmentId                        |
-      | 71717171-7171-7171-7171-717171717171 |
+      | 70877087-7087-7087-7087-708770877087 |
     Then AppointmentNoShowRecorded is emitted
       | ownerId                              |
       | 0e5e0001-0000-0000-0000-000000000001 |
 
-  @slice:AppointmentsQueue
-  Scenario: A proposed home check waits in the queue for the owner
-    Triggered by Appointments queue
-    Given no events for Appointment "94349434-9434-9434-9434-943494349434"
-    And the arrangement "home check appointment proposed"
-    Then the AppointmentsQueue read model contains
-      | Kind      | Status   | AwaitingAction |
-      | HomeCheck | Proposed | true           |
-
-  @slice:AppointmentsQueue
-  Scenario: A completed appointment stops awaiting action
-    Triggered by Appointments queue
-    Given no events for Appointment "51395139-5139-5139-5139-513951395139"
+  @slice:RecordAppointmentNoShow
+  Scenario: A completed appointment cannot be marked a no-show
+    Triggered by Record Appointment No-Show
+    Given no events for Appointment "18431843-1843-1843-1843-184318431843"
     And the arrangement "home check appointment proposed, then appointment confirmed, then appointment completed"
-    Then the AppointmentsQueue read model contains
-      | Status    | AwaitingAction |
-      | Completed | false          |
-
-  @slice:MyAppointments
-  Scenario: An owner sees a proposed appointment waiting to be confirmed
-    Triggered by My appointments
-    Given no events for Appointment "95469546-9546-9546-9546-954695469546"
-    And HomeCheckAppointmentProposed occurred
-      | ownerId                              | proposedFor          |
-      | 0e5e0004-0000-0000-0000-000000000004 | 2026-10-05T14:00:00Z |
-    Then the MyAppointments read model with id "0e5e0004-0000-0000-0000-000000000004" contains
-      | AwaitingConfirmation | Confirmed | NextAppointmentAt    |
-      | 1                    | 0         | 2026-10-05T14:00:00Z |
-
-  @slice:MyAppointments
-  Scenario: Confirming moves an appointment off the owner's waiting list
-    Triggered by My appointments
-    Given no events for Appointment "38673867-3867-3867-3867-386738673867"
-    And HomeCheckAppointmentProposed occurred
-      | ownerId                              | proposedFor          |
-      | 0e5e0005-0000-0000-0000-000000000005 | 2026-10-06T09:30:00Z |
-    And AppointmentConfirmed occurred
-      | ownerId                              |
-      | 0e5e0005-0000-0000-0000-000000000005 |
-    Then the MyAppointments read model with id "0e5e0005-0000-0000-0000-000000000005" contains
-      | AwaitingConfirmation | Confirmed |
-      | 0                    | 1         |
+    When RecordAppointmentNoShow is posted to "/api/scheduling/recordappointmentnoshow"
+      | appointmentId                        |
+      | 18431843-1843-1843-1843-184318431843 |
+    # refused with: "This appointment is already closed"
+    Then the response is 400
+    And no events are emitted
