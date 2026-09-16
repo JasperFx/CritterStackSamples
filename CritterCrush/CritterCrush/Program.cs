@@ -1,5 +1,5 @@
 using Bobcat.EventModel;
-using CritterCrush.Appointments;
+using CritterCrush.Scheduling;
 using JasperFx;
 using JasperFx.Events.Daemon;
 using JasperFx.Events.Projections;
@@ -30,15 +30,22 @@ builder.Services.AddMarten(opts =>
         // The write model read back by id gets an Inline snapshot: a caller's next GET sees
         // their own write, and the automations aggregate against committed state.
         opts.Projections.Snapshot<Appointment>(SnapshotLifecycle.Inline);
+        opts.Projections.Snapshot<VolunteerApplication>(SnapshotLifecycle.Inline);
+        opts.Projections.Snapshot<HomeCheck>(SnapshotLifecycle.Inline);
 
-        // Both are ASYNC, including AppointmentsQueue, which is single-stream and would otherwise
-        // be a natural Inline. Inline would run inside every slice's write transaction, so one
+        // Both are ASYNC. Both are also multi-stream — the queue folds every appointment stream in
+        // a shelter into one document, the page every stream an owner has — so neither could be an
+        // Inline snapshot anyway. Inline would run inside every slice's write transaction, so one
         // unfilled Apply would fail every OTHER slice's command — coupling nine slices to the
         // progress of one. Async keeps the blast radius to the projection: the daemon stops on the
         // unfilled event, and only the scenarios asserting that read model fail, on their
         // projection wait. Scaffolded projections register cleanly as of Bobcat 0.13.0 (#232).
         opts.Projections.Add<AppointmentsQueueProjection>(ProjectionLifecycle.Async);
         opts.Projections.Add<MyAppointmentsProjection>(ProjectionLifecycle.Async);
+
+        // Volunteering's one view is SINGLE-stream — one document per application, folded from that
+        // application's own stream — and still async, for the same blast-radius reason.
+        opts.Projections.Add<VolunteerApplicationsQueueProjection>(ProjectionLifecycle.Async);
     })
     .IntegrateWithWolverine(m => m.UseFastEventForwarding = true)
     .AddAsyncDaemon(DaemonMode.Solo)
