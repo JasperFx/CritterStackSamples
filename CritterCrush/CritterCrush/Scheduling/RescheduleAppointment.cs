@@ -1,23 +1,23 @@
 namespace CritterCrush.Scheduling;
 
-/// <summary>The shelter moved the appointment to a new time</summary>
+/// <summary>The shelter moved it</summary>
 public record AppointmentRescheduled(Guid OwnerId, Guid ShelterId, DateTimeOffset ScheduledFor);
 
 public record RescheduleAppointment(Guid AppointmentId, DateTimeOffset ScheduledFor);
 
-public record RescheduleAppointmentResponse();
-
-/// <summary>
-/// Only a requested move is honoured. The board draws Reschedule strictly downstream of Request
-/// Reschedule, so a unilateral move is refused here — and the model carries that as a hotspot,
-/// because whether a shelter may move an appointment on its own is a real question the board did
-/// not settle.
-/// </summary>
+/// <inheritdoc cref="ConfirmAppointmentEndpoint"/>
 public static class RescheduleAppointmentEndpoint
 {
-    public static ProblemDetails Validate(RescheduleAppointment command, [ReadModel] Appointment? appointment)
+    public static ProblemDetails Validate(RescheduleAppointment command, Appointment appointment)
     {
-        if (appointment is null) return Refusals.NoSuchAppointment;
+        // TWO conditions, and both are requirements rather than exclusions. Checking only
+        // RescheduleRequested would be the trap: that flag survives a cancellation, so asking to
+        // move an appointment and then cancelling it would leave it movable.
+        if (appointment.IsClosed)
+        {
+            return new ProblemDetails { Detail = "This appointment is already closed", Status = 400 };
+        }
+
         if (!appointment.RescheduleRequested)
         {
             return new ProblemDetails { Detail = "Nobody asked to move this appointment", Status = 400 };
@@ -27,7 +27,7 @@ public static class RescheduleAppointmentEndpoint
     }
 
     [WolverinePost("/api/scheduling/rescheduleappointment")]
-    public static (RescheduleAppointmentResponse, EventsToAppend) Post(RescheduleAppointment command, [WriteModel] Appointment appointment) =>
-        (new RescheduleAppointmentResponse(),
-            [new AppointmentRescheduled(appointment.OwnerId, appointment.ShelterId, command.ScheduledFor)]);
+    [EmptyResponse]
+    public static EventsToAppend Post(RescheduleAppointment command, [WriteModel] Appointment appointment) =>
+        [new AppointmentRescheduled(appointment.OwnerId, appointment.ShelterId, command.ScheduledFor)];
 }

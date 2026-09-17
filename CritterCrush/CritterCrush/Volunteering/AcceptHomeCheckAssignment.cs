@@ -17,15 +17,13 @@ public record HomeCheckAssignmentAccepted(
     Guid VolunteerOwnerId,
     DateTimeOffset ProposedFor);
 
-public record AcceptHomeCheckAssignment(Guid HomeCheckId, Guid VolunteerOwnerId, DateTimeOffset ProposedFor);
+public record AcceptHomeCheckAssignment([property: Identity] Guid HomeCheckId, Guid VolunteerOwnerId, DateTimeOffset ProposedFor);
 
-public record AcceptHomeCheckAssignmentResponse();
-
+/// <inheritdoc cref="CritterCrush.Scheduling.ConfirmAppointmentEndpoint"/>
 public static class AcceptHomeCheckAssignmentEndpoint
 {
-    public static ProblemDetails Validate(AcceptHomeCheckAssignment command, [ReadModel] HomeCheck? homeCheck)
+    public static ProblemDetails Validate(HomeCheck homeCheck)
     {
-        if (homeCheck is null) return VolunteeringRefusals.NoSuchHomeCheck;
         if (homeCheck.Status != HomeCheckStatus.Requested)
         {
             return new ProblemDetails { Detail = "This home check is already assigned", Status = 400 };
@@ -35,14 +33,14 @@ public static class AcceptHomeCheckAssignmentEndpoint
     }
 
     [WolverinePost("/api/volunteering/accepthomecheckassignment")]
-    public static (AcceptHomeCheckAssignmentResponse, EventsToAppend) Post(AcceptHomeCheckAssignment command, [WriteModel] HomeCheck homeCheck) =>
-        (new AcceptHomeCheckAssignmentResponse(),
-            [
-                new HomeCheckAssignmentAccepted(
-                    Guid.NewGuid(),
-                    homeCheck.OwnerId,
-                    homeCheck.ShelterId,
-                    command.VolunteerOwnerId,
-                    command.ProposedFor)
-            ]);
+    [EmptyResponse]
+    public static EventsToAppend Post(AcceptHomeCheckAssignment command, [WriteModel] HomeCheck homeCheck) =>
+    [
+        new HomeCheckAssignmentAccepted(
+            Guid.NewGuid(),
+            homeCheck.OwnerId,
+            homeCheck.ShelterId,
+            command.VolunteerOwnerId,
+            command.ProposedFor)
+    ];
 }

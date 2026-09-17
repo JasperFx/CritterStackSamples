@@ -1,0 +1,32 @@
+# Every CritterCrush slice is specified as an xUnit test rather than as a .feature.
+#
+# That is the inverse of the case the manifest was designed around ("three entries, not nineteen"),
+# and before Bobcat 0.26 it meant listing all nineteen. `defaults:` (bobcat#334) states it once.
+#
+# `scaffold: true` is the half that is NOT a default anywhere: the integration + projected corner
+# means "an existing hand-written suite adopts this slice" in a repo whose tests predate the model,
+# and "write the skeleton" in a repo being built from it. Bobcat refuses to guess, so this file
+# says which one CritterCrush is.
+#
+# `owner:` is a template because it is the one genuinely per-slice field — a literal default would
+# point every feature at one type and leave us listing nineteen entries anyway. `{feature}` groups
+# slices exactly as the scaffolder already groups skeletons, which is the grouping the hand-written
+# manifest arrived at independently.
+schema: 1
+model: CritterCrush
+
+defaults:
+  authoring: projected
+  scaffold: true
+  owner: CritterCrush.Specs.{feature}Specs
+
+slices:
+  # The one genuinely unit-tested slice, and the case that opened #324: a trigger event in, one
+  # event out, plus the stream it starts. It asserts the decision that actually matters — the
+  # appointment's stream IS the assignment that asked for it — directly, in about a millisecond,
+  # instead of indirectly through the store in ~600ms. Its own class, so it boots no host at all;
+  # that is why it is the one slice whose owner does not follow {feature}.
+  - slice: ProposeHomeCheckAppointment
+    kind: unit
+    owner: CritterCrush.Specs.ProposalSpecs
+    coveredBy: HomeChecks/Accepting an assignment books the home check as an appointment

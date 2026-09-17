@@ -1,16 +1,20 @@
 namespace CritterCrush.Scheduling;
 
 /// <summary>A home-check visit was proposed and awaits the owner's confirmation</summary>
-public record HomeCheckAppointmentProposed(Guid OwnerId, Guid ShelterId, string Kind, Guid SourceId, DateTimeOffset ScheduledFor);
+public record HomeCheckAppointmentProposed(Guid OwnerId, Guid ShelterId, string Kind, Guid SourceId, DateTimeOffset ScheduledFor) : IShelterEvent, IOwnerEvent;
 
 /// <summary>
-/// Automation slice: triggered by the HomeCheckAssignmentAccepted event, never by a route. Decides and returns —
-/// the framework loads the aggregate, appends, and commits.
+/// Automation slice: triggered by the HomeCheckAssignmentAccepted event, never by a route. Decides and
+/// returns — the framework loads the aggregate, appends, and commits.
 ///
-/// At-least-once delivery is handled by the stream id: the appointment's stream IS the home-check assignment
-/// that asked for it, so a redelivered trigger collides on StartStream instead of quietly booking
-/// a second visit. What that costs — one source entity can hold only one appointment — is a
+/// At-least-once delivery is handled by the stream id: the appointment's stream IS the home-check
+/// assignment that asked for it, so a redelivered trigger collides on StartStream instead of quietly
+/// booking a second visit. What that costs — one source entity can hold only one appointment — is a
 /// hotspot on the model, not a silent assumption here.
+///
+/// AssignmentId is the ASSIGNMENT's identity, minted by the slice that emits it, and deliberately
+/// not the home check's own stream id: Marten's stream id space is global across aggregate types,
+/// so reusing it would collide.
 /// </summary>
 public static class ProposeHomeCheckAppointmentHandler
 {

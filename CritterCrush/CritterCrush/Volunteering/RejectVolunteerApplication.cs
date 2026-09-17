@@ -1,21 +1,18 @@
 namespace CritterCrush.Volunteering;
 
-/// <summary>The applicant will not be volunteering</summary>
+/// <summary>The application was turned down</summary>
 public record VolunteerApplicationRejected(Guid ApplicantOwnerId, string Reason);
 
-public record RejectVolunteerApplication(Guid ApplicantOwnerId, string Reason)
-{
-    [Identity] public Guid VolunteerApplicationId => ApplicantOwnerId;
-}
+public record RejectVolunteerApplication([property: Identity] Guid ApplicantOwnerId, string Reason);
 
-public record RejectVolunteerApplicationResponse();
-
+/// <inheritdoc cref="CritterCrush.Scheduling.ConfirmAppointmentEndpoint"/>
 public static class RejectVolunteerApplicationEndpoint
 {
-    public static ProblemDetails Validate(RejectVolunteerApplication command, [ReadModel] VolunteerApplication? volunteerApplication)
+    public static ProblemDetails Validate(VolunteerApplication volunteerApplication)
     {
-        if (volunteerApplication is null) return VolunteeringRefusals.NoSuchApplication;
-        if (volunteerApplication.IsDecided)
+        // Rejection sits opposite ApproveVolunteer and requires the same state: an application a
+        // human has actually looked at.
+        if (volunteerApplication.Status != VolunteerApplicationStatus.Reviewed)
         {
             return new ProblemDetails { Detail = "This application has already been decided", Status = 400 };
         }
@@ -24,7 +21,7 @@ public static class RejectVolunteerApplicationEndpoint
     }
 
     [WolverinePost("/api/volunteering/rejectvolunteerapplication")]
-    public static (RejectVolunteerApplicationResponse, EventsToAppend) Post(RejectVolunteerApplication command, [WriteModel] VolunteerApplication volunteerApplication) =>
-        (new RejectVolunteerApplicationResponse(),
-            [new VolunteerApplicationRejected(volunteerApplication.ApplicantOwnerId, command.Reason)]);
+    [EmptyResponse]
+    public static EventsToAppend Post(RejectVolunteerApplication command, [WriteModel] VolunteerApplication volunteerApplication) =>
+        [new VolunteerApplicationRejected(volunteerApplication.ApplicantOwnerId, command.Reason)];
 }

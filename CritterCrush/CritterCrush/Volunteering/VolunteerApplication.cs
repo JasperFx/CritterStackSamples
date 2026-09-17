@@ -1,6 +1,6 @@
 namespace CritterCrush.Volunteering;
 
-/// <summary>Where an application has got to. Strings, because the model declares `status: string`.</summary>
+/// <inheritdoc cref="CritterCrush.Scheduling.AppointmentStatus"/>
 public static class VolunteerApplicationStatus
 {
     public const string Submitted = nameof(Submitted);
@@ -16,21 +16,23 @@ public class VolunteerApplication
     public string AreasOfInterest { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
 
-    /// <summary>Approved or rejected — reviewing again, or deciding twice, is refused past here.</summary>
-    public bool IsDecided =>
-        Status is VolunteerApplicationStatus.Approved or VolunteerApplicationStatus.Rejected;
+    public static VolunteerApplication Create(VolunteerApplicationSubmitted e) => new()
+    {
+        ApplicantOwnerId = e.ApplicantOwnerId,
+        AreasOfInterest = e.AreasOfInterest,
+        Status = VolunteerApplicationStatus.Submitted
+    };
 
-    public static VolunteerApplication Create(VolunteerApplicationSubmitted e) =>
-        new()
-        {
-            ApplicantOwnerId = e.ApplicantOwnerId,
-            AreasOfInterest = e.AreasOfInterest,
-            Status = VolunteerApplicationStatus.Submitted
-        };
+    public void Apply(VolunteerApplicationSubmitted e)
+    {
+        ApplicantOwnerId = e.ApplicantOwnerId;
+        AreasOfInterest = e.AreasOfInterest;
+        Status = VolunteerApplicationStatus.Submitted;
+    }
 
-    public void Apply(VolunteerApplicationReviewed _) => Status = VolunteerApplicationStatus.Reviewed;
+    public void Apply(VolunteerApplicationReviewed e) => Status = VolunteerApplicationStatus.Reviewed;
 
-    public void Apply(VolunteerApproved _) => Status = VolunteerApplicationStatus.Approved;
+    public void Apply(VolunteerApproved e) => Status = VolunteerApplicationStatus.Approved;
 
-    public void Apply(VolunteerApplicationRejected _) => Status = VolunteerApplicationStatus.Rejected;
+    public void Apply(VolunteerApplicationRejected e) => Status = VolunteerApplicationStatus.Rejected;
 }

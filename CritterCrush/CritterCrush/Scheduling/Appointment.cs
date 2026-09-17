@@ -1,29 +1,17 @@
 namespace CritterCrush.Scheduling;
 
 /// <summary>
-/// The lifecycle an appointment moves through. Strings rather than an enum because the model
-/// declares `status: string` — the curated file is the source, and an enum here would be a shape
-/// the model never asked for.
+/// The states an appointment can be in. The curated format only knows
+/// <c>string, Guid, bool, int, decimal, DateTimeOffset</c>, so the model spells this
+/// <c>status: string</c> — the constants are here so a guard can name a state rather than quote one.
 /// </summary>
 public static class AppointmentStatus
 {
     public const string Proposed = nameof(Proposed);
     public const string Confirmed = nameof(Confirmed);
-    public const string Completed = nameof(Completed);
     public const string Cancelled = nameof(Cancelled);
+    public const string Completed = nameof(Completed);
     public const string NoShow = nameof(NoShow);
-}
-
-/// <summary>
-/// Which flow asked for the visit. The board's own words: "a single generic, purpose-tagged
-/// Appointment concept (HomeCheck | FosterHandover | SurrenderIntake, linking back to the source
-/// entity id) reused across three automation entry points rather than three separate booking flows".
-/// </summary>
-public static class AppointmentKind
-{
-    public const string HomeCheck = nameof(HomeCheck);
-    public const string FosterHandover = nameof(FosterHandover);
-    public const string SurrenderIntake = nameof(SurrenderIntake);
 }
 
 public class Appointment
@@ -37,48 +25,50 @@ public class Appointment
     public string Status { get; set; } = string.Empty;
     public bool RescheduleRequested { get; set; }
 
-    /// <summary>
-    /// Closed exactly once, by whichever of the three closing events got there. The guards on
-    /// Complete, Cancel and RecordNoShow all read this, which is why it lives here and not in
-    /// three copies of the same boolean expression.
-    /// </summary>
+    /// <summary>Nothing more can happen to the appointment; the three ways it ends.</summary>
     public bool IsClosed =>
-        Status is AppointmentStatus.Completed or AppointmentStatus.Cancelled or AppointmentStatus.NoShow;
+        Status is AppointmentStatus.Cancelled or AppointmentStatus.Completed or AppointmentStatus.NoShow;
 
-    // Three events can start the stream — one per entry point — and they carry the same shape, so
-    // each Create funnels into one place.
-    public static Appointment Create(HomeCheckAppointmentProposed e) => proposed(e.OwnerId, e.ShelterId, e.Kind, e.SourceId, e.ScheduledFor);
+    public static Appointment Create(HomeCheckAppointmentProposed proposed) => new Appointment().With(proposed);
 
-    public static Appointment Create(FosterHandoverAppointmentProposed e) => proposed(e.OwnerId, e.ShelterId, e.Kind, e.SourceId, e.ScheduledFor);
+    public void Apply(HomeCheckAppointmentProposed e) => With(e);
 
-    public static Appointment Create(SurrenderIntakeAppointmentProposed e) => proposed(e.OwnerId, e.ShelterId, e.Kind, e.SourceId, e.ScheduledFor);
+    public void Apply(FosterHandoverAppointmentProposed e) => proposed(e.OwnerId, e.ShelterId, e.Kind, e.SourceId, e.ScheduledFor);
 
-    public void Apply(AppointmentConfirmed _) => Status = AppointmentStatus.Confirmed;
+    public void Apply(SurrenderIntakeAppointmentProposed e) => proposed(e.OwnerId, e.ShelterId, e.Kind, e.SourceId, e.ScheduledFor);
 
-    public void Apply(AppointmentRescheduleRequested _) => RescheduleRequested = true;
+    public void Apply(AppointmentConfirmed e) => Status = AppointmentStatus.Confirmed;
 
-    // A move satisfies the request that asked for it, and leaves the appointment confirmed — the
-    // counterparty already agreed to come, just not at the old time.
+    public void Apply(AppointmentRescheduleRequested e) => RescheduleRequested = true;
+
     public void Apply(AppointmentRescheduled e)
     {
         ScheduledFor = e.ScheduledFor;
+
+        // The request is spent. Leaving it set would let one request move the appointment
+        // repeatedly, which is the "nobody asked to move this" guard passing on a stale yes.
         RescheduleRequested = false;
     }
 
-    public void Apply(AppointmentCompleted _) => Status = AppointmentStatus.Completed;
+    public void Apply(AppointmentCompleted e) => Status = AppointmentStatus.Completed;
 
-    public void Apply(AppointmentCancelled _) => Status = AppointmentStatus.Cancelled;
+    public void Apply(AppointmentCancelled e) => Status = AppointmentStatus.Cancelled;
 
-    public void Apply(AppointmentNoShowRecorded _) => Status = AppointmentStatus.NoShow;
+    public void Apply(AppointmentNoShowRecorded e) => Status = AppointmentStatus.NoShow;
 
-    private static Appointment proposed(Guid ownerId, Guid shelterId, string kind, Guid sourceId, DateTimeOffset scheduledFor) =>
-        new()
-        {
-            OwnerId = ownerId,
-            ShelterId = shelterId,
-            Kind = kind,
-            SourceId = sourceId,
-            ScheduledFor = scheduledFor,
-            Status = AppointmentStatus.Proposed
-        };
+    internal Appointment With(HomeCheckAppointmentProposed e)
+    {
+        proposed(e.OwnerId, e.ShelterId, e.Kind, e.SourceId, e.ScheduledFor);
+        return this;
+    }
+
+    private void proposed(Guid ownerId, Guid shelterId, string kind, Guid sourceId, DateTimeOffset scheduledFor)
+    {
+        OwnerId = ownerId;
+        ShelterId = shelterId;
+        Kind = kind;
+        SourceId = sourceId;
+        ScheduledFor = scheduledFor;
+        Status = AppointmentStatus.Proposed;
+    }
 }

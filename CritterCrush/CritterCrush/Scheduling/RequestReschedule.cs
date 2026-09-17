@@ -5,17 +5,13 @@ public record AppointmentRescheduleRequested(Guid OwnerId, Guid ShelterId, DateT
 
 public record RequestReschedule(Guid AppointmentId, DateTimeOffset RequestedFor, string Reason);
 
-public record RequestRescheduleResponse();
-
-/// <summary>
-/// The counterparty asks; the shelter still owns the move itself, which is the RescheduleAppointment
-/// slice. Asking is deliberately not moving.
-/// </summary>
+/// <inheritdoc cref="ConfirmAppointmentEndpoint"/>
 public static class RequestRescheduleEndpoint
 {
-    public static ProblemDetails Validate(RequestReschedule command, [ReadModel] Appointment? appointment)
+    public static ProblemDetails Validate(RequestReschedule command, Appointment appointment)
     {
-        if (appointment is null) return Refusals.NoSuchAppointment;
+        // Asking to move is reachable from either open state — proposed or confirmed — so the rule
+        // is "still open", the same one cancellation requires.
         if (appointment.IsClosed)
         {
             return new ProblemDetails { Detail = "This appointment is already closed", Status = 400 };
@@ -25,7 +21,7 @@ public static class RequestRescheduleEndpoint
     }
 
     [WolverinePost("/api/scheduling/requestreschedule")]
-    public static (RequestRescheduleResponse, EventsToAppend) Post(RequestReschedule command, [WriteModel] Appointment appointment) =>
-        (new RequestRescheduleResponse(),
-            [new AppointmentRescheduleRequested(appointment.OwnerId, appointment.ShelterId, command.RequestedFor, command.Reason)]);
+    [EmptyResponse]
+    public static EventsToAppend Post(RequestReschedule command, [WriteModel] Appointment appointment) =>
+        [new AppointmentRescheduleRequested(appointment.OwnerId, appointment.ShelterId, command.RequestedFor, command.Reason)];
 }

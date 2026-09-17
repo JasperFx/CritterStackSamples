@@ -1,26 +1,18 @@
 namespace CritterCrush.Scheduling;
 
-/// <summary>
-/// The appointment will not happen. WasConfirmed is carried because the counting views cannot
-/// otherwise know which of their buckets this appointment was sitting in, and the aggregate is the
-/// only place that knows — a projection has no prior state to consult.
-/// </summary>
-public record AppointmentCancelled(Guid OwnerId, Guid ShelterId, bool WasConfirmed, string Reason);
+/// <summary>Called off before it happened</summary>
+public record AppointmentCancelled(Guid OwnerId, Guid ShelterId, bool WasConfirmed, string Reason) : IShelterEvent, IOwnerEvent;
 
 public record CancelAppointment(Guid AppointmentId, string Reason);
 
-public record CancelAppointmentResponse();
-
-/// <summary>
-/// The one closing event reachable from EITHER state — a proposal nobody answered can be cancelled
-/// just as a confirmed visit can. That is why this event, alone among the three, tells the views
-/// where it came from.
-/// </summary>
+/// <inheritdoc cref="ConfirmAppointmentEndpoint"/>
 public static class CancelAppointmentEndpoint
 {
-    public static ProblemDetails Validate(CancelAppointment command, [ReadModel] Appointment? appointment)
+    public static ProblemDetails Validate(CancelAppointment command, Appointment appointment)
     {
-        if (appointment is null) return Refusals.NoSuchAppointment;
+        // Cancellation is the one command reachable from EITHER open state, so the rule it requires
+        // is "still open" rather than a single status — and `IsClosed` is that rule stated on the
+        // aggregate, not a list of states to exclude.
         if (appointment.IsClosed)
         {
             return new ProblemDetails { Detail = "This appointment is already closed", Status = 400 };
@@ -30,13 +22,13 @@ public static class CancelAppointmentEndpoint
     }
 
     [WolverinePost("/api/scheduling/cancelappointment")]
-    public static (CancelAppointmentResponse, EventsToAppend) Post(CancelAppointment command, [WriteModel] Appointment appointment) =>
-        (new CancelAppointmentResponse(),
-            [
-                new AppointmentCancelled(
-                    appointment.OwnerId,
-                    appointment.ShelterId,
-                    appointment.Status == AppointmentStatus.Confirmed,
-                    command.Reason)
-            ]);
+    [EmptyResponse]
+    public static EventsToAppend Post(CancelAppointment command, [WriteModel] Appointment appointment) =>
+    [
+        new AppointmentCancelled(appointment.OwnerId, appointment.ShelterId,
+            // The queue read model has to know which bucket to take this appointment out of, and
+            // after the fold it can no longer tell. So the event carries it.
+            WasConfirmed: appointment.Status == AppointmentStatus.Confirmed,
+            command.Reason)
+    ];
 }

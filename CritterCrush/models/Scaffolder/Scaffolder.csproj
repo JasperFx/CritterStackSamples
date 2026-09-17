@@ -11,8 +11,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Bobcat.EventModel" Version="0.22.0" />
-    <PackageReference Include="Bobcat.EventModel.Scaffolding" Version="0.22.0" />
+    <PackageReference Include="Bobcat.EventModel" Version="0.26.2" />
+    <PackageReference Include="Bobcat.EventModel.Scaffolding" Version="0.26.2" />
   </ItemGroup>
 
 </Project>

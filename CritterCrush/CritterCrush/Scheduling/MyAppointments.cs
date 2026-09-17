@@ -1,5 +1,14 @@
 namespace CritterCrush.Scheduling;
 
+/// <summary>
+/// Routes by OwnerId: AppointmentCancelled, AppointmentCompleted, AppointmentConfirmed, AppointmentNoShowRecorded, FosterHandoverAppointmentProposed, HomeCheckAppointmentProposed, SurrenderIntakeAppointmentProposed.
+/// </summary>
+public interface IOwnerEvent
+{
+    Guid OwnerId { get; }
+}
+
+
 public class MyAppointments
 {
     public Guid Id { get; set; }
@@ -9,52 +18,69 @@ public class MyAppointments
     public int Closed { get; set; }
 }
 
-/// <summary>
-/// One document per OWNER. An owner reached by two different flows — a home check and a surrender
-/// intake — has two appointment streams and one page, which is the whole reason this is a
-/// MultiStreamProjection rather than a snapshot of one stream.
-///
-/// Async lifecycle: register with the daemon RUNNING (AddAsyncDaemon), or this never advances.
-/// </summary>
+
+// Async lifecycle: register with the daemon RUNNING (AddAsyncDaemon), or this never advances.
 public class MyAppointmentsProjection : MultiStreamProjection<MyAppointments, Guid>
 {
     public MyAppointmentsProjection()
     {
-        Identity<HomeCheckAppointmentProposed>(x => x.OwnerId);
-        Identity<FosterHandoverAppointmentProposed>(x => x.OwnerId);
-        Identity<SurrenderIntakeAppointmentProposed>(x => x.OwnerId);
-        Identity<AppointmentConfirmed>(x => x.OwnerId);
-        Identity<AppointmentCompleted>(x => x.OwnerId);
-        Identity<AppointmentCancelled>(x => x.OwnerId);
-        Identity<AppointmentNoShowRecorded>(x => x.OwnerId);
+        // The slicing rule, without which this projection cannot be registered. One document
+        // per key; Identities<T>(x => [x.OneId, x.OtherId]) where one event updates several.
+        Identity<IOwnerEvent>(x => x.OwnerId);
     }
 
-    public void Apply(HomeCheckAppointmentProposed _, MyAppointments view) => view.AwaitingConfirmation++;
 
-    public void Apply(FosterHandoverAppointmentProposed _, MyAppointments view) => view.AwaitingConfirmation++;
-
-    public void Apply(SurrenderIntakeAppointmentProposed _, MyAppointments view) => view.AwaitingConfirmation++;
-
-    public void Apply(AppointmentConfirmed _, MyAppointments view)
+    public override MyAppointments Evolve(MyAppointments snapshot, Guid id, IEvent e)
     {
-        view.AwaitingConfirmation--;
-        view.Confirmed++;
+        snapshot ??= new MyAppointments { Id = id };
+
+        // ONE place for anything derived from the identity — as Apply methods this was a line
+        // at the top of every one of them, which is exactly where it goes missing.
+        if (e.Data is IOwnerEvent routed) snapshot.OwnerId = routed.OwnerId;
+
+        switch (e.Data)
+        {
+            // Three chapters propose appointments and all three land in the same bucket, so the
+            // labels stack rather than repeating one body three times.
+            case HomeCheckAppointmentProposed:
+            case FosterHandoverAppointmentProposed:
+            case SurrenderIntakeAppointmentProposed:
+                snapshot.AwaitingConfirmation++;
+                break;
+
+            case AppointmentConfirmed:
+                snapshot.AwaitingConfirmation--;
+                snapshot.Confirmed++;
+                break;
+
+            // A closing event has to know which bucket the appointment was in, which is why
+            // AppointmentCancelled carries WasConfirmed: after the fold nothing can say.
+            case AppointmentCancelled cancelled:
+                if (cancelled.WasConfirmed) snapshot.Confirmed--;
+                else snapshot.AwaitingConfirmation--;
+                snapshot.Closed++;
+                break;
+
+            // Completion and a no-show are both reachable only from Confirmed, so both leave that
+            // bucket. The guards are what make that true.
+            case AppointmentCompleted:
+            case AppointmentNoShowRecorded:
+                snapshot.Confirmed--;
+                snapshot.Closed++;
+                break;
+        }
+
+        return snapshot;
     }
 
-    public void Apply(AppointmentCompleted _, MyAppointments view) => closeFromConfirmed(view);
-
-    public void Apply(AppointmentNoShowRecorded _, MyAppointments view) => closeFromConfirmed(view);
-
-    public void Apply(AppointmentCancelled e, MyAppointments view)
-    {
-        if (e.WasConfirmed) view.Confirmed--;
-        else view.AwaitingConfirmation--;
-        view.Closed++;
-    }
-
-    private static void closeFromConfirmed(MyAppointments view)
-    {
-        view.Confirmed--;
-        view.Closed++;
-    }
 }
+
+
+public static class GetMyAppointmentsEndpoint
+{
+    [WolverineGet("/api/myappointments/{id}")]
+    public static Task<MyAppointments?> Get(Guid id, IQuerySession session, CancellationToken ct)
+        => session.LoadAsync<MyAppointments>(id, ct);
+}
+
+

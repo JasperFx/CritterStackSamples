@@ -1,11 +1,9 @@
 namespace CritterCrush.Scheduling;
 
 /// <summary>The counterparty never arrived</summary>
-public record AppointmentNoShowRecorded(Guid OwnerId, Guid ShelterId, DateTimeOffset RecordedAt);
+public record AppointmentNoShowRecorded(Guid OwnerId, Guid ShelterId, DateTimeOffset RecordedAt) : IShelterEvent, IOwnerEvent;
 
 public record RecordAppointmentNoShow(Guid AppointmentId);
-
-public record RecordAppointmentNoShowResponse();
 
 /// <summary>
 /// A no-show is a kind of completion — somebody turned up to an empty doorstep — so like completion
@@ -13,19 +11,25 @@ public record RecordAppointmentNoShowResponse();
 /// </summary>
 public static class RecordAppointmentNoShowEndpoint
 {
-    public static ProblemDetails Validate(RecordAppointmentNoShow command, [ReadModel] Appointment? appointment)
+    public static ProblemDetails Validate(RecordAppointmentNoShow command, Appointment appointment)
     {
-        if (appointment is null) return Refusals.NoSuchAppointment;
+        // The closed case first, only because it earns a better sentence than the general refusal.
+        // It decides nothing: delete it and the required-state check below still refuses.
         if (appointment.IsClosed)
         {
             return new ProblemDetails { Detail = "This appointment is already closed", Status = 400 };
+        }
+
+        if (appointment.Status != AppointmentStatus.Confirmed)
+        {
+            return new ProblemDetails { Detail = "This appointment has not been confirmed", Status = 400 };
         }
 
         return WolverineContinue.NoProblems;
     }
 
     [WolverinePost("/api/scheduling/recordappointmentnoshow")]
-    public static (RecordAppointmentNoShowResponse, EventsToAppend) Post(RecordAppointmentNoShow command, [WriteModel] Appointment appointment) =>
-        (new RecordAppointmentNoShowResponse(),
-            [new AppointmentNoShowRecorded(appointment.OwnerId, appointment.ShelterId, DateTimeOffset.UtcNow)]);
+    [EmptyResponse]
+    public static EventsToAppend Post(RecordAppointmentNoShow command, [WriteModel] Appointment appointment) =>
+        [new AppointmentNoShowRecorded(appointment.OwnerId, appointment.ShelterId, DateTimeOffset.UtcNow)];
 }

@@ -1,22 +1,19 @@
 namespace CritterCrush.Volunteering;
 
-/// <summary>An admin read the application and it now awaits a decision</summary>
+/// <summary>An admin looked at the application</summary>
 public record VolunteerApplicationReviewed(Guid ApplicantOwnerId);
 
-public record ReviewVolunteerApplication(Guid ApplicantOwnerId)
-{
-    [Identity] public Guid VolunteerApplicationId => ApplicantOwnerId;
-}
+public record ReviewVolunteerApplication([property: Identity] Guid ApplicantOwnerId);
 
-public record ReviewVolunteerApplicationResponse();
-
-/// <summary>Reviewing is not deciding — approval and rejection are their own slices.</summary>
+/// <inheritdoc cref="CritterCrush.Scheduling.ConfirmAppointmentEndpoint"/>
 public static class ReviewVolunteerApplicationEndpoint
 {
-    public static ProblemDetails Validate(ReviewVolunteerApplication command, [ReadModel] VolunteerApplication? volunteerApplication)
+    public static ProblemDetails Validate(VolunteerApplication volunteerApplication)
     {
-        if (volunteerApplication is null) return VolunteeringRefusals.NoSuchApplication;
-        if (volunteerApplication.IsDecided)
+        // Review is reachable only from Submitted. Stated as the state it requires: an exclusion
+        // list would have to name Approved AND Rejected and would silently admit anything added
+        // later.
+        if (volunteerApplication.Status != VolunteerApplicationStatus.Submitted)
         {
             return new ProblemDetails { Detail = "This application has already been decided", Status = 400 };
         }
@@ -25,6 +22,7 @@ public static class ReviewVolunteerApplicationEndpoint
     }
 
     [WolverinePost("/api/volunteering/reviewvolunteerapplication")]
-    public static (ReviewVolunteerApplicationResponse, EventsToAppend) Post(ReviewVolunteerApplication command, [WriteModel] VolunteerApplication volunteerApplication) =>
-        (new ReviewVolunteerApplicationResponse(), [new VolunteerApplicationReviewed(volunteerApplication.ApplicantOwnerId)]);
+    [EmptyResponse]
+    public static EventsToAppend Post(ReviewVolunteerApplication command, [WriteModel] VolunteerApplication volunteerApplication) =>
+        [new VolunteerApplicationReviewed(volunteerApplication.ApplicantOwnerId)];
 }

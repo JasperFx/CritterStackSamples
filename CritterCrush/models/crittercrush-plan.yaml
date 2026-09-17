@@ -37,6 +37,9 @@ nodes:
     specs:
       - BookingAppointments/A proposed appointment is confirmed
       - BookingAppointments/A cancelled appointment cannot be confirmed
+      - BookingAppointments/A completed appointment cannot be confirmed
+      - BookingAppointments/An appointment is not confirmed twice
+      - BookingAppointments/An appointment that does not exist is not found
   - id: request-reschedule
     kind: slice
     slice: RequestReschedule
@@ -57,6 +60,7 @@ nodes:
     specs:
       - BookingAppointments/The shelter moves an appointment a member asked to move
       - BookingAppointments/An appointment nobody asked to move is not moved
+      - BookingAppointments/A cancelled appointment is not moved even when a move was asked for
   - id: complete-appointment
     kind: slice
     slice: CompleteAppointment
@@ -85,8 +89,9 @@ nodes:
     depends_on:
       - propose-home-check-appointment
     specs:
-      - BookingAppointments/A no-show is recorded against a confirmed appointment
-      - BookingAppointments/A completed appointment cannot be marked a no-show
+      - BookingAppointments/A no show is recorded against a confirmed appointment
+      - BookingAppointments/A completed appointment cannot be marked a no show
+      - BookingAppointments/An appointment nobody confirmed is not a no show
   - id: appointments-queue
     kind: slice
     slice: AppointmentsQueue
@@ -119,7 +124,7 @@ nodes:
       - record-appointment-no-show
     specs:
       - MyAppointments/An owner sees an appointment awaiting their confirmation
-      - MyAppointments/An owner's page spans every appointment stream they have
+      - MyAppointments/An owner page spans every appointment stream they have
   - id: apply-to-volunteer
     kind: slice
     slice: ApplyToVolunteer
