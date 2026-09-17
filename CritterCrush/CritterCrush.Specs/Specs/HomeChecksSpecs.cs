@@ -166,4 +166,35 @@ public class HomeChecksSpecs(CritterCrushHost host) : CritterCrushSpec(host)
         ThenResponseIs(400);
         ThenNoEvents();
     }
+
+
+    /// <summary>
+    /// Wolverine's own not-found guard, which answers before Validate runs. Declared on the model
+    /// (bobcat#337) rather than carried as an orphan: that declaration is what makes the write
+    /// model non-nullable, which is what makes a hand-written null check unreachable.
+    /// </summary>
+    [Fact]
+    [BobcatSlice(SliceType = typeof(AcceptHomeCheckAssignment))]
+    public async Task Accepting_a_home_check_that_does_not_exist_is_not_found()
+    {
+        await WhenPosted(new AcceptHomeCheckAssignment(Guid.NewGuid(), Guid.NewGuid(), new DateTimeOffset(2026, 10, 1, 15, 0, 0, TimeSpan.Zero)), "/api/volunteering/accepthomecheckassignment");
+
+        ThenResponseIs(404);
+        ThenNoEvents();
+    }
+
+    /// <summary>
+    /// Wolverine's own not-found guard, which answers before Validate runs. Declared on the model
+    /// (bobcat#337) rather than carried as an orphan: that declaration is what makes the write
+    /// model non-nullable, which is what makes a hand-written null check unreachable.
+    /// </summary>
+    [Fact]
+    [BobcatSlice(SliceType = typeof(SubmitHomeCheckReport))]
+    public async Task Reporting_on_a_home_check_that_does_not_exist_is_not_found()
+    {
+        await WhenPosted(new SubmitHomeCheckReport(Guid.NewGuid(), "Pass", "Secure garden, calm household, good fit for a shy dog"), "/api/volunteering/submithomecheckreport");
+
+        ThenResponseIs(404);
+        ThenNoEvents();
+    }
 }

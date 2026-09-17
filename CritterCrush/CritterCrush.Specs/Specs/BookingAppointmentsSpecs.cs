@@ -429,4 +429,80 @@ public class BookingAppointmentsSpecs(CritterCrushHost host) : CritterCrushSpec(
         ThenResponseIs(400);
         ThenNoEvents();
     }
+
+
+    /// <summary>
+    /// Wolverine's own not-found guard, which answers before Validate runs. Declared on the model
+    /// (bobcat#337) rather than carried as an orphan: that declaration is what makes the write
+    /// model non-nullable, which is what makes a hand-written null check unreachable.
+    /// </summary>
+    [Fact]
+    [BobcatSlice(SliceType = typeof(CompleteAppointment))]
+    public async Task Completing_an_appointment_that_does_not_exist_is_not_found()
+    {
+        await WhenPosted(new CompleteAppointment(Guid.NewGuid()), "/api/scheduling/completeappointment");
+
+        ThenResponseIs(404);
+        ThenNoEvents();
+    }
+
+    /// <summary>
+    /// Wolverine's own not-found guard, which answers before Validate runs. Declared on the model
+    /// (bobcat#337) rather than carried as an orphan: that declaration is what makes the write
+    /// model non-nullable, which is what makes a hand-written null check unreachable.
+    /// </summary>
+    [Fact]
+    [BobcatSlice(SliceType = typeof(CancelAppointment))]
+    public async Task Cancelling_an_appointment_that_does_not_exist_is_not_found()
+    {
+        await WhenPosted(new CancelAppointment(Guid.NewGuid(), "The volunteer withdrew"), "/api/scheduling/cancelappointment");
+
+        ThenResponseIs(404);
+        ThenNoEvents();
+    }
+
+    /// <summary>
+    /// Wolverine's own not-found guard, which answers before Validate runs. Declared on the model
+    /// (bobcat#337) rather than carried as an orphan: that declaration is what makes the write
+    /// model non-nullable, which is what makes a hand-written null check unreachable.
+    /// </summary>
+    [Fact]
+    [BobcatSlice(SliceType = typeof(RecordAppointmentNoShow))]
+    public async Task Recording_a_no_show_against_an_appointment_that_does_not_exist_is_not_found()
+    {
+        await WhenPosted(new RecordAppointmentNoShow(Guid.NewGuid()), "/api/scheduling/recordappointmentnoshow");
+
+        ThenResponseIs(404);
+        ThenNoEvents();
+    }
+
+    /// <summary>
+    /// Wolverine's own not-found guard, which answers before Validate runs. Declared on the model
+    /// (bobcat#337) rather than carried as an orphan: that declaration is what makes the write
+    /// model non-nullable, which is what makes a hand-written null check unreachable.
+    /// </summary>
+    [Fact]
+    [BobcatSlice(SliceType = typeof(RequestReschedule))]
+    public async Task Asking_to_move_an_appointment_that_does_not_exist_is_not_found()
+    {
+        await WhenPosted(new RequestReschedule(Guid.NewGuid(), new DateTimeOffset(2026, 10, 5, 15, 0, 0, TimeSpan.Zero), "Working that afternoon"), "/api/scheduling/requestreschedule");
+
+        ThenResponseIs(404);
+        ThenNoEvents();
+    }
+
+    /// <summary>
+    /// Wolverine's own not-found guard, which answers before Validate runs. Declared on the model
+    /// (bobcat#337) rather than carried as an orphan: that declaration is what makes the write
+    /// model non-nullable, which is what makes a hand-written null check unreachable.
+    /// </summary>
+    [Fact]
+    [BobcatSlice(SliceType = typeof(RescheduleAppointment))]
+    public async Task Moving_an_appointment_that_does_not_exist_is_not_found()
+    {
+        await WhenPosted(new RescheduleAppointment(Guid.NewGuid(), new DateTimeOffset(2026, 10, 5, 15, 0, 0, TimeSpan.Zero)), "/api/scheduling/rescheduleappointment");
+
+        ThenResponseIs(404);
+        ThenNoEvents();
+    }
 }

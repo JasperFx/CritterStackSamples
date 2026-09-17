@@ -150,4 +150,50 @@ public class VolunteeringSpecs(CritterCrushHost host) : CritterCrushSpec(host)
         ThenResponseIs(400);
         ThenNoEvents();
     }
+
+
+    /// <summary>
+    /// Wolverine's own not-found guard, which answers before Validate runs. Declared on the model
+    /// (bobcat#337) rather than carried as an orphan: that declaration is what makes the write
+    /// model non-nullable, which is what makes a hand-written null check unreachable.
+    /// </summary>
+    [Fact]
+    [BobcatSlice(SliceType = typeof(ReviewVolunteerApplication))]
+    public async Task Reviewing_an_application_that_does_not_exist_is_not_found()
+    {
+        await WhenPosted(new ReviewVolunteerApplication(Guid.NewGuid()), "/api/volunteering/reviewvolunteerapplication");
+
+        ThenResponseIs(404);
+        ThenNoEvents();
+    }
+
+    /// <summary>
+    /// Wolverine's own not-found guard, which answers before Validate runs. Declared on the model
+    /// (bobcat#337) rather than carried as an orphan: that declaration is what makes the write
+    /// model non-nullable, which is what makes a hand-written null check unreachable.
+    /// </summary>
+    [Fact]
+    [BobcatSlice(SliceType = typeof(ApproveVolunteer))]
+    public async Task Approving_an_application_that_does_not_exist_is_not_found()
+    {
+        await WhenPosted(new ApproveVolunteer(Guid.NewGuid()), "/api/volunteering/approvevolunteer");
+
+        ThenResponseIs(404);
+        ThenNoEvents();
+    }
+
+    /// <summary>
+    /// Wolverine's own not-found guard, which answers before Validate runs. Declared on the model
+    /// (bobcat#337) rather than carried as an orphan: that declaration is what makes the write
+    /// model non-nullable, which is what makes a hand-written null check unreachable.
+    /// </summary>
+    [Fact]
+    [BobcatSlice(SliceType = typeof(RejectVolunteerApplication))]
+    public async Task Rejecting_an_application_that_does_not_exist_is_not_found()
+    {
+        await WhenPosted(new RejectVolunteerApplication(Guid.NewGuid(), "Not enough availability"), "/api/volunteering/rejectvolunteerapplication");
+
+        ThenResponseIs(404);
+        ThenNoEvents();
+    }
 }

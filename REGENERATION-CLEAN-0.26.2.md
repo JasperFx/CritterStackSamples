@@ -21,7 +21,7 @@ removed from a scaffolded file was a `TODO` comment or a `throw new NotImplement
 
 ## What still needed hand work, and neither is a scaffolder defect
 
-### 1. Ten endpoints bound `X?` because the model declares one 404 (10 edits)
+### 1. Ten endpoints bound `X?` because the model declared one 404 — NOW FIXED IN THE MODEL
 
 | | scaffolded | final |
 |---|---|---|
@@ -33,7 +33,26 @@ twelve nullable — correctly, given what it was told. Two of those genuinely ar
 (`ApplyToVolunteer`, `RequestHomeCheck`) where null is the expected state. The other ten were
 flipped to non-nullable by hand.
 
-**This is a model gap, not a scaffolder gap, and it is the single biggest remaining source of hand
+**Resolved.** The other ten are declared now, and the numbers moved exactly as predicted:
+
+| | one 404 declared | eleven declared |
+|---|---|---|
+| `[WriteModel]` nullable | 12 | **2** |
+| `[WriteModel]` required | 1 | **11** |
+| scenarios | 42 | **52** |
+| suite | 78 green | **88 green** |
+
+The two that stay nullable are the genuinely creating slices, `ApplyToVolunteer` and
+`RequestHomeCheck`, where null is the expected state and non-null is the refusal. Every scaffolded
+signature now matches what had been hand-edited, and the only remaining difference is cosmetic — a
+`Validate` that reads just the aggregate drops the unused `command` parameter.
+
+Falsified rather than assumed: making one write model nullable again fails exactly its own 404
+scenario and nothing else, which is Wolverine ceasing to emit the guard.
+
+The original note, kept because it is the general lesson:
+
+**This was a model gap, not a scaffolder gap, and it was the single biggest remaining source of hand
 editing.** bobcat#337 made a 404 declarable and the payoff scales with how many you declare:
 declaring all eleven removes ten edits and the nullable/non-nullable judgement with them. Worth
 doing before the next pass — the scaffolder already turns a declared 404 into a required parameter
