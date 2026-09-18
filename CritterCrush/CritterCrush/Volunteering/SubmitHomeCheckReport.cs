@@ -1,8 +1,5 @@
 namespace CritterCrush.Volunteering;
 
-/// <summary>The volunteer wrote up the visit</summary>
-public record HomeCheckReportSubmitted(Guid ApplicationId, Guid OwnerId, Guid ShelterId, string Outcome, string Notes);
-
 public record SubmitHomeCheckReport([property: Identity] Guid HomeCheckId, string Outcome, string Notes);
 
 /// <inheritdoc cref="CritterCrush.Scheduling.ConfirmAppointmentEndpoint"/>

@@ -1,8 +1,5 @@
 namespace CritterCrush.Scheduling;
 
-/// <summary>The counterparty asked for a different time</summary>
-public record AppointmentRescheduleRequested(Guid OwnerId, Guid ShelterId, DateTimeOffset RequestedFor, string Reason);
-
 public record RequestReschedule(Guid AppointmentId, DateTimeOffset RequestedFor, string Reason);
 
 /// <inheritdoc cref="ConfirmAppointmentEndpoint"/>

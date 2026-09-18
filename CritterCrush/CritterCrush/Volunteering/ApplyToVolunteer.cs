@@ -1,8 +1,5 @@
 namespace CritterCrush.Volunteering;
 
-/// <summary>Somebody offered to help</summary>
-public record VolunteerApplicationSubmitted(Guid ApplicantOwnerId, string AreasOfInterest);
-
 /// <summary>
 /// ApplicantOwnerId doubles as the application's stream identity — one person, one application —
 /// which is what makes "applying twice" a state question rather than a query.

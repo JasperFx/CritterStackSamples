@@ -1,8 +1,5 @@
 namespace CritterCrush.Scheduling;
 
-/// <summary>Called off before it happened</summary>
-public record AppointmentCancelled(Guid OwnerId, Guid ShelterId, bool WasConfirmed, string Reason) : IShelterEvent, IOwnerEvent;
-
 public record CancelAppointment(Guid AppointmentId, string Reason);
 
 /// <inheritdoc cref="ConfirmAppointmentEndpoint"/>

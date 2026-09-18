@@ -1,8 +1,5 @@
 namespace CritterCrush.Volunteering;
 
-/// <summary>The application was accepted</summary>
-public record VolunteerApproved(Guid ApplicantOwnerId);
-
 public record ApproveVolunteer([property: Identity] Guid ApplicantOwnerId);
 
 /// <inheritdoc cref="CritterCrush.Scheduling.ConfirmAppointmentEndpoint"/>

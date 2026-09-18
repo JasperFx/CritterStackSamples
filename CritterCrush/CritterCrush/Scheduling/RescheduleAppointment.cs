@@ -1,8 +1,5 @@
 namespace CritterCrush.Scheduling;
 
-/// <summary>The shelter moved it</summary>
-public record AppointmentRescheduled(Guid OwnerId, Guid ShelterId, DateTimeOffset ScheduledFor);
-
 public record RescheduleAppointment(Guid AppointmentId, DateTimeOffset ScheduledFor);
 
 /// <inheritdoc cref="ConfirmAppointmentEndpoint"/>

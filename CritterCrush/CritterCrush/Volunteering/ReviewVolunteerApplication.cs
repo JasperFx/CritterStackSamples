@@ -1,8 +1,5 @@
 namespace CritterCrush.Volunteering;
 
-/// <summary>An admin looked at the application</summary>
-public record VolunteerApplicationReviewed(Guid ApplicantOwnerId);
-
 public record ReviewVolunteerApplication([property: Identity] Guid ApplicantOwnerId);
 
 /// <inheritdoc cref="CritterCrush.Scheduling.ConfirmAppointmentEndpoint"/>

@@ -1,8 +1,5 @@
 namespace CritterCrush.Scheduling;
 
-/// <summary>A foster handover was proposed and awaits the foster carer's confirmation</summary>
-public record FosterHandoverAppointmentProposed(Guid OwnerId, Guid ShelterId, string Kind, Guid SourceId, DateTimeOffset ScheduledFor) : IShelterEvent, IOwnerEvent;
-
 /// <inheritdoc cref="ProposeHomeCheckAppointmentHandler"/>
 public static class ProposeFosterHandoverAppointmentHandler
 {

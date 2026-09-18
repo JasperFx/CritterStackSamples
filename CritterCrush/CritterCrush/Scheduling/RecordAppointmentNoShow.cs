@@ -1,8 +1,5 @@
 namespace CritterCrush.Scheduling;
 
-/// <summary>The counterparty never arrived</summary>
-public record AppointmentNoShowRecorded(Guid OwnerId, Guid ShelterId, DateTimeOffset RecordedAt) : IShelterEvent, IOwnerEvent;
-
 public record RecordAppointmentNoShow(Guid AppointmentId);
 
 /// <summary>

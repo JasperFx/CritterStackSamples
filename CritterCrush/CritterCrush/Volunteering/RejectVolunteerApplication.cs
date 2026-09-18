@@ -1,8 +1,5 @@
 namespace CritterCrush.Volunteering;
 
-/// <summary>The application was turned down</summary>
-public record VolunteerApplicationRejected(Guid ApplicantOwnerId, string Reason);
-
 public record RejectVolunteerApplication([property: Identity] Guid ApplicantOwnerId, string Reason);
 
 /// <inheritdoc cref="CritterCrush.Scheduling.ConfirmAppointmentEndpoint"/>

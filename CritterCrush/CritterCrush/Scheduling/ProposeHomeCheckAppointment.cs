@@ -1,8 +1,5 @@
 namespace CritterCrush.Scheduling;
 
-/// <summary>A home-check visit was proposed and awaits the owner's confirmation</summary>
-public record HomeCheckAppointmentProposed(Guid OwnerId, Guid ShelterId, string Kind, Guid SourceId, DateTimeOffset ScheduledFor) : IShelterEvent, IOwnerEvent;
-
 /// <summary>
 /// Automation slice: triggered by the HomeCheckAssignmentAccepted event, never by a route. Decides and
 /// returns — the framework loads the aggregate, appends, and commits.
