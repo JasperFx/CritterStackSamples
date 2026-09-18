@@ -18,6 +18,6 @@ public static class SubmitHomeCheckReportEndpoint
 
     [WolverinePost("/api/volunteering/submithomecheckreport")]
     [EmptyResponse]
-    public static EventsToAppend Post(SubmitHomeCheckReport command, [WriteModel] HomeCheck homeCheck) =>
-        [new HomeCheckReportSubmitted(homeCheck.ApplicationId, homeCheck.OwnerId, homeCheck.ShelterId, command.Outcome, command.Notes)];
+    public static HomeCheckReportSubmitted Post(SubmitHomeCheckReport command, [WriteModel] HomeCheck homeCheck) =>
+        new HomeCheckReportSubmitted(homeCheck.ApplicationId, homeCheck.OwnerId, homeCheck.ShelterId, command.Outcome, command.Notes);
 }

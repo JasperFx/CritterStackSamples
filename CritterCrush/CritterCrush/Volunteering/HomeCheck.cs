@@ -39,5 +39,5 @@ public class HomeCheck
         Status = HomeCheckStatus.Accepted;
     }
 
-    public void Apply(HomeCheckReportSubmitted e) => Status = HomeCheckStatus.Reported;
+    public void Apply(HomeCheckReportSubmitted _) => Status = HomeCheckStatus.Reported;
 }

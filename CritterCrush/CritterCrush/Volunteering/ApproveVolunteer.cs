@@ -17,6 +17,6 @@ public static class ApproveVolunteerEndpoint
 
     [WolverinePost("/api/volunteering/approvevolunteer")]
     [EmptyResponse]
-    public static EventsToAppend Post(ApproveVolunteer command, [WriteModel] VolunteerApplication volunteerApplication) =>
-        [new VolunteerApproved(volunteerApplication.ApplicantOwnerId)];
+    public static VolunteerApproved Post(ApproveVolunteer command, [WriteModel] VolunteerApplication volunteerApplication) =>
+        new VolunteerApproved(volunteerApplication.ApplicantOwnerId);
 }

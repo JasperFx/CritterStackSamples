@@ -37,9 +37,10 @@ public class Appointment
 
     public void Apply(SurrenderIntakeAppointmentProposed e) => proposed(e.OwnerId, e.ShelterId, e.Kind, e.SourceId, e.ScheduledFor);
 
-    public void Apply(AppointmentConfirmed e) => Status = AppointmentStatus.Confirmed;
+    // If the event itself isn't used, use the C# "_" to erase the variable
+    public void Apply(AppointmentConfirmed _) => Status = AppointmentStatus.Confirmed;
 
-    public void Apply(AppointmentRescheduleRequested e) => RescheduleRequested = true;
+    public void Apply(AppointmentRescheduleRequested _) => RescheduleRequested = true;
 
     public void Apply(AppointmentRescheduled e)
     {
@@ -50,11 +51,11 @@ public class Appointment
         RescheduleRequested = false;
     }
 
-    public void Apply(AppointmentCompleted e) => Status = AppointmentStatus.Completed;
+    public void Apply(AppointmentCompleted _) => Status = AppointmentStatus.Completed;
 
-    public void Apply(AppointmentCancelled e) => Status = AppointmentStatus.Cancelled;
+    public void Apply(AppointmentCancelled _) => Status = AppointmentStatus.Cancelled;
 
-    public void Apply(AppointmentNoShowRecorded e) => Status = AppointmentStatus.NoShow;
+    public void Apply(AppointmentNoShowRecorded _) => Status = AppointmentStatus.NoShow;
 
     internal Appointment With(HomeCheckAppointmentProposed e)
     {

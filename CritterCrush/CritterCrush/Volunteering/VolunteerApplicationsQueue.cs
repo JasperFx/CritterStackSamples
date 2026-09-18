@@ -23,13 +23,13 @@ public class VolunteerApplicationsQueueProjection : SingleStreamProjection<Volun
         view.Status = VolunteerApplicationStatus.Submitted;
     }
 
-    public void Apply(VolunteerApplicationReviewed e, VolunteerApplicationsQueue view)
+    public void Apply(VolunteerApplicationReviewed _, VolunteerApplicationsQueue view)
         => view.Status = VolunteerApplicationStatus.Reviewed;
 
-    public void Apply(VolunteerApproved e, VolunteerApplicationsQueue view)
+    public void Apply(VolunteerApproved _, VolunteerApplicationsQueue view)
         => view.Status = VolunteerApplicationStatus.Approved;
 
-    public void Apply(VolunteerApplicationRejected e, VolunteerApplicationsQueue view)
+    public void Apply(VolunteerApplicationRejected _, VolunteerApplicationsQueue view)
         => view.Status = VolunteerApplicationStatus.Rejected;
 }
 

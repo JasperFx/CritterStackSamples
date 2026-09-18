@@ -19,6 +19,6 @@ public static class RejectVolunteerApplicationEndpoint
 
     [WolverinePost("/api/volunteering/rejectvolunteerapplication")]
     [EmptyResponse]
-    public static EventsToAppend Post(RejectVolunteerApplication command, [WriteModel] VolunteerApplication volunteerApplication) =>
-        [new VolunteerApplicationRejected(volunteerApplication.ApplicantOwnerId, command.Reason)];
+    public static VolunteerApplicationRejected Post(RejectVolunteerApplication command, [WriteModel] VolunteerApplication volunteerApplication) =>
+        new VolunteerApplicationRejected(volunteerApplication.ApplicantOwnerId, command.Reason);
 }

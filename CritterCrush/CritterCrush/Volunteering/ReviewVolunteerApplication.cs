@@ -20,6 +20,6 @@ public static class ReviewVolunteerApplicationEndpoint
 
     [WolverinePost("/api/volunteering/reviewvolunteerapplication")]
     [EmptyResponse]
-    public static EventsToAppend Post(ReviewVolunteerApplication command, [WriteModel] VolunteerApplication volunteerApplication) =>
-        [new VolunteerApplicationReviewed(volunteerApplication.ApplicantOwnerId)];
+    public static VolunteerApplicationReviewed Post(ReviewVolunteerApplication command, [WriteModel] VolunteerApplication volunteerApplication) =>
+        new VolunteerApplicationReviewed(volunteerApplication.ApplicantOwnerId);
 }

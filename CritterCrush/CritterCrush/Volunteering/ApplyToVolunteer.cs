@@ -24,6 +24,6 @@ public static class ApplyToVolunteerEndpoint
 
     [WolverinePost("/api/volunteering/applytovolunteer")]
     [EmptyResponse]
-    public static EventsToAppend Post(ApplyToVolunteer command, [WriteModel] VolunteerApplication? volunteerApplication) =>
-        [new VolunteerApplicationSubmitted(command.ApplicantOwnerId, command.AreasOfInterest)];
+    public static VolunteerApplicationSubmitted Post(ApplyToVolunteer command, [WriteModel] VolunteerApplication? volunteerApplication) =>
+        new VolunteerApplicationSubmitted(command.ApplicantOwnerId, command.AreasOfInterest);
 }

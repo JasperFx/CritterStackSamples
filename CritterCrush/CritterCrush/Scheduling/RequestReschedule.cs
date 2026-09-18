@@ -19,6 +19,6 @@ public static class RequestRescheduleEndpoint
 
     [WolverinePost("/api/scheduling/requestreschedule")]
     [EmptyResponse]
-    public static EventsToAppend Post(RequestReschedule command, [WriteModel] Appointment appointment) =>
-        [new AppointmentRescheduleRequested(appointment.OwnerId, appointment.ShelterId, command.RequestedFor, command.Reason)];
+    public static AppointmentRescheduleRequested Post(RequestReschedule command, [WriteModel] Appointment appointment) =>
+        new AppointmentRescheduleRequested(appointment.OwnerId, appointment.ShelterId, command.RequestedFor, command.Reason);
 }

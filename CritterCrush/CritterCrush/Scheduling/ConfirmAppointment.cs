@@ -26,6 +26,6 @@ public static class ConfirmAppointmentEndpoint
 
     [WolverinePost("/api/scheduling/confirmappointment")]
     [EmptyResponse]
-    public static EventsToAppend Post(ConfirmAppointment command, [WriteModel] Appointment appointment) =>
-        [new AppointmentConfirmed(appointment.OwnerId, appointment.ShelterId, DateTimeOffset.UtcNow)];
+    public static AppointmentConfirmed Post(ConfirmAppointment command, [WriteModel] Appointment appointment) =>
+        new AppointmentConfirmed(appointment.OwnerId, appointment.ShelterId, DateTimeOffset.UtcNow);
 }

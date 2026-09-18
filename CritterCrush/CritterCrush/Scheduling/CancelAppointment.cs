@@ -5,6 +5,8 @@ public record CancelAppointment(Guid AppointmentId, string Reason);
 /// <inheritdoc cref="ConfirmAppointmentEndpoint"/>
 public static class CancelAppointmentEndpoint
 {
+    // If all you're doing it returning a 400 ProblemDetails, this signature is functionally
+    // equivalent and tighter code
     public static ProblemDetails Validate(Appointment appointment)
     {
         // Cancellation is the one command reachable from EITHER open state, so the rule it requires
@@ -20,12 +22,11 @@ public static class CancelAppointmentEndpoint
 
     [WolverinePost("/api/scheduling/cancelappointment")]
     [EmptyResponse]
-    public static EventsToAppend Post(CancelAppointment command, [WriteModel] Appointment appointment) =>
-    [
+    // If there is only one event, just return that event
+    public static AppointmentCancelled Post(CancelAppointment command, [WriteModel] Appointment appointment) =>
         new AppointmentCancelled(appointment.OwnerId, appointment.ShelterId,
             // The queue read model has to know which bucket to take this appointment out of, and
             // after the fold it can no longer tell. So the event carries it.
             WasConfirmed: appointment.Status == AppointmentStatus.Confirmed,
-            command.Reason)
-    ];
+            command.Reason);
 }

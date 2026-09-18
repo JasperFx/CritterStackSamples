@@ -17,13 +17,11 @@ public static class AcceptHomeCheckAssignmentEndpoint
 
     [WolverinePost("/api/volunteering/accepthomecheckassignment")]
     [EmptyResponse]
-    public static EventsToAppend Post(AcceptHomeCheckAssignment command, [WriteModel] HomeCheck homeCheck) =>
-    [
-        new HomeCheckAssignmentAccepted(
+    public static HomeCheckAssignmentAccepted Post(AcceptHomeCheckAssignment command, [WriteModel] HomeCheck homeCheck) =>
+    new HomeCheckAssignmentAccepted(
             Guid.NewGuid(),
             homeCheck.OwnerId,
             homeCheck.ShelterId,
             command.VolunteerOwnerId,
-            command.ProposedFor)
-    ];
+            command.ProposedFor);
 }

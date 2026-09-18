@@ -27,6 +27,6 @@ public static class RecordAppointmentNoShowEndpoint
 
     [WolverinePost("/api/scheduling/recordappointmentnoshow")]
     [EmptyResponse]
-    public static EventsToAppend Post(RecordAppointmentNoShow command, [WriteModel] Appointment appointment) =>
-        [new AppointmentNoShowRecorded(appointment.OwnerId, appointment.ShelterId, DateTimeOffset.UtcNow)];
+    public static AppointmentNoShowRecorded Post(RecordAppointmentNoShow command, [WriteModel] Appointment appointment) =>
+        new AppointmentNoShowRecorded(appointment.OwnerId, appointment.ShelterId, DateTimeOffset.UtcNow);
 }

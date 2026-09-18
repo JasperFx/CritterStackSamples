@@ -30,9 +30,9 @@ public class VolunteerApplication
         Status = VolunteerApplicationStatus.Submitted;
     }
 
-    public void Apply(VolunteerApplicationReviewed e) => Status = VolunteerApplicationStatus.Reviewed;
+    public void Apply(VolunteerApplicationReviewed _) => Status = VolunteerApplicationStatus.Reviewed;
 
-    public void Apply(VolunteerApproved e) => Status = VolunteerApplicationStatus.Approved;
+    public void Apply(VolunteerApproved _) => Status = VolunteerApplicationStatus.Approved;
 
-    public void Apply(VolunteerApplicationRejected e) => Status = VolunteerApplicationStatus.Rejected;
+    public void Apply(VolunteerApplicationRejected _) => Status = VolunteerApplicationStatus.Rejected;
 }

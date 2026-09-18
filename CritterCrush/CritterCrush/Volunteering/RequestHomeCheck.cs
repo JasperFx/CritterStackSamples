@@ -19,6 +19,6 @@ public static class RequestHomeCheckEndpoint
 
     [WolverinePost("/api/volunteering/requesthomecheck")]
     [EmptyResponse]
-    public static EventsToAppend Post(RequestHomeCheck command, [WriteModel] HomeCheck? homeCheck) =>
-        [new HomeCheckRequested(command.ApplicationId, command.OwnerId, command.ShelterId)];
+    public static HomeCheckRequested Post(RequestHomeCheck command, [WriteModel] HomeCheck? homeCheck) =>
+        new HomeCheckRequested(command.ApplicationId, command.OwnerId, command.ShelterId);
 }
