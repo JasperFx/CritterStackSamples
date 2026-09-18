@@ -9,7 +9,7 @@ public record ConfirmAppointment(Guid AppointmentId);
 /// </summary>
 public static class ConfirmAppointmentEndpoint
 {
-    public static ProblemDetails Validate(ConfirmAppointment command, Appointment appointment)
+    public static ProblemDetails Validate(Appointment appointment)
     {
         // One question — is this still Proposed — asked once. The other arms differ only in what
         // they tell the caller; delete any of them and `_` still refuses, which is the test for

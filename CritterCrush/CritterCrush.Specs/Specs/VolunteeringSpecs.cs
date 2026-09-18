@@ -2,7 +2,6 @@ using Bobcat;
 using CritterCrush.Scheduling;
 using CritterCrush.Volunteering;
 using Xunit;
-using CritterCrush.Volunteering;
 
 namespace CritterCrush.Specs;
 

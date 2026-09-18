@@ -5,7 +5,7 @@ public record CompleteAppointment(Guid AppointmentId);
 /// <inheritdoc cref="ConfirmAppointmentEndpoint"/>
 public static class CompleteAppointmentEndpoint
 {
-    public static ProblemDetails Validate(CompleteAppointment command, Appointment appointment)
+    public static ProblemDetails Validate(Appointment appointment)
     {
         // Completion is reachable only from Confirmed. Stated as the state it REQUIRES, so a state
         // added later refuses by default rather than falling through to success.

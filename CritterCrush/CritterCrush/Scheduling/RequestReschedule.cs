@@ -5,7 +5,7 @@ public record RequestReschedule(Guid AppointmentId, DateTimeOffset RequestedFor,
 /// <inheritdoc cref="ConfirmAppointmentEndpoint"/>
 public static class RequestRescheduleEndpoint
 {
-    public static ProblemDetails Validate(RequestReschedule command, Appointment appointment)
+    public static ProblemDetails Validate(Appointment appointment)
     {
         // Asking to move is reachable from either open state — proposed or confirmed — so the rule
         // is "still open", the same one cancellation requires.

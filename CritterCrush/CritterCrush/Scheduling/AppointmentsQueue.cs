@@ -30,7 +30,7 @@ public class AppointmentsQueueProjection : MultiStreamProjection<AppointmentsQue
     }
 
 
-    public override AppointmentsQueue Evolve(AppointmentsQueue snapshot, Guid id, IEvent e)
+    public override AppointmentsQueue Evolve(AppointmentsQueue? snapshot, Guid id, IEvent e)
     {
         snapshot ??= new AppointmentsQueue { Id = id };
 

@@ -5,7 +5,7 @@ public record RescheduleAppointment(Guid AppointmentId, DateTimeOffset Scheduled
 /// <inheritdoc cref="ConfirmAppointmentEndpoint"/>
 public static class RescheduleAppointmentEndpoint
 {
-    public static ProblemDetails Validate(RescheduleAppointment command, Appointment appointment)
+    public static ProblemDetails Validate(Appointment appointment)
     {
         // TWO conditions, and both are requirements rather than exclusions. Checking only
         // RescheduleRequested would be the trap: that flag survives a cancellation, so asking to

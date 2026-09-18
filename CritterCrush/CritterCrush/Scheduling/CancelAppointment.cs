@@ -5,7 +5,7 @@ public record CancelAppointment(Guid AppointmentId, string Reason);
 /// <inheritdoc cref="ConfirmAppointmentEndpoint"/>
 public static class CancelAppointmentEndpoint
 {
-    public static ProblemDetails Validate(CancelAppointment command, Appointment appointment)
+    public static ProblemDetails Validate(Appointment appointment)
     {
         // Cancellation is the one command reachable from EITHER open state, so the rule it requires
         // is "still open" rather than a single status — and `IsClosed` is that rule stated on the

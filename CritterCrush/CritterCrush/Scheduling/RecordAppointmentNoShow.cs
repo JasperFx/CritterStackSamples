@@ -8,7 +8,7 @@ public record RecordAppointmentNoShow(Guid AppointmentId);
 /// </summary>
 public static class RecordAppointmentNoShowEndpoint
 {
-    public static ProblemDetails Validate(RecordAppointmentNoShow command, Appointment appointment)
+    public static ProblemDetails Validate(Appointment appointment)
     {
         // The closed case first, only because it earns a better sentence than the general refusal.
         // It decides nothing: delete it and the required-state check below still refuses.
