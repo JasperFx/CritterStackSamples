@@ -18,13 +18,6 @@ public class Appointment
     }
 
 
-    public void Apply(HomeCheckAppointmentProposed homeCheckAppointmentProposed)
-    {
-        // TODO: fold this event into the state. Deterministic only —
-        // timestamps belong on the event record, never DateTimeOffset.UtcNow here.
-    }
-
-
     public void Apply(FosterHandoverAppointmentProposed fosterHandoverAppointmentProposed)
     {
         // TODO: fold this event into the state. Deterministic only —

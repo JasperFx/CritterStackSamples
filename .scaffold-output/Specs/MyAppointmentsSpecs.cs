@@ -13,12 +13,9 @@ namespace CritterCrush.Specs;
 /// are stated once, on the event model, and merge in by slice name.
 /// </remarks>
 [BobcatFeature("MyAppointments")]
-// TODO — these are integration slices: give this class the store. Derive from (or
-// inject) this repository's host/store fixture; the arrange/act/assert helpers are in
-// Bobcat.CritterStack. A unit-tested slice needs none of that — see the model's
-// spec-ownership manifest for which slices are which.
+[Collection(CritterCrushHost.CollectionName)]
 [BobcatSlice(SliceType = typeof(MyAppointments))]
-public class MyAppointmentsSpecs
+public class MyAppointmentsSpecs(CritterCrushHost fixture) : CritterCrushSpec(fixture)
 {
     [Fact]
     public void An_owner_sees_an_appointment_awaiting_their_confirmation()

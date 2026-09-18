@@ -1,8 +1,5 @@
 namespace CritterCrush.Volunteering;
 
-/// <summary>The applicant may now be assigned home checks</summary>
-public record VolunteerApproved(Guid ApplicantOwnerId);
-
 public record ApproveVolunteer(Guid ApplicantOwnerId);
 
 /// <summary>

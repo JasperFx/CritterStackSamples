@@ -31,6 +31,7 @@ public class HomeChecksSpecs(CritterCrushHost host) : CritterCrushSpec(host)
             "/api/volunteering/requesthomecheck");
 
         ThenEvents(typeof(HomeCheckRequested));
+        await ThenStreamIsStarted(typeof(HomeCheck), homeCheckId);
 
         var requested = TheEvent<HomeCheckRequested>();
         Assert.Equal(applicationId, requested.ApplicationId);

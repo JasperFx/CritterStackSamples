@@ -30,7 +30,7 @@ public class AppointmentsQueueProjection : MultiStreamProjection<AppointmentsQue
     }
 
 
-    public override AppointmentsQueue Evolve(AppointmentsQueue snapshot, Guid id, IEvent e)
+    public override AppointmentsQueue Evolve(AppointmentsQueue? snapshot, Guid id, IEvent e)
     {
         snapshot ??= new AppointmentsQueue { Id = id };
 
@@ -67,8 +67,7 @@ public class AppointmentsQueueProjection : MultiStreamProjection<AppointmentsQue
 public static class GetAppointmentsQueueEndpoint
 {
     [WolverineGet("/api/appointmentsqueue/{id}")]
-    public static Task<AppointmentsQueue?> Get(Guid id, IQuerySession session, CancellationToken ct)
-        => session.LoadAsync<AppointmentsQueue>(id, ct);
+    public static AppointmentsQueue Get([Entity(Required = true)] AppointmentsQueue appointmentsQueue) => appointmentsQueue;
 }
 
 

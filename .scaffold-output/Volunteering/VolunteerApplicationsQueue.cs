@@ -54,8 +54,7 @@ public class VolunteerApplicationsQueueProjection : SingleStreamProjection<Volun
 public static class GetVolunteerApplicationsQueueEndpoint
 {
     [WolverineGet("/api/volunteerapplicationsqueue/{id}")]
-    public static Task<VolunteerApplicationsQueue?> Get(Guid id, IQuerySession session, CancellationToken ct)
-        => session.LoadAsync<VolunteerApplicationsQueue>(id, ct);
+    public static VolunteerApplicationsQueue Get([Entity(Required = true)] VolunteerApplicationsQueue volunteerApplicationsQueue) => volunteerApplicationsQueue;
 }
 
 

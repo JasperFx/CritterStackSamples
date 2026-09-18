@@ -29,6 +29,7 @@ public class VolunteeringSpecs(CritterCrushHost host) : CritterCrushSpec(host)
             "/api/volunteering/applytovolunteer");
 
         ThenEvents(typeof(VolunteerApplicationSubmitted));
+        await ThenStreamIsStarted(typeof(VolunteerApplication), applicantOwnerId);
         Assert.Equal("HomeChecks", TheEvent<VolunteerApplicationSubmitted>().AreasOfInterest);
     }
 

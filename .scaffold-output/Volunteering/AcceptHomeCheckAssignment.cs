@@ -1,8 +1,5 @@
 namespace CritterCrush.Volunteering;
 
-/// <summary>A volunteer took the assignment and proposed a time to visit</summary>
-public record HomeCheckAssignmentAccepted(Guid AssignmentId, Guid OwnerId, Guid ShelterId, Guid VolunteerOwnerId, DateTimeOffset ProposedFor);
-
 public record AcceptHomeCheckAssignment(Guid HomeCheckId, Guid VolunteerOwnerId, DateTimeOffset ProposedFor);
 
 /// <summary>

@@ -13,11 +13,8 @@ namespace CritterCrush.Specs;
 /// are stated once, on the event model, and merge in by slice name.
 /// </remarks>
 [BobcatFeature("Volunteering")]
-// TODO — these are integration slices: give this class the store. Derive from (or
-// inject) this repository's host/store fixture; the arrange/act/assert helpers are in
-// Bobcat.CritterStack. A unit-tested slice needs none of that — see the model's
-// spec-ownership manifest for which slices are which.
-public class VolunteeringSpecs
+[Collection(CritterCrushHost.CollectionName)]
+public class VolunteeringSpecs(CritterCrushHost fixture) : CritterCrushSpec(fixture)
 {
     [Fact]
     [BobcatSlice(SliceType = typeof(ApplyToVolunteer))]
@@ -25,6 +22,7 @@ public class VolunteeringSpecs
     {
         // When ApplyToVolunteer is posted to "/api/volunteering/applytovolunteer" (applicantOwnerId = {streamId}, areasOfInterest = HomeChecks)
         // Then VolunteerApplicationSubmitted is emitted (areasOfInterest = HomeChecks)
+        // Then a VolunteerApplication stream is started with id "{streamId}"
 
         throw new NotImplementedException("ApplyToVolunteer: Somebody applies to volunteer");
     }

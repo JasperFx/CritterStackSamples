@@ -1057,6 +1057,8 @@ slices:
           then:
             - event: VolunteerApplicationSubmitted
               with: { areasOfInterest: HomeChecks }
+            # bobcat#360: the identity, which `event:` cannot reach.
+            - startsStream: VolunteerApplication
         - name: Applying twice is refused
           given:
             - event: VolunteerApplicationSubmitted
@@ -1302,6 +1304,8 @@ slices:
               with:
                 applicationId: "a99a0001-0000-0000-0000-000000000001"
                 ownerId: "0e5e0011-0000-0000-0000-000000000011"
+            # bobcat#360: the identity, which `event:` cannot reach.
+            - startsStream: HomeCheck
         - name: Requesting the same home check twice is refused
           given:
             - event: HomeCheckRequested

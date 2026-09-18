@@ -226,6 +226,30 @@ public abstract class CritterCrushSpec : IAsyncLifetime
     }
 
     /// <summary>
+    /// A creating slice started the stream, under the identity the model says (bobcat#360).
+    /// </summary>
+    /// <remarks>
+    /// <see cref="ThenEvents"/> proves an event of some type was appended — and for a minting slice
+    /// it reads a high-water delta, not a stream, so it cannot say WHERE. The identity is usually
+    /// the decision: ProposeHomeCheckAppointment uses the assignment's id so a redelivered trigger
+    /// collides on StartStream instead of booking a second visit, and nothing else asserts that.
+    /// Non-generic and taking Type for the same reason <see cref="GivenEvents(Type, Guid, object[])"/>
+    /// is — an interceptor is an extension method whose type arguments must be inferable.
+    /// </remarks>
+    [BobcatStep("a {aggregate} stream is started with id \"{id}\"", Keyword = "Then")]
+    public async Task ThenStreamIsStarted(Type aggregate, Guid id)
+    {
+        rethrowUnexpected();
+
+        var events = await EventStores.FetchStreamAsync(Store, id);
+
+        Assert.True(events.Count > 0,
+            $"Expected a {aggregate.Name} stream with id {id}, but no stream exists there. The slice "
+            + "appended its event somewhere else, or did not start a stream at all — which "
+            + "ThenEvents cannot tell you, because it does not address the stream.");
+    }
+
+    /// <summary>
     /// A read model, after the async daemon has caught up. The wait is the point: these projections
     /// are async and multi-stream, so reading straight after the act reads a stale document.
     /// </summary>

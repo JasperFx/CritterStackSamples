@@ -1,8 +1,5 @@
 namespace CritterCrush.Volunteering;
 
-/// <summary>The applicant will not be volunteering</summary>
-public record VolunteerApplicationRejected(Guid ApplicantOwnerId, string Reason);
-
 public record RejectVolunteerApplication(Guid ApplicantOwnerId, string Reason);
 
 /// <summary>

@@ -1,8 +1,5 @@
 namespace CritterCrush.Scheduling;
 
-/// <summary>A surrender intake was proposed and awaits the owner's confirmation</summary>
-public record SurrenderIntakeAppointmentProposed(Guid OwnerId, Guid ShelterId, string Kind, Guid SourceId, DateTimeOffset ScheduledFor) : IOwnerEvent, IShelterEvent;
-
 /// <summary>
 /// Automation slice: triggered by the SurrenderRequestReviewed event, never by a route. Decides and returns —
 /// the framework loads the aggregate, appends, and commits. Design for at-least-once delivery.

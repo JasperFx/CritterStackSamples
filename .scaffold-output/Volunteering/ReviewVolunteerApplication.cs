@@ -1,8 +1,5 @@
 namespace CritterCrush.Volunteering;
 
-/// <summary>An admin read the application and it now awaits a decision</summary>
-public record VolunteerApplicationReviewed(Guid ApplicantOwnerId);
-
 public record ReviewVolunteerApplication(Guid ApplicantOwnerId);
 
 /// <summary>

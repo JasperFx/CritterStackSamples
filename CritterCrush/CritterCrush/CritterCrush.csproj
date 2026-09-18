@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Bobcat.EventModel" Version="0.26.2" />
+    <PackageReference Include="Bobcat.EventModel" Version="0.26.3" />
     <PackageReference Include="Marten" Version="9.36.0" />
     <PackageReference Include="WolverineFx.Http.Marten" Version="6.38.0" />
     <PackageReference Include="WolverineFx.RuntimeCompilation" Version="6.38.0" />

@@ -1,8 +1,5 @@
 namespace CritterCrush.Volunteering;
 
-/// <summary>A home check is needed and awaits a volunteer</summary>
-public record HomeCheckRequested(Guid ApplicationId, Guid OwnerId, Guid ShelterId);
-
 public record RequestHomeCheck(Guid HomeCheckId, Guid ApplicationId, Guid OwnerId, Guid ShelterId);
 
 /// <summary>

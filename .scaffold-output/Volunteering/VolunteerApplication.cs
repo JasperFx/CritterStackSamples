@@ -14,13 +14,6 @@ public class VolunteerApplication
     }
 
 
-    public void Apply(VolunteerApplicationSubmitted volunteerApplicationSubmitted)
-    {
-        // TODO: fold this event into the state. Deterministic only —
-        // timestamps belong on the event record, never DateTimeOffset.UtcNow here.
-    }
-
-
     public void Apply(VolunteerApplicationReviewed volunteerApplicationReviewed)
     {
         // TODO: fold this event into the state. Deterministic only —

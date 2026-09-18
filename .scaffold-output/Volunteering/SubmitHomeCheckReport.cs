@@ -1,8 +1,5 @@
 namespace CritterCrush.Volunteering;
 
-/// <summary>The volunteer visited and wrote it up</summary>
-public record HomeCheckReportSubmitted(Guid ApplicationId, Guid OwnerId, Guid ShelterId, string Outcome, string Notes);
-
 public record SubmitHomeCheckReport(Guid HomeCheckId, string Outcome, string Notes);
 
 /// <summary>

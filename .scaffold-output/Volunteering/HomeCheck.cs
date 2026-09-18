@@ -16,13 +16,6 @@ public class HomeCheck
     }
 
 
-    public void Apply(HomeCheckRequested homeCheckRequested)
-    {
-        // TODO: fold this event into the state. Deterministic only —
-        // timestamps belong on the event record, never DateTimeOffset.UtcNow here.
-    }
-
-
     public void Apply(HomeCheckAssignmentAccepted homeCheckAssignmentAccepted)
     {
         // TODO: fold this event into the state. Deterministic only —

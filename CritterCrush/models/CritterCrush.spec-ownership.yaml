@@ -20,6 +20,14 @@ defaults:
   scaffold: true
   owner: CritterCrush.Specs.{feature}Specs
 
+  # bobcat#356. The only thing the scaffolder could not derive: it already knew these are
+  # integration slices, because this file said so. Stated once, every integration spec class is
+  # written complete instead of arriving as a bare class plus the same two hand edits.
+  fixture:
+    baseType: CritterCrushSpec
+    inject: CritterCrushHost
+    attribute: Collection(CritterCrushHost.CollectionName)
+
 slices:
   # The one genuinely unit-tested slice, and the case that opened #324: a trigger event in, one
   # event out, plus the stream it starts. It asserts the decision that actually matters — the

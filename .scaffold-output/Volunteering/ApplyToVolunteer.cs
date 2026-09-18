@@ -1,8 +1,5 @@
 namespace CritterCrush.Volunteering;
 
-/// <summary>Somebody asked to volunteer</summary>
-public record VolunteerApplicationSubmitted(Guid ApplicantOwnerId, string AreasOfInterest);
-
 public record ApplyToVolunteer(Guid ApplicantOwnerId, string AreasOfInterest);
 
 /// <summary>

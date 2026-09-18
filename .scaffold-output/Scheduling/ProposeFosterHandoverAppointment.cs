@@ -1,8 +1,5 @@
 namespace CritterCrush.Scheduling;
 
-/// <summary>A foster handover was proposed and awaits the foster carer's confirmation</summary>
-public record FosterHandoverAppointmentProposed(Guid OwnerId, Guid ShelterId, string Kind, Guid SourceId, DateTimeOffset ScheduledFor) : IOwnerEvent, IShelterEvent;
-
 /// <summary>
 /// Automation slice: triggered by the DogPlacedInFoster event, never by a route. Decides and returns —
 /// the framework loads the aggregate, appends, and commits. Design for at-least-once delivery.

@@ -13,12 +13,9 @@ namespace CritterCrush.Specs;
 /// are stated once, on the event model, and merge in by slice name.
 /// </remarks>
 [BobcatFeature("VolunteerApplicationsQueue")]
-// TODO — these are integration slices: give this class the store. Derive from (or
-// inject) this repository's host/store fixture; the arrange/act/assert helpers are in
-// Bobcat.CritterStack. A unit-tested slice needs none of that — see the model's
-// spec-ownership manifest for which slices are which.
+[Collection(CritterCrushHost.CollectionName)]
 [BobcatSlice(SliceType = typeof(VolunteerApplicationsQueue))]
-public class VolunteerApplicationsQueueSpecs
+public class VolunteerApplicationsQueueSpecs(CritterCrushHost fixture) : CritterCrushSpec(fixture)
 {
     [Fact]
     public void A_new_application_shows_as_submitted()

@@ -1,11 +1,5 @@
 namespace CritterCrush.Scheduling;
 
-/// <summary>
-/// The appointment will not happen. `wasConfirmed` is carried because the counting views cannot otherwise know which of their buckets this appointment was sitting in, and the aggregate is the only place that knows — a projection has no prior state to consult.
-/// 
-/// </summary>
-public record AppointmentCancelled(Guid OwnerId, Guid ShelterId, bool WasConfirmed, string Reason) : IOwnerEvent, IShelterEvent;
-
 public record CancelAppointment(Guid AppointmentId, string Reason);
 
 /// <summary>

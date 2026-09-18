@@ -1,8 +1,5 @@
 namespace CritterCrush.Scheduling;
 
-/// <summary>The visit happened</summary>
-public record AppointmentCompleted(Guid OwnerId, Guid ShelterId, DateTimeOffset CompletedAt) : IOwnerEvent, IShelterEvent;
-
 public record CompleteAppointment(Guid AppointmentId);
 
 /// <summary>

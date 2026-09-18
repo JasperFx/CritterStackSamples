@@ -13,11 +13,8 @@ namespace CritterCrush.Specs;
 /// are stated once, on the event model, and merge in by slice name.
 /// </remarks>
 [BobcatFeature("HomeChecks")]
-// TODO — these are integration slices: give this class the store. Derive from (or
-// inject) this repository's host/store fixture; the arrange/act/assert helpers are in
-// Bobcat.CritterStack. A unit-tested slice needs none of that — see the model's
-// spec-ownership manifest for which slices are which.
-public class HomeChecksSpecs
+[Collection(CritterCrushHost.CollectionName)]
+public class HomeChecksSpecs(CritterCrushHost fixture) : CritterCrushSpec(fixture)
 {
     [Fact]
     [BobcatSlice(SliceType = typeof(RequestHomeCheck))]
@@ -25,6 +22,7 @@ public class HomeChecksSpecs
     {
         // When RequestHomeCheck is posted to "/api/volunteering/requesthomecheck" (homeCheckId = {streamId}, applicationId = a99a0001-0000-0000-0000-000000000001, ownerId = 0e5e0011-0000-0000-0000-000000000011, shelterId = 5e110001-0000-0000-0000-000000000001)
         // Then HomeCheckRequested is emitted (applicationId = a99a0001-0000-0000-0000-000000000001, ownerId = 0e5e0011-0000-0000-0000-000000000011)
+        // Then a HomeCheck stream is started with id "{streamId}"
 
         throw new NotImplementedException("RequestHomeCheck: An admin requests a home check");
     }

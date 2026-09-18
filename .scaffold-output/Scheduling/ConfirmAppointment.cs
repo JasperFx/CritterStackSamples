@@ -1,8 +1,5 @@
 namespace CritterCrush.Scheduling;
 
-/// <summary>The counterparty accepted the proposed time</summary>
-public record AppointmentConfirmed(Guid OwnerId, Guid ShelterId, DateTimeOffset ConfirmedAt) : IOwnerEvent, IShelterEvent;
-
 public record ConfirmAppointment(Guid AppointmentId);
 
 /// <summary>
