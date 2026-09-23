@@ -1,4 +1,5 @@
 using Bobcat;
+using Bobcat.Xunit;
 using CritterCrush.Scheduling;
 using CritterCrush.Volunteering;
 using Xunit;
@@ -13,6 +14,7 @@ namespace CritterCrush.Specs;
 /// runner. [BobcatSlice] carries the BINDING only — the slice's domain, chapter and pattern
 /// are stated once, on the event model, and merge in by slice name.
 /// </remarks>
+[BobcatScenario]
 [BobcatFeature("AppointmentsQueue")]
 [BobcatSlice(SliceType = typeof(AppointmentsQueue))]
 [Collection(CritterCrushHost.CollectionName)]
