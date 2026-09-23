@@ -97,11 +97,22 @@ public abstract class CritterCrushSpec : IAsyncLifetime
     /// Arrange events on a DIFFERENT stream than the one the act runs against — a second aggregate,
     /// or a second stream of the same one, for a rule that spans both or a fan-out read model.
     /// </summary>
+    /// <remarks>
+    /// The one thing this does NOT do is what makes it a separate method: it leaves the stream the
+    /// act runs against alone, where <see cref="GivenEvents(Type, Guid, object[])"/> declares it.
+    /// <para>
+    /// Its keyword is <c>Given</c>, not <c>And</c>. It usually follows one, and hardcoding <c>And</c>
+    /// to suit that read as a specification opening mid-sentence in the seven scenarios where this
+    /// is the FIRST step. Bobcat 0.27.3 renders a repeated keyword as <c>And</c> on its own, which
+    /// is a fact about the scenario rather than about this helper — so the helper states what it is
+    /// and the recorder decides how it reads.
+    /// </para>
+    /// </remarks>
     public Task GivenEventsOn<T>(Guid id, params object[] events) where T : class
         => GivenEventsOn(typeof(T), id, events);
 
     /// <inheritdoc cref="GivenEventsOn{T}"/>
-    [BobcatStep("{aggregate} \"{id}\" has already recorded these events", Keyword = "And")]
+    [BobcatStep("{aggregate} \"{id}\" has already recorded these events", Keyword = "Given")]
     public Task GivenEventsOn(Type aggregate, Guid id, params object[] events)
         => events.Length == 0 ? Task.CompletedTask : EventStoreAuthoring.AppendAsync(Store, aggregate, id, events);
 
