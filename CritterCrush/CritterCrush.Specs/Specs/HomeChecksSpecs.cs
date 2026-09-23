@@ -1,6 +1,7 @@
 using Bobcat;
-using Xunit;
+using CritterCrush.Scheduling;
 using CritterCrush.Volunteering;
+using Xunit;
 
 namespace CritterCrush.Specs;
 
@@ -14,114 +15,186 @@ namespace CritterCrush.Specs;
 /// </remarks>
 [BobcatFeature("HomeChecks")]
 [Collection(CritterCrushHost.CollectionName)]
-public class HomeChecksSpecs(CritterCrushHost fixture) : CritterCrushSpec(fixture)
+public class HomeChecksSpecs(CritterCrushHost host) : CritterCrushSpec(host)
 {
     [Fact]
     [BobcatSlice(SliceType = typeof(RequestHomeCheck))]
-    public void An_admin_requests_a_home_check()
+    public async Task An_admin_requests_a_home_check()
     {
-        // When RequestHomeCheck is posted to "/api/volunteering/requesthomecheck" (homeCheckId = {streamId}, applicationId = a99a0001-0000-0000-0000-000000000001, ownerId = 0e5e0011-0000-0000-0000-000000000011, shelterId = 5e110001-0000-0000-0000-000000000001)
-        // Then HomeCheckRequested is emitted (applicationId = a99a0001-0000-0000-0000-000000000001, ownerId = 0e5e0011-0000-0000-0000-000000000011)
-        // Then a HomeCheck stream is started with id "{streamId}"
+        var homeCheckId = Guid.NewGuid();
+        var applicationId = Guid.NewGuid();
+        var ownerId = Guid.NewGuid();
 
-        throw new NotImplementedException("RequestHomeCheck: An admin requests a home check");
+        await GivenNoEvents<HomeCheck>(homeCheckId);
+
+        await WhenPosted(new RequestHomeCheck(homeCheckId, applicationId, ownerId, Guid.NewGuid()),
+            "/api/volunteering/requesthomecheck");
+
+        ThenEvents(typeof(HomeCheckRequested));
+        await ThenStreamIsStarted(typeof(HomeCheck), homeCheckId);
+
+        var requested = TheEvent<HomeCheckRequested>();
+        Assert.Equal(applicationId, requested.ApplicationId);
+        Assert.Equal(ownerId, requested.OwnerId);
     }
 
     [Fact]
     [BobcatSlice(SliceType = typeof(RequestHomeCheck))]
-    public void Requesting_the_same_home_check_twice_is_refused()
+    public async Task Requesting_the_same_home_check_twice_is_refused()
     {
-        // Given HomeCheckRequested (applicationId = a99a0001-0000-0000-0000-000000000001, ownerId = 0e5e0011-0000-0000-0000-000000000011, shelterId = 5e110001-0000-0000-0000-000000000001)
-        // When RequestHomeCheck is posted to "/api/volunteering/requesthomecheck" (homeCheckId = {streamId}, applicationId = a99a0001-0000-0000-0000-000000000001, ownerId = 0e5e0011-0000-0000-0000-000000000011, shelterId = 5e110001-0000-0000-0000-000000000001)
-        // # refused with: "This home check has already been requested"
-        // Then the response is 400
-        // And no events are emitted
+        var homeCheckId = Guid.NewGuid();
+        var applicationId = Guid.NewGuid();
+        var ownerId = Guid.NewGuid();
+        var shelterId = Guid.NewGuid();
 
-        throw new NotImplementedException("RequestHomeCheck: Requesting the same home check twice is refused");
+        await GivenEvents<HomeCheck>(homeCheckId, new HomeCheckRequested(applicationId, ownerId, shelterId));
+
+        await WhenPosted(new RequestHomeCheck(homeCheckId, applicationId, ownerId, shelterId),
+            "/api/volunteering/requesthomecheck");
+
+        // Refused with "This home check has already been requested".
+        ThenResponseIs(400);
+        ThenNoEvents();
     }
 
     [Fact]
     [BobcatSlice(SliceType = typeof(AcceptHomeCheckAssignment))]
-    public void A_volunteer_accepts_an_assignment_and_proposes_a_time()
+    public async Task A_volunteer_accepts_an_assignment_and_proposes_a_time()
     {
-        // Given HomeCheckRequested (applicationId = a99a0002-0000-0000-0000-000000000002, ownerId = 0e5e0012-0000-0000-0000-000000000012, shelterId = 5e110001-0000-0000-0000-000000000001)
-        // When AcceptHomeCheckAssignment is posted to "/api/volunteering/accepthomecheckassignment" (homeCheckId = {streamId}, volunteerOwnerId = 0e5e0099-0000-0000-0000-000000000099, proposedFor = 2026-10-01T15:00:00Z)
-        // Then HomeCheckAssignmentAccepted is emitted (ownerId = 0e5e0012-0000-0000-0000-000000000012, volunteerOwnerId = 0e5e0099-0000-0000-0000-000000000099, proposedFor = 2026-10-01T15:00:00Z)
+        var homeCheckId = Guid.NewGuid();
+        var ownerId = Guid.NewGuid();
+        var volunteerOwnerId = Guid.NewGuid();
+        var proposedFor = new DateTimeOffset(2026, 10, 1, 15, 0, 0, TimeSpan.Zero);
 
-        throw new NotImplementedException("AcceptHomeCheckAssignment: A volunteer accepts an assignment and proposes a time");
+        await GivenEvents<HomeCheck>(homeCheckId, new HomeCheckRequested(Guid.NewGuid(), ownerId, Guid.NewGuid()));
+
+        await WhenPosted(new AcceptHomeCheckAssignment(homeCheckId, volunteerOwnerId, proposedFor),
+            "/api/volunteering/accepthomecheckassignment");
+
+        ThenEvents(typeof(HomeCheckAssignmentAccepted));
+
+        var accepted = TheEvent<HomeCheckAssignmentAccepted>();
+        Assert.Equal(ownerId, accepted.OwnerId);
+        Assert.Equal(volunteerOwnerId, accepted.VolunteerOwnerId);
+        Assert.Equal(proposedFor, accepted.ProposedFor);
     }
 
     [Fact]
     [BobcatSlice(SliceType = typeof(AcceptHomeCheckAssignment))]
-    public void Accepting_an_assignment_books_the_home_check_as_an_appointment()
+    /// <summary>
+    /// The scenario the manifest names as <c>coveredBy</c> for ProposeHomeCheckAppointment: the
+    /// chain from this command, through the bus, into the automation that starts the appointment
+    /// stream, and on into the async projection. That chain is not expressible in the model, which
+    /// is exactly why the cover has to be declared rather than inferred.
+    /// </summary>
+    public async Task Accepting_an_assignment_books_the_home_check_as_an_appointment()
     {
-        // Given HomeCheckRequested (applicationId = a99a0004-0000-0000-0000-000000000004, ownerId = 0e5e0014-0000-0000-0000-000000000014, shelterId = 5e110004-0000-0000-0000-000000000004)
-        // When AcceptHomeCheckAssignment is posted to "/api/volunteering/accepthomecheckassignment" (homeCheckId = {streamId}, volunteerOwnerId = 0e5e0099-0000-0000-0000-000000000099, proposedFor = 2026-10-01T15:00:00Z)
-        // Then the MyAppointments read model contains (AwaitingConfirmation = 1, Confirmed = 0, Closed = 0)
+        var homeCheckId = Guid.NewGuid();
+        var ownerId = Guid.NewGuid();
+        var proposedFor = new DateTimeOffset(2026, 10, 1, 15, 0, 0, TimeSpan.Zero);
 
-        throw new NotImplementedException("AcceptHomeCheckAssignment: Accepting an assignment books the home check as an appointment");
+        await GivenEvents<HomeCheck>(homeCheckId, new HomeCheckRequested(Guid.NewGuid(), ownerId, Guid.NewGuid()));
+
+        await WhenPosted(new AcceptHomeCheckAssignment(homeCheckId, Guid.NewGuid(), proposedFor),
+            "/api/volunteering/accepthomecheckassignment");
+
+        // MyAppointments is keyed by OwnerId, not by the stream.
+        var mine = await ThenReadModel<MyAppointments>(ownerId);
+        Assert.Equal(1, mine.AwaitingConfirmation);
+        Assert.Equal(0, mine.Confirmed);
+        Assert.Equal(0, mine.Closed);
     }
 
     [Fact]
     [BobcatSlice(SliceType = typeof(AcceptHomeCheckAssignment))]
-    public void An_assignment_already_accepted_is_not_accepted_again()
+    public async Task An_assignment_already_accepted_is_not_accepted_again()
     {
-        // Given HomeCheckRequested (applicationId = a99a0002-0000-0000-0000-000000000002, ownerId = 0e5e0012-0000-0000-0000-000000000012, shelterId = 5e110001-0000-0000-0000-000000000001)
-        // Given HomeCheckAssignmentAccepted (ownerId = 0e5e0012-0000-0000-0000-000000000012, shelterId = 5e110001-0000-0000-0000-000000000001, volunteerOwnerId = 0e5e0099-0000-0000-0000-000000000099, proposedFor = 2026-10-01T15:00:00Z)
-        // When AcceptHomeCheckAssignment is posted to "/api/volunteering/accepthomecheckassignment" (homeCheckId = {streamId}, volunteerOwnerId = 0e5e0098-0000-0000-0000-000000000098, proposedFor = 2026-10-02T15:00:00Z)
-        // # refused with: "This home check is already assigned"
-        // Then the response is 400
-        // And no events are emitted
+        var homeCheckId = Guid.NewGuid();
+        var ownerId = Guid.NewGuid();
+        var shelterId = Guid.NewGuid();
+        var proposedFor = new DateTimeOffset(2026, 10, 1, 15, 0, 0, TimeSpan.Zero);
 
-        throw new NotImplementedException("AcceptHomeCheckAssignment: An assignment already accepted is not accepted again");
-    }
+        await GivenEvents<HomeCheck>(homeCheckId,
+            new HomeCheckRequested(Guid.NewGuid(), ownerId, shelterId),
+            new HomeCheckAssignmentAccepted(homeCheckId, ownerId, shelterId, Guid.NewGuid(), proposedFor));
 
-    [Fact]
-    [BobcatSlice(SliceType = typeof(AcceptHomeCheckAssignment))]
-    public void Accepting_a_home_check_that_does_not_exist_is_not_found()
-    {
-        // When AcceptHomeCheckAssignment is posted to "/api/volunteering/accepthomecheckassignment" (homeCheckId = {streamId}, volunteerOwnerId = 0e5e0099-0000-0000-0000-000000000099, proposedFor = 2026-10-01T15:00:00Z)
-        // # refused with: "No home check with that id"
-        // Then the response is 404
-        // And no events are emitted
+        await WhenPosted(new AcceptHomeCheckAssignment(homeCheckId, Guid.NewGuid(), proposedFor.AddDays(1)),
+            "/api/volunteering/accepthomecheckassignment");
 
-        throw new NotImplementedException("AcceptHomeCheckAssignment: Accepting a home check that does not exist is not found");
+        // Refused with "This home check is already assigned".
+        ThenResponseIs(400);
+        ThenNoEvents();
     }
 
     [Fact]
     [BobcatSlice(SliceType = typeof(SubmitHomeCheckReport))]
-    public void A_volunteer_reports_on_a_visit_they_accepted()
+    public async Task A_volunteer_reports_on_a_visit_they_accepted()
     {
-        // Given HomeCheckRequested (applicationId = a99a0003-0000-0000-0000-000000000003, ownerId = 0e5e0013-0000-0000-0000-000000000013, shelterId = 5e110001-0000-0000-0000-000000000001)
-        // Given HomeCheckAssignmentAccepted (ownerId = 0e5e0013-0000-0000-0000-000000000013, shelterId = 5e110001-0000-0000-0000-000000000001, volunteerOwnerId = 0e5e0099-0000-0000-0000-000000000099, proposedFor = 2026-10-01T15:00:00Z)
-        // When SubmitHomeCheckReport is posted to "/api/volunteering/submithomecheckreport" (homeCheckId = {streamId}, outcome = Pass, notes = Secure garden, calm household, good fit for a shy dog)
-        // Then HomeCheckReportSubmitted is emitted (outcome = Pass, notes = Secure garden, calm household, good fit for a shy dog)
+        var homeCheckId = Guid.NewGuid();
+        var ownerId = Guid.NewGuid();
+        var shelterId = Guid.NewGuid();
+        const string notes = "Secure garden, calm household, good fit for a shy dog";
 
-        throw new NotImplementedException("SubmitHomeCheckReport: A volunteer reports on a visit they accepted");
+        await GivenEvents<HomeCheck>(homeCheckId,
+            new HomeCheckRequested(Guid.NewGuid(), ownerId, shelterId),
+            new HomeCheckAssignmentAccepted(homeCheckId, ownerId, shelterId, Guid.NewGuid(),
+                new DateTimeOffset(2026, 10, 1, 15, 0, 0, TimeSpan.Zero)));
+
+        await WhenPosted(new SubmitHomeCheckReport(homeCheckId, "Pass", notes),
+            "/api/volunteering/submithomecheckreport");
+
+        ThenEvents(typeof(HomeCheckReportSubmitted));
+
+        var submitted = TheEvent<HomeCheckReportSubmitted>();
+        Assert.Equal("Pass", submitted.Outcome);
+        Assert.Equal(notes, submitted.Notes);
     }
 
     [Fact]
     [BobcatSlice(SliceType = typeof(SubmitHomeCheckReport))]
-    public void A_visit_nobody_accepted_cannot_be_reported_on()
+    public async Task A_visit_nobody_accepted_cannot_be_reported_on()
     {
-        // Given HomeCheckRequested (applicationId = a99a0003-0000-0000-0000-000000000003, ownerId = 0e5e0013-0000-0000-0000-000000000013, shelterId = 5e110001-0000-0000-0000-000000000001)
-        // When SubmitHomeCheckReport is posted to "/api/volunteering/submithomecheckreport" (homeCheckId = {streamId}, outcome = Pass, notes = Secure garden, calm household, good fit for a shy dog)
-        // # refused with: "Nobody has accepted this home check"
-        // Then the response is 400
-        // And no events are emitted
+        var homeCheckId = Guid.NewGuid();
 
-        throw new NotImplementedException("SubmitHomeCheckReport: A visit nobody accepted cannot be reported on");
+        await GivenEvents<HomeCheck>(homeCheckId,
+            new HomeCheckRequested(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()));
+
+        await WhenPosted(new SubmitHomeCheckReport(homeCheckId, "Pass", "Secure garden"),
+            "/api/volunteering/submithomecheckreport");
+
+        // Refused with "Nobody has accepted this home check".
+        ThenResponseIs(400);
+        ThenNoEvents();
     }
 
+
+    /// <summary>
+    /// Wolverine's own not-found guard, which answers before Validate runs. Declared on the model
+    /// (bobcat#337) rather than carried as an orphan: that declaration is what makes the write
+    /// model non-nullable, which is what makes a hand-written null check unreachable.
+    /// </summary>
+    [Fact]
+    [BobcatSlice(SliceType = typeof(AcceptHomeCheckAssignment))]
+    public async Task Accepting_a_home_check_that_does_not_exist_is_not_found()
+    {
+        await WhenPosted(new AcceptHomeCheckAssignment(Guid.NewGuid(), Guid.NewGuid(), new DateTimeOffset(2026, 10, 1, 15, 0, 0, TimeSpan.Zero)), "/api/volunteering/accepthomecheckassignment");
+
+        ThenResponseIs(404);
+        ThenNoEvents();
+    }
+
+    /// <summary>
+    /// Wolverine's own not-found guard, which answers before Validate runs. Declared on the model
+    /// (bobcat#337) rather than carried as an orphan: that declaration is what makes the write
+    /// model non-nullable, which is what makes a hand-written null check unreachable.
+    /// </summary>
     [Fact]
     [BobcatSlice(SliceType = typeof(SubmitHomeCheckReport))]
-    public void Reporting_on_a_home_check_that_does_not_exist_is_not_found()
+    public async Task Reporting_on_a_home_check_that_does_not_exist_is_not_found()
     {
-        // When SubmitHomeCheckReport is posted to "/api/volunteering/submithomecheckreport" (homeCheckId = {streamId}, outcome = Pass, notes = Secure garden, calm household, good fit for a shy dog)
-        // # refused with: "No home check with that id"
-        // Then the response is 404
-        // And no events are emitted
+        await WhenPosted(new SubmitHomeCheckReport(Guid.NewGuid(), "Pass", "Secure garden, calm household, good fit for a shy dog"), "/api/volunteering/submithomecheckreport");
 
-        throw new NotImplementedException("SubmitHomeCheckReport: Reporting on a home check that does not exist is not found");
+        ThenResponseIs(404);
+        ThenNoEvents();
     }
 }

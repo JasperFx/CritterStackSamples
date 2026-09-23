@@ -38,23 +38,36 @@ public class AppointmentsQueueProjection : MultiStreamProjection<AppointmentsQue
         // at the top of every one of them, which is exactly where it goes missing.
         if (e.Data is IShelterEvent routed) snapshot.ShelterId = routed.ShelterId;
 
-        // Fill each arm in and delete the throw — the model's scenarios say what the view holds.
         switch (e.Data)
         {
+            // A proposal joins the queue waiting on the counterparty.
             case HomeCheckAppointmentProposed:
-                throw new NotImplementedException("TODO: AppointmentsQueue — project HomeCheckAppointmentProposed");
             case FosterHandoverAppointmentProposed:
-                throw new NotImplementedException("TODO: AppointmentsQueue — project FosterHandoverAppointmentProposed");
             case SurrenderIntakeAppointmentProposed:
-                throw new NotImplementedException("TODO: AppointmentsQueue — project SurrenderIntakeAppointmentProposed");
+                snapshot.AwaitingConfirmation++;
+                break;
+
             case AppointmentConfirmed:
-                throw new NotImplementedException("TODO: AppointmentsQueue — project AppointmentConfirmed");
+                snapshot.AwaitingConfirmation--;
+                snapshot.Confirmed++;
+                break;
+
+            // Completing and no-showing both end a CONFIRMED appointment — the guards on those two
+            // slices refuse anything else, so there is no other bucket they can be leaving.
             case AppointmentCompleted:
-                throw new NotImplementedException("TODO: AppointmentsQueue — project AppointmentCompleted");
-            case AppointmentCancelled:
-                throw new NotImplementedException("TODO: AppointmentsQueue — project AppointmentCancelled");
             case AppointmentNoShowRecorded:
-                throw new NotImplementedException("TODO: AppointmentsQueue — project AppointmentNoShowRecorded");
+                snapshot.Confirmed--;
+                snapshot.Closed++;
+                break;
+
+            // Cancelling is the one that can arrive from either bucket, which is the whole reason
+            // WasConfirmed rides on the event: a projection has no prior state to consult, and
+            // guessing here is how a counter goes negative and stays there.
+            case AppointmentCancelled cancelled:
+                if (cancelled.WasConfirmed) snapshot.Confirmed--;
+                else snapshot.AwaitingConfirmation--;
+                snapshot.Closed++;
+                break;
         }
 
 
@@ -69,5 +82,3 @@ public static class GetAppointmentsQueueEndpoint
     [WolverineGet("/api/appointmentsqueue/{id}")]
     public static AppointmentsQueue Get([Entity(Required = true)] AppointmentsQueue appointmentsQueue) => appointmentsQueue;
 }
-
-

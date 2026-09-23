@@ -1,6 +1,7 @@
 using Bobcat;
-using Xunit;
 using CritterCrush.Scheduling;
+using CritterCrush.Volunteering;
+using Xunit;
 
 namespace CritterCrush.Specs;
 
@@ -13,27 +14,51 @@ namespace CritterCrush.Specs;
 /// are stated once, on the event model, and merge in by slice name.
 /// </remarks>
 [BobcatFeature("MyAppointments")]
-[Collection(CritterCrushHost.CollectionName)]
 [BobcatSlice(SliceType = typeof(MyAppointments))]
-public class MyAppointmentsSpecs(CritterCrushHost fixture) : CritterCrushSpec(fixture)
+[Collection(CritterCrushHost.CollectionName)]
+public class MyAppointmentsSpecs(CritterCrushHost host) : CritterCrushSpec(host)
 {
     [Fact]
-    public void An_owner_sees_an_appointment_awaiting_their_confirmation()
+    public async Task An_owner_sees_an_appointment_awaiting_their_confirmation()
     {
-        // Given HomeCheckAppointmentProposed (ownerId = 0e5e0004-0000-0000-0000-000000000004, shelterId = 5e110001-0000-0000-0000-000000000001, kind = HomeCheck, scheduledFor = 2026-10-01T15:00:00Z)
-        // Then the MyAppointments read model contains (AwaitingConfirmation = 1, Confirmed = 0, Closed = 0)
+        var ownerId = Guid.NewGuid();
+        var id = Guid.NewGuid();
 
-        throw new NotImplementedException("MyAppointments: An owner sees an appointment awaiting their confirmation");
+        await GivenEventsOn<Appointment>(id,
+            new HomeCheckAppointmentProposed(ownerId, Guid.NewGuid(), AppointmentKind.HomeCheck, id,
+                new DateTimeOffset(2026, 10, 1, 15, 0, 0, TimeSpan.Zero)));
+
+        var mine = await ThenReadModel<MyAppointments>(ownerId);
+        // The view carries the key it is folded by — never assigned before the review.
+        Assert.Equal(ownerId, mine.OwnerId);
+        Assert.Equal(1, mine.AwaitingConfirmation);
+        Assert.Equal(0, mine.Confirmed);
+        Assert.Equal(0, mine.Closed);
     }
 
     [Fact]
-    public void An_owner_page_spans_every_appointment_stream_they_have()
+    /// <summary>
+    /// The multi-stream fold from the owner's side: one person, two appointment streams, one page.
+    /// </summary>
+    public async Task An_owner_page_spans_every_appointment_stream_they_have()
     {
-        // Given HomeCheckAppointmentProposed (ownerId = 0e5e0005-0000-0000-0000-000000000005, shelterId = 5e110001-0000-0000-0000-000000000001, kind = HomeCheck, scheduledFor = 2026-10-01T15:00:00Z)
-        // Given AppointmentConfirmed (ownerId = 0e5e0005-0000-0000-0000-000000000005, shelterId = 5e110001-0000-0000-0000-000000000001)
-        // Given SurrenderIntakeAppointmentProposed (ownerId = 0e5e0005-0000-0000-0000-000000000005, shelterId = 5e110001-0000-0000-0000-000000000001, kind = SurrenderIntake, scheduledFor = 2026-10-03T09:00:00Z)
-        // Then the MyAppointments read model contains (AwaitingConfirmation = 1, Confirmed = 1, Closed = 0)
+        var ownerId = Guid.NewGuid();
+        var shelterId = Guid.NewGuid();
+        var confirmed = Guid.NewGuid();
+        var awaiting = Guid.NewGuid();
+        var at = new DateTimeOffset(2026, 10, 1, 15, 0, 0, TimeSpan.Zero);
 
-        throw new NotImplementedException("MyAppointments: An owner page spans every appointment stream they have");
+        await GivenEventsOn<Appointment>(confirmed,
+            new HomeCheckAppointmentProposed(ownerId, shelterId, AppointmentKind.HomeCheck, confirmed, at),
+            new AppointmentConfirmed(ownerId, shelterId, at));
+
+        await GivenEventsOn<Appointment>(awaiting,
+            new SurrenderIntakeAppointmentProposed(ownerId, shelterId, AppointmentKind.SurrenderIntake, awaiting,
+                new DateTimeOffset(2026, 10, 3, 9, 0, 0, TimeSpan.Zero)));
+
+        var mine = await ThenReadModel<MyAppointments>(ownerId);
+        Assert.Equal(1, mine.AwaitingConfirmation);
+        Assert.Equal(1, mine.Confirmed);
+        Assert.Equal(0, mine.Closed);
     }
 }

@@ -1,6 +1,7 @@
 using Bobcat;
-using Xunit;
+using CritterCrush.Scheduling;
 using CritterCrush.Volunteering;
+using Xunit;
 
 namespace CritterCrush.Specs;
 
@@ -13,27 +14,36 @@ namespace CritterCrush.Specs;
 /// are stated once, on the event model, and merge in by slice name.
 /// </remarks>
 [BobcatFeature("VolunteerApplicationsQueue")]
-[Collection(CritterCrushHost.CollectionName)]
 [BobcatSlice(SliceType = typeof(VolunteerApplicationsQueue))]
-public class VolunteerApplicationsQueueSpecs(CritterCrushHost fixture) : CritterCrushSpec(fixture)
+[Collection(CritterCrushHost.CollectionName)]
+public class VolunteerApplicationsQueueSpecs(CritterCrushHost host) : CritterCrushSpec(host)
 {
     [Fact]
-    public void A_new_application_shows_as_submitted()
+    public async Task A_new_application_shows_as_submitted()
     {
-        // Given VolunteerApplicationSubmitted (applicantOwnerId = 0e5e0021-0000-0000-0000-000000000021, areasOfInterest = HomeChecks)
-        // Then the VolunteerApplicationsQueue read model contains (AreasOfInterest = HomeChecks, Status = Submitted)
+        var applicantOwnerId = Guid.NewGuid();
 
-        throw new NotImplementedException("VolunteerApplicationsQueue: A new application shows as submitted");
+        await GivenEventsOn<VolunteerApplication>(applicantOwnerId,
+            new VolunteerApplicationSubmitted(applicantOwnerId, "HomeChecks"));
+
+        // Single-stream: the document id IS the stream id, which here is the applicant's own id.
+        var row = await ThenReadModel<VolunteerApplicationsQueue>(applicantOwnerId);
+        Assert.Equal("HomeChecks", row.AreasOfInterest);
+        Assert.Equal(VolunteerApplicationStatus.Submitted, row.Status);
     }
 
     [Fact]
-    public void An_approved_application_shows_the_decision()
+    public async Task An_approved_application_shows_the_decision()
     {
-        // Given VolunteerApplicationSubmitted (applicantOwnerId = 0e5e0022-0000-0000-0000-000000000022, areasOfInterest = FosterSupport)
-        // Given VolunteerApplicationReviewed (applicantOwnerId = 0e5e0022-0000-0000-0000-000000000022)
-        // Given VolunteerApproved (applicantOwnerId = 0e5e0022-0000-0000-0000-000000000022)
-        // Then the VolunteerApplicationsQueue read model contains (AreasOfInterest = FosterSupport, Status = Approved)
+        var applicantOwnerId = Guid.NewGuid();
 
-        throw new NotImplementedException("VolunteerApplicationsQueue: An approved application shows the decision");
+        await GivenEventsOn<VolunteerApplication>(applicantOwnerId,
+            new VolunteerApplicationSubmitted(applicantOwnerId, "FosterSupport"),
+            new VolunteerApplicationReviewed(applicantOwnerId),
+            new VolunteerApproved(applicantOwnerId));
+
+        var row = await ThenReadModel<VolunteerApplicationsQueue>(applicantOwnerId);
+        Assert.Equal("FosterSupport", row.AreasOfInterest);
+        Assert.Equal(VolunteerApplicationStatus.Approved, row.Status);
     }
 }

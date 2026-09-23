@@ -8,18 +8,16 @@ public static class ProposeSurrenderIntakeAppointmentHandler
 {
     public static StartStream Handle(SurrenderRequestReviewed trigger)
     {
-        // HOTSPOT (from the model): One source entity can hold only one appointment, because the source id IS the appointment's stream id. A surrender needing a second intake visit — the first one a no-show, say — has nowhere to put it. The alternative is a minted id, which costs idempotency on redelivery; this model chose idempotency and wrote the cost down.
-
-        // HOTSPOT (from the model): The board's trigger is "Surrender Request Reviewed", and a review can plainly end either way — but the board declares no outcome field, so this model cannot say whether a REJECTED review also books an intake. Today every reviewed request books one. Resolving it means asking the Surrenders chapter to carry the outcome on its contract, which is a change to somebody else's event, not to this slice.
-
-        // The decision. Every scenario of this slice arranges no prior events, so it starts the
-        // stream: mint the id (or take it off the trigger) and hand back the Appointment's first event.
-        // Fill this in and delete the throw — the shape is:
-        //     var id = Guid.NewGuid();   // or the identity the trigger already carries
-        //     return Storage.StartStream<Appointment>(id, new SurrenderIntakeAppointmentProposed(/* … */));
-        throw new NotImplementedException("TODO: ProposeSurrenderIntakeAppointment — decide which event starts the stream, and what its id is");
+        // The appointment's stream IS SurrenderRequestId. Not a fresh Guid: an id the
+        // automation invents is an id no scenario can predict, so nothing could ever assert WHERE
+        // the event landed (bobcat#319/#360). It is safe to reuse only because that id belongs to
+        // no other aggregate in this model — Marten's stream id space is global across types.
+        return Storage.StartStream<Appointment>(trigger.SurrenderRequestId, new SurrenderIntakeAppointmentProposed(
+            trigger.OwnerId,
+            trigger.ShelterId,
+            AppointmentKind.SurrenderIntake,
+            trigger.SurrenderRequestId,
+            trigger.ProposedFor));
     }
 
 }
-
-

@@ -1,6 +1,7 @@
 using Bobcat;
-using Xunit;
+using CritterCrush.Scheduling;
 using CritterCrush.Volunteering;
+using Xunit;
 
 namespace CritterCrush.Specs;
 
@@ -14,143 +15,185 @@ namespace CritterCrush.Specs;
 /// </remarks>
 [BobcatFeature("Volunteering")]
 [Collection(CritterCrushHost.CollectionName)]
-public class VolunteeringSpecs(CritterCrushHost fixture) : CritterCrushSpec(fixture)
+public class VolunteeringSpecs(CritterCrushHost host) : CritterCrushSpec(host)
 {
     [Fact]
     [BobcatSlice(SliceType = typeof(ApplyToVolunteer))]
-    public void Somebody_applies_to_volunteer()
+    public async Task Somebody_applies_to_volunteer()
     {
-        // When ApplyToVolunteer is posted to "/api/volunteering/applytovolunteer" (applicantOwnerId = {streamId}, areasOfInterest = HomeChecks)
-        // Then VolunteerApplicationSubmitted is emitted (areasOfInterest = HomeChecks)
-        // Then a VolunteerApplication stream is started with id "{streamId}"
+        var applicantOwnerId = Guid.NewGuid();
 
-        throw new NotImplementedException("ApplyToVolunteer: Somebody applies to volunteer");
+        await GivenNoEvents<VolunteerApplication>(applicantOwnerId);
+
+        await WhenPosted(new ApplyToVolunteer(applicantOwnerId, "HomeChecks"),
+            "/api/volunteering/applytovolunteer");
+
+        ThenEvents(typeof(VolunteerApplicationSubmitted));
+        await ThenStreamIsStarted(typeof(VolunteerApplication), applicantOwnerId);
+        Assert.Equal("HomeChecks", TheEvent<VolunteerApplicationSubmitted>().AreasOfInterest);
     }
 
     [Fact]
     [BobcatSlice(SliceType = typeof(ApplyToVolunteer))]
-    public void Applying_twice_is_refused()
+    public async Task Applying_twice_is_refused()
     {
-        // Given VolunteerApplicationSubmitted (areasOfInterest = HomeChecks)
-        // When ApplyToVolunteer is posted to "/api/volunteering/applytovolunteer" (applicantOwnerId = {streamId}, areasOfInterest = Transport)
-        // # refused with: "You have already applied to volunteer"
-        // Then the response is 400
-        // And no events are emitted
+        var applicantOwnerId = Guid.NewGuid();
 
-        throw new NotImplementedException("ApplyToVolunteer: Applying twice is refused");
+        await GivenEvents<VolunteerApplication>(applicantOwnerId,
+            new VolunteerApplicationSubmitted(applicantOwnerId, "HomeChecks"));
+
+        await WhenPosted(new ApplyToVolunteer(applicantOwnerId, "Transport"),
+            "/api/volunteering/applytovolunteer");
+
+        // Refused with "You have already applied to volunteer".
+        ThenResponseIs(400);
+        ThenNoEvents();
     }
 
     [Fact]
     [BobcatSlice(SliceType = typeof(ReviewVolunteerApplication))]
-    public void An_admin_reviews_a_submitted_application()
+    public async Task An_admin_reviews_a_submitted_application()
     {
-        // Given VolunteerApplicationSubmitted (areasOfInterest = HomeChecks)
-        // When ReviewVolunteerApplication is posted to "/api/volunteering/reviewvolunteerapplication" (applicantOwnerId = {streamId})
-        // Then VolunteerApplicationReviewed is emitted
+        var applicantOwnerId = Guid.NewGuid();
 
-        throw new NotImplementedException("ReviewVolunteerApplication: An admin reviews a submitted application");
+        await GivenEvents<VolunteerApplication>(applicantOwnerId,
+            new VolunteerApplicationSubmitted(applicantOwnerId, "HomeChecks"));
+
+        await WhenPosted(new ReviewVolunteerApplication(applicantOwnerId),
+            "/api/volunteering/reviewvolunteerapplication");
+
+        ThenEvents(typeof(VolunteerApplicationReviewed));
     }
 
     [Fact]
     [BobcatSlice(SliceType = typeof(ReviewVolunteerApplication))]
-    public void An_application_already_decided_is_not_reviewed_again()
+    public async Task An_application_already_decided_is_not_reviewed_again()
     {
-        // Given VolunteerApplicationSubmitted (areasOfInterest = HomeChecks)
-        // Given VolunteerApplicationReviewed
-        // Given VolunteerApproved
-        // When ReviewVolunteerApplication is posted to "/api/volunteering/reviewvolunteerapplication" (applicantOwnerId = {streamId})
-        // # refused with: "This application has already been decided"
-        // Then the response is 400
-        // And no events are emitted
+        var applicantOwnerId = Guid.NewGuid();
 
-        throw new NotImplementedException("ReviewVolunteerApplication: An application already decided is not reviewed again");
+        await GivenEvents<VolunteerApplication>(applicantOwnerId,
+            new VolunteerApplicationSubmitted(applicantOwnerId, "HomeChecks"),
+            new VolunteerApplicationReviewed(applicantOwnerId),
+            new VolunteerApproved(applicantOwnerId));
+
+        await WhenPosted(new ReviewVolunteerApplication(applicantOwnerId),
+            "/api/volunteering/reviewvolunteerapplication");
+
+        // Refused with "This application has already been decided".
+        ThenResponseIs(400);
+        ThenNoEvents();
     }
 
+    [Fact]
+    [BobcatSlice(SliceType = typeof(ApproveVolunteer))]
+    public async Task A_reviewed_applicant_is_approved()
+    {
+        var applicantOwnerId = Guid.NewGuid();
+
+        await GivenEvents<VolunteerApplication>(applicantOwnerId,
+            new VolunteerApplicationSubmitted(applicantOwnerId, "HomeChecks"),
+            new VolunteerApplicationReviewed(applicantOwnerId));
+
+        await WhenPosted(new ApproveVolunteer(applicantOwnerId), "/api/volunteering/approvevolunteer");
+
+        ThenEvents(typeof(VolunteerApproved));
+    }
+
+    [Fact]
+    [BobcatSlice(SliceType = typeof(ApproveVolunteer))]
+    public async Task An_applicant_nobody_reviewed_is_not_approved()
+    {
+        var applicantOwnerId = Guid.NewGuid();
+
+        await GivenEvents<VolunteerApplication>(applicantOwnerId,
+            new VolunteerApplicationSubmitted(applicantOwnerId, "HomeChecks"));
+
+        await WhenPosted(new ApproveVolunteer(applicantOwnerId), "/api/volunteering/approvevolunteer");
+
+        // Refused with "This application has not been reviewed".
+        ThenResponseIs(400);
+        ThenNoEvents();
+    }
+
+    [Fact]
+    [BobcatSlice(SliceType = typeof(RejectVolunteerApplication))]
+    public async Task A_reviewed_applicant_is_rejected_with_a_reason()
+    {
+        var applicantOwnerId = Guid.NewGuid();
+
+        await GivenEvents<VolunteerApplication>(applicantOwnerId,
+            new VolunteerApplicationSubmitted(applicantOwnerId, "HomeChecks"),
+            new VolunteerApplicationReviewed(applicantOwnerId));
+
+        await WhenPosted(new RejectVolunteerApplication(applicantOwnerId, "Outside our current coverage area"),
+            "/api/volunteering/rejectvolunteerapplication");
+
+        ThenEvents(typeof(VolunteerApplicationRejected));
+        Assert.Equal("Outside our current coverage area", TheEvent<VolunteerApplicationRejected>().Reason);
+    }
+
+    [Fact]
+    [BobcatSlice(SliceType = typeof(RejectVolunteerApplication))]
+    public async Task An_approved_volunteer_is_not_then_rejected()
+    {
+        var applicantOwnerId = Guid.NewGuid();
+
+        await GivenEvents<VolunteerApplication>(applicantOwnerId,
+            new VolunteerApplicationSubmitted(applicantOwnerId, "HomeChecks"),
+            new VolunteerApplicationReviewed(applicantOwnerId),
+            new VolunteerApproved(applicantOwnerId));
+
+        await WhenPosted(new RejectVolunteerApplication(applicantOwnerId, "Outside our current coverage area"),
+            "/api/volunteering/rejectvolunteerapplication");
+
+        // Refused with "This application has already been decided".
+        ThenResponseIs(400);
+        ThenNoEvents();
+    }
+
+
+    /// <summary>
+    /// Wolverine's own not-found guard, which answers before Validate runs. Declared on the model
+    /// (bobcat#337) rather than carried as an orphan: that declaration is what makes the write
+    /// model non-nullable, which is what makes a hand-written null check unreachable.
+    /// </summary>
     [Fact]
     [BobcatSlice(SliceType = typeof(ReviewVolunteerApplication))]
-    public void Reviewing_an_application_that_does_not_exist_is_not_found()
+    public async Task Reviewing_an_application_that_does_not_exist_is_not_found()
     {
-        // When ReviewVolunteerApplication is posted to "/api/volunteering/reviewvolunteerapplication" (applicantOwnerId = {streamId})
-        // # refused with: "No volunteer application with that id"
-        // Then the response is 404
-        // And no events are emitted
+        await WhenPosted(new ReviewVolunteerApplication(Guid.NewGuid()), "/api/volunteering/reviewvolunteerapplication");
 
-        throw new NotImplementedException("ReviewVolunteerApplication: Reviewing an application that does not exist is not found");
+        ThenResponseIs(404);
+        ThenNoEvents();
     }
 
+    /// <summary>
+    /// Wolverine's own not-found guard, which answers before Validate runs. Declared on the model
+    /// (bobcat#337) rather than carried as an orphan: that declaration is what makes the write
+    /// model non-nullable, which is what makes a hand-written null check unreachable.
+    /// </summary>
     [Fact]
     [BobcatSlice(SliceType = typeof(ApproveVolunteer))]
-    public void A_reviewed_applicant_is_approved()
+    public async Task Approving_an_application_that_does_not_exist_is_not_found()
     {
-        // Given VolunteerApplicationSubmitted (areasOfInterest = HomeChecks)
-        // Given VolunteerApplicationReviewed
-        // When ApproveVolunteer is posted to "/api/volunteering/approvevolunteer" (applicantOwnerId = {streamId})
-        // Then VolunteerApproved is emitted
+        await WhenPosted(new ApproveVolunteer(Guid.NewGuid()), "/api/volunteering/approvevolunteer");
 
-        throw new NotImplementedException("ApproveVolunteer: A reviewed applicant is approved");
+        ThenResponseIs(404);
+        ThenNoEvents();
     }
 
-    [Fact]
-    [BobcatSlice(SliceType = typeof(ApproveVolunteer))]
-    public void An_applicant_nobody_reviewed_is_not_approved()
-    {
-        // Given VolunteerApplicationSubmitted (areasOfInterest = HomeChecks)
-        // When ApproveVolunteer is posted to "/api/volunteering/approvevolunteer" (applicantOwnerId = {streamId})
-        // # refused with: "This application has not been reviewed"
-        // Then the response is 400
-        // And no events are emitted
-
-        throw new NotImplementedException("ApproveVolunteer: An applicant nobody reviewed is not approved");
-    }
-
-    [Fact]
-    [BobcatSlice(SliceType = typeof(ApproveVolunteer))]
-    public void Approving_an_application_that_does_not_exist_is_not_found()
-    {
-        // When ApproveVolunteer is posted to "/api/volunteering/approvevolunteer" (applicantOwnerId = {streamId})
-        // # refused with: "No volunteer application with that id"
-        // Then the response is 404
-        // And no events are emitted
-
-        throw new NotImplementedException("ApproveVolunteer: Approving an application that does not exist is not found");
-    }
-
+    /// <summary>
+    /// Wolverine's own not-found guard, which answers before Validate runs. Declared on the model
+    /// (bobcat#337) rather than carried as an orphan: that declaration is what makes the write
+    /// model non-nullable, which is what makes a hand-written null check unreachable.
+    /// </summary>
     [Fact]
     [BobcatSlice(SliceType = typeof(RejectVolunteerApplication))]
-    public void A_reviewed_applicant_is_rejected_with_a_reason()
+    public async Task Rejecting_an_application_that_does_not_exist_is_not_found()
     {
-        // Given VolunteerApplicationSubmitted (areasOfInterest = HomeChecks)
-        // Given VolunteerApplicationReviewed
-        // When RejectVolunteerApplication is posted to "/api/volunteering/rejectvolunteerapplication" (applicantOwnerId = {streamId}, reason = Outside our current coverage area)
-        // Then VolunteerApplicationRejected is emitted (reason = Outside our current coverage area)
+        await WhenPosted(new RejectVolunteerApplication(Guid.NewGuid(), "Not enough availability"), "/api/volunteering/rejectvolunteerapplication");
 
-        throw new NotImplementedException("RejectVolunteerApplication: A reviewed applicant is rejected with a reason");
-    }
-
-    [Fact]
-    [BobcatSlice(SliceType = typeof(RejectVolunteerApplication))]
-    public void An_approved_volunteer_is_not_then_rejected()
-    {
-        // Given VolunteerApplicationSubmitted (areasOfInterest = HomeChecks)
-        // Given VolunteerApplicationReviewed
-        // Given VolunteerApproved
-        // When RejectVolunteerApplication is posted to "/api/volunteering/rejectvolunteerapplication" (applicantOwnerId = {streamId}, reason = Outside our current coverage area)
-        // # refused with: "This application has already been decided"
-        // Then the response is 400
-        // And no events are emitted
-
-        throw new NotImplementedException("RejectVolunteerApplication: An approved volunteer is not then rejected");
-    }
-
-    [Fact]
-    [BobcatSlice(SliceType = typeof(RejectVolunteerApplication))]
-    public void Rejecting_an_application_that_does_not_exist_is_not_found()
-    {
-        // When RejectVolunteerApplication is posted to "/api/volunteering/rejectvolunteerapplication" (applicantOwnerId = {streamId}, reason = Not enough availability)
-        // # refused with: "No volunteer application with that id"
-        // Then the response is 404
-        // And no events are emitted
-
-        throw new NotImplementedException("RejectVolunteerApplication: Rejecting an application that does not exist is not found");
+        ThenResponseIs(404);
+        ThenNoEvents();
     }
 }

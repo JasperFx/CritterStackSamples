@@ -12,49 +12,25 @@ public class VolunteerApplicationsQueue
 // Async lifecycle: register with the daemon RUNNING (AddAsyncDaemon), or this never advances.
 public class VolunteerApplicationsQueueProjection : SingleStreamProjection<VolunteerApplicationsQueue, Guid>
 {
-
-    public void Apply(VolunteerApplicationSubmitted volunteerApplicationSubmitted, VolunteerApplicationsQueue view)
+    public void Apply(VolunteerApplicationSubmitted submitted, VolunteerApplicationsQueue view)
     {
-        // Fill this in and delete the throw — the model's scenarios say what the view holds.
-        // Until then the projection stops on this event, so a scenario asserting the read model
-        // fails on its projection wait rather than on a value.
-        throw new NotImplementedException("TODO: VolunteerApplicationsQueue — project VolunteerApplicationSubmitted");
+        view.ApplicantOwnerId = submitted.ApplicantOwnerId;
+        view.AreasOfInterest = submitted.AreasOfInterest;
+        view.Status = VolunteerApplicationStatus.Submitted;
     }
 
+    public void Apply(VolunteerApplicationReviewed _, VolunteerApplicationsQueue view)
+        => view.Status = VolunteerApplicationStatus.Reviewed;
 
-    public void Apply(VolunteerApplicationReviewed volunteerApplicationReviewed, VolunteerApplicationsQueue view)
-    {
-        // Fill this in and delete the throw — the model's scenarios say what the view holds.
-        // Until then the projection stops on this event, so a scenario asserting the read model
-        // fails on its projection wait rather than on a value.
-        throw new NotImplementedException("TODO: VolunteerApplicationsQueue — project VolunteerApplicationReviewed");
-    }
+    public void Apply(VolunteerApproved _, VolunteerApplicationsQueue view)
+        => view.Status = VolunteerApplicationStatus.Approved;
 
-
-    public void Apply(VolunteerApproved volunteerApproved, VolunteerApplicationsQueue view)
-    {
-        // Fill this in and delete the throw — the model's scenarios say what the view holds.
-        // Until then the projection stops on this event, so a scenario asserting the read model
-        // fails on its projection wait rather than on a value.
-        throw new NotImplementedException("TODO: VolunteerApplicationsQueue — project VolunteerApproved");
-    }
-
-
-    public void Apply(VolunteerApplicationRejected volunteerApplicationRejected, VolunteerApplicationsQueue view)
-    {
-        // Fill this in and delete the throw — the model's scenarios say what the view holds.
-        // Until then the projection stops on this event, so a scenario asserting the read model
-        // fails on its projection wait rather than on a value.
-        throw new NotImplementedException("TODO: VolunteerApplicationsQueue — project VolunteerApplicationRejected");
-    }
-
+    public void Apply(VolunteerApplicationRejected _, VolunteerApplicationsQueue view)
+        => view.Status = VolunteerApplicationStatus.Rejected;
 }
-
 
 public static class GetVolunteerApplicationsQueueEndpoint
 {
     [WolverineGet("/api/volunteerapplicationsqueue/{id}")]
     public static VolunteerApplicationsQueue Get([Entity(Required = true)] VolunteerApplicationsQueue volunteerApplicationsQueue) => volunteerApplicationsQueue;
 }
-
-

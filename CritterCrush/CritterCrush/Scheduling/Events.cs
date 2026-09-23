@@ -47,4 +47,3 @@ public record AppointmentCancelled(Guid OwnerId, Guid ShelterId, bool WasConfirm
 
 /// <summary>The counterparty never arrived</summary>
 public record AppointmentNoShowRecorded(Guid OwnerId, Guid ShelterId, DateTimeOffset RecordedAt) : IOwnerEvent, IShelterEvent;
-

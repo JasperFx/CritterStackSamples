@@ -1,4 +1,6 @@
 using Bobcat;
+using CritterCrush.Scheduling;
+using CritterCrush.Volunteering;
 using Xunit;
 
 namespace CritterCrush.Specs;
@@ -13,14 +15,34 @@ namespace CritterCrush.Specs;
 /// </remarks>
 [BobcatFeature("BookingAppointments")]
 [BobcatSlice(SliceName = "ProposeHomeCheckAppointment")]
-public class ProposalSpecs
+[Collection(CritterCrushHost.CollectionName)]
+public class ProposalSpecs(CritterCrushHost host) : CritterCrushSpec(host)
 {
+    /// <summary>
+    /// The slice #324 opens with: a trigger event in, one event out, plus the stream it starts.
+    /// The decision that matters is that the appointment's stream IS the assignment that asked for
+    /// it — at-least-once delivery then collides on StartStream instead of booking a second visit —
+    /// and this asserts it directly rather than through the store.
+    /// </summary>
     [Fact]
-    public void An_accepted_home_check_assignment_proposes_a_visit()
+    public async Task An_accepted_home_check_assignment_proposes_a_visit()
     {
-        // When HomeCheckAssignmentAccepted is received (assignmentId = {streamId}, ownerId = 0e5e0001-0000-0000-0000-000000000001, shelterId = 5e110001-0000-0000-0000-000000000001, volunteerOwnerId = 0e5e0099-0000-0000-0000-000000000099, proposedFor = 2026-10-01T15:00:00Z)
-        // Then HomeCheckAppointmentProposed is emitted (ownerId = 0e5e0001-0000-0000-0000-000000000001, kind = HomeCheck, sourceId = {streamId}, scheduledFor = 2026-10-01T15:00:00Z)
+        var assignmentId = Guid.NewGuid();
+        var ownerId = Guid.NewGuid();
+        var shelterId = Guid.NewGuid();
+        var proposedFor = new DateTimeOffset(2026, 10, 1, 15, 0, 0, TimeSpan.Zero);
 
-        throw new NotImplementedException("ProposeHomeCheckAppointment: An accepted home check assignment proposes a visit");
+        await WhenReceived(new HomeCheckAssignmentAccepted(
+            assignmentId, ownerId, shelterId, Guid.NewGuid(), proposedFor));
+
+        ThenEvents(typeof(HomeCheckAppointmentProposed));
+
+        var proposed = TheEvent<HomeCheckAppointmentProposed>();
+        Assert.Equal(ownerId, proposed.OwnerId);
+        Assert.Equal(AppointmentKind.HomeCheck, proposed.Kind);
+        Assert.Equal(proposedFor, proposed.ScheduledFor);
+
+        // The one decision worth specifying: the appointment's stream is the assignment's id.
+        Assert.Equal(assignmentId, proposed.SourceId);
     }
 }

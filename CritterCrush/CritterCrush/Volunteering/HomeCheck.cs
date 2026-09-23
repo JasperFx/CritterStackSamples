@@ -1,5 +1,13 @@
 namespace CritterCrush.Volunteering;
 
+/// <summary>Where a home check is in its life.</summary>
+public static class HomeCheckStatus
+{
+    public const string Requested = nameof(Requested);
+    public const string Accepted = nameof(Accepted);
+    public const string Reported = nameof(Reported);
+}
+
 public class HomeCheck
 {
     public Guid Id { get; set; }
@@ -9,26 +17,22 @@ public class HomeCheck
     public Guid VolunteerOwnerId { get; set; }
     public string Status { get; set; } = string.Empty;
 
-    public static HomeCheck Create(HomeCheckRequested homeCheckRequested)
+    public static HomeCheck Create(HomeCheckRequested requested) => new()
     {
-        // TODO: fold the creating event into the initial state
-        return new HomeCheck();
+        ApplicationId = requested.ApplicationId,
+        OwnerId = requested.OwnerId,
+        ShelterId = requested.ShelterId,
+        Status = HomeCheckStatus.Requested
+    };
+
+
+    public void Apply(HomeCheckAssignmentAccepted accepted)
+    {
+        VolunteerOwnerId = accepted.VolunteerOwnerId;
+        Status = HomeCheckStatus.Accepted;
     }
 
 
-    public void Apply(HomeCheckAssignmentAccepted homeCheckAssignmentAccepted)
-    {
-        // TODO: fold this event into the state. Deterministic only —
-        // timestamps belong on the event record, never DateTimeOffset.UtcNow here.
-    }
-
-
-    public void Apply(HomeCheckReportSubmitted homeCheckReportSubmitted)
-    {
-        // TODO: fold this event into the state. Deterministic only —
-        // timestamps belong on the event record, never DateTimeOffset.UtcNow here.
-    }
+    public void Apply(HomeCheckReportSubmitted _) => Status = HomeCheckStatus.Reported;
 
 }
-
-

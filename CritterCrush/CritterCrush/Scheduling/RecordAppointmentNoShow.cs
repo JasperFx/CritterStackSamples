@@ -9,32 +9,24 @@ public record RecordAppointmentNoShow(Guid AppointmentId);
 /// </summary>
 public static class RecordAppointmentNoShowEndpoint
 {
-    public static ProblemDetails Validate(RecordAppointmentNoShow command, Appointment appointment)
-    {
-        // The model's refusing scenarios arrange prior events, so these refusals are about
-        // appointment's state, not the request's shape. It is never null — see the 404 below.
-        // TODO guard: return new ProblemDetails { Detail = "This appointment is already closed", Status = 400 };
-        // TODO guard: return new ProblemDetails { Detail = "This appointment has not been confirmed", Status = 400 };
-        // 404 ("No appointment with that id") is Wolverine's own guard on the required Appointment below:
-        // it answers before this method runs, so there is no guard to write here. A null
-        // check on appointment would be unreachable code that looks load-bearing.
-        return WolverineContinue.NoProblems;
-    }
+    /// <summary>
+    /// Only a confirmed appointment can be a no-show: somebody has to have agreed to be there.
+    /// Stated as the state required rather than the states excluded — the closed check and the
+    /// unconfirmed check are one question, and asking it as two `if`s is how a state that is both
+    /// gets told the wrong reason.
+    /// </summary>
+    public static ProblemDetails Validate(Appointment appointment)
+        => appointment.Status switch
+        {
+            AppointmentStatus.Confirmed => WolverineContinue.NoProblems,
+            AppointmentStatus.Proposed => new ProblemDetails { Detail = "This appointment has not been confirmed", Status = 400 },
+            _ => new ProblemDetails { Detail = "This appointment is already closed", Status = 400 }
+        };
 
 
     [WolverinePost("/api/scheduling/recordappointmentnoshow")]
     [EmptyResponse]
-    public static EventsToAppend Post(RecordAppointmentNoShow command, [WriteModel] Appointment appointment)
-    {
-        // The decision. Nothing to append is `return [];` — never a nullable event (wolverine#4309).
-        // A computed stream id belongs on the request record: [Identity] public Guid ...Id => ...;
-        // Answering with a body instead of 204: drop [EmptyResponse], declare the response
-        // record, and return it beside the events as a tuple.
-        // Fill this in and delete the throw — the shape is:
-        //     return [new AppointmentNoShowRecorded(/* … */)];
-        throw new NotImplementedException("TODO: RecordAppointmentNoShow — decide which events this slice appends");
-    }
+    public static AppointmentNoShowRecorded Post(RecordAppointmentNoShow command, [WriteModel] Appointment appointment)
+        => new AppointmentNoShowRecorded(appointment.OwnerId, appointment.ShelterId, DateTimeOffset.UtcNow);
 
 }
-
-

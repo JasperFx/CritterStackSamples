@@ -8,14 +8,16 @@ public static class ProposeFosterHandoverAppointmentHandler
 {
     public static StartStream Handle(DogPlacedInFoster trigger)
     {
-        // The decision. Every scenario of this slice arranges no prior events, so it starts the
-        // stream: mint the id (or take it off the trigger) and hand back the Appointment's first event.
-        // Fill this in and delete the throw — the shape is:
-        //     var id = Guid.NewGuid();   // or the identity the trigger already carries
-        //     return Storage.StartStream<Appointment>(id, new FosterHandoverAppointmentProposed(/* … */));
-        throw new NotImplementedException("TODO: ProposeFosterHandoverAppointment — decide which event starts the stream, and what its id is");
+        // The appointment's stream IS FosterApplicationId. Not a fresh Guid: an id the
+        // automation invents is an id no scenario can predict, so nothing could ever assert WHERE
+        // the event landed (bobcat#319/#360). It is safe to reuse only because that id belongs to
+        // no other aggregate in this model — Marten's stream id space is global across types.
+        return Storage.StartStream<Appointment>(trigger.FosterApplicationId, new FosterHandoverAppointmentProposed(
+            trigger.OwnerId,
+            trigger.ShelterId,
+            AppointmentKind.FosterHandover,
+            trigger.FosterApplicationId,
+            trigger.ProposedFor));
     }
 
 }
-
-

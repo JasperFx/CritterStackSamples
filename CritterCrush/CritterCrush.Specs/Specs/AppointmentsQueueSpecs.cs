@@ -1,6 +1,7 @@
 using Bobcat;
-using Xunit;
 using CritterCrush.Scheduling;
+using CritterCrush.Volunteering;
+using Xunit;
 
 namespace CritterCrush.Specs;
 
@@ -13,39 +14,76 @@ namespace CritterCrush.Specs;
 /// are stated once, on the event model, and merge in by slice name.
 /// </remarks>
 [BobcatFeature("AppointmentsQueue")]
-[Collection(CritterCrushHost.CollectionName)]
 [BobcatSlice(SliceType = typeof(AppointmentsQueue))]
-public class AppointmentsQueueSpecs(CritterCrushHost fixture) : CritterCrushSpec(fixture)
+[Collection(CritterCrushHost.CollectionName)]
+public class AppointmentsQueueSpecs(CritterCrushHost host) : CritterCrushSpec(host)
 {
     [Fact]
-    public void The_queue_counts_appointments_from_every_stream_in_the_shelter()
+    /// <summary>
+    /// The behaviour that makes this projection multi-stream: two DIFFERENT appointment streams
+    /// fold into one shelter's document. A single-stream projection could not express it, so
+    /// arranging both streams is the whole point of the scenario.
+    /// </summary>
+    public async Task The_queue_counts_appointments_from_every_stream_in_the_shelter()
     {
-        // Given HomeCheckAppointmentProposed (ownerId = 0e5e0001-0000-0000-0000-000000000001, shelterId = 5e110001-0000-0000-0000-000000000001, kind = HomeCheck, scheduledFor = 2026-10-01T15:00:00Z)
-        // Given AppointmentConfirmed (ownerId = 0e5e0001-0000-0000-0000-000000000001, shelterId = 5e110001-0000-0000-0000-000000000001)
-        // Given SurrenderIntakeAppointmentProposed (ownerId = 0e5e0003-0000-0000-0000-000000000003, shelterId = 5e110001-0000-0000-0000-000000000001, kind = SurrenderIntake, scheduledFor = 2026-10-03T09:00:00Z)
-        // Then the AppointmentsQueue read model contains (AwaitingConfirmation = 1, Confirmed = 1, Closed = 0)
+        var shelterId = Guid.NewGuid();
+        var confirmed = Guid.NewGuid();
+        var awaiting = Guid.NewGuid();
+        var ownerId = Guid.NewGuid();
+        var at = new DateTimeOffset(2026, 10, 1, 15, 0, 0, TimeSpan.Zero);
 
-        throw new NotImplementedException("AppointmentsQueue: The queue counts appointments from every stream in the shelter");
+        await GivenEventsOn<Appointment>(confirmed,
+            new HomeCheckAppointmentProposed(ownerId, shelterId, AppointmentKind.HomeCheck, confirmed, at),
+            new AppointmentConfirmed(ownerId, shelterId, at));
+
+        await GivenEventsOn<Appointment>(awaiting,
+            new SurrenderIntakeAppointmentProposed(Guid.NewGuid(), shelterId, AppointmentKind.SurrenderIntake, awaiting,
+                new DateTimeOffset(2026, 10, 3, 9, 0, 0, TimeSpan.Zero)));
+
+        var queue = await ThenReadModel<AppointmentsQueue>(shelterId);
+        // The view carries the key it is folded by — never assigned before the review.
+        Assert.Equal(shelterId, queue.ShelterId);
+        Assert.Equal(1, queue.AwaitingConfirmation);
+        Assert.Equal(1, queue.Confirmed);
+        Assert.Equal(0, queue.Closed);
     }
 
     [Fact]
-    public void An_appointment_cancelled_before_anyone_confirmed_it_leaves_the_awaiting_count()
+    public async Task An_appointment_cancelled_before_anyone_confirmed_it_leaves_the_awaiting_count()
     {
-        // Given HomeCheckAppointmentProposed (ownerId = 0e5e0001-0000-0000-0000-000000000001, shelterId = 5e110003-0000-0000-0000-000000000003, kind = HomeCheck, scheduledFor = 2026-10-01T15:00:00Z)
-        // Given AppointmentCancelled (ownerId = 0e5e0001-0000-0000-0000-000000000001, shelterId = 5e110003-0000-0000-0000-000000000003, wasConfirmed = false, reason = The volunteer withdrew)
-        // Then the AppointmentsQueue read model contains (AwaitingConfirmation = 0, Confirmed = 0, Closed = 1)
+        var shelterId = Guid.NewGuid();
+        var id = Guid.NewGuid();
+        var ownerId = Guid.NewGuid();
+        var at = new DateTimeOffset(2026, 10, 1, 15, 0, 0, TimeSpan.Zero);
 
-        throw new NotImplementedException("AppointmentsQueue: An appointment cancelled before anyone confirmed it leaves the awaiting count");
+        await GivenEventsOn<Appointment>(id,
+            new HomeCheckAppointmentProposed(ownerId, shelterId, AppointmentKind.HomeCheck, id, at),
+            // wasConfirmed: false — cancelled while still awaiting, so it leaves the awaiting count
+            // rather than the confirmed one. That flag is why the event carries it at all.
+            new AppointmentCancelled(ownerId, shelterId, false, "The volunteer withdrew"));
+
+        var queue = await ThenReadModel<AppointmentsQueue>(shelterId);
+        Assert.Equal(0, queue.AwaitingConfirmation);
+        Assert.Equal(0, queue.Confirmed);
+        Assert.Equal(1, queue.Closed);
     }
 
     [Fact]
-    public void A_completed_appointment_leaves_the_queue()
+    public async Task A_completed_appointment_leaves_the_queue()
     {
-        // Given HomeCheckAppointmentProposed (ownerId = 0e5e0001-0000-0000-0000-000000000001, shelterId = 5e110002-0000-0000-0000-000000000002, kind = HomeCheck, scheduledFor = 2026-10-01T15:00:00Z)
-        // Given AppointmentConfirmed (ownerId = 0e5e0001-0000-0000-0000-000000000001, shelterId = 5e110002-0000-0000-0000-000000000002)
-        // Given AppointmentCompleted (ownerId = 0e5e0001-0000-0000-0000-000000000001, shelterId = 5e110002-0000-0000-0000-000000000002, completedAt = 2026-10-01T16:00:00Z)
-        // Then the AppointmentsQueue read model contains (AwaitingConfirmation = 0, Confirmed = 0, Closed = 1)
+        var shelterId = Guid.NewGuid();
+        var id = Guid.NewGuid();
+        var ownerId = Guid.NewGuid();
+        var at = new DateTimeOffset(2026, 10, 1, 15, 0, 0, TimeSpan.Zero);
 
-        throw new NotImplementedException("AppointmentsQueue: A completed appointment leaves the queue");
+        await GivenEventsOn<Appointment>(id,
+            new HomeCheckAppointmentProposed(ownerId, shelterId, AppointmentKind.HomeCheck, id, at),
+            new AppointmentConfirmed(ownerId, shelterId, at),
+            new AppointmentCompleted(ownerId, shelterId, at.AddHours(1)));
+
+        var queue = await ThenReadModel<AppointmentsQueue>(shelterId);
+        Assert.Equal(0, queue.AwaitingConfirmation);
+        Assert.Equal(0, queue.Confirmed);
+        Assert.Equal(1, queue.Closed);
     }
 }

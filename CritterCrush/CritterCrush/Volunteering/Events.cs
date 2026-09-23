@@ -36,4 +36,3 @@ public record HomeCheckAssignmentAccepted(Guid AssignmentId, Guid OwnerId, Guid 
 
 /// <summary>The volunteer visited and wrote it up</summary>
 public record HomeCheckReportSubmitted(Guid ApplicationId, Guid OwnerId, Guid ShelterId, string Outcome, string Notes);
-

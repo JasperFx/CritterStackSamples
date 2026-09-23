@@ -6,4 +6,3 @@ namespace CritterCrush.Scheduling;
 /// rather than edit it: a breaking change is SurrenderRequestReviewedV2, never a changed field here.
 /// </summary>
 public record SurrenderRequestReviewed(Guid SurrenderRequestId, Guid OwnerId, Guid ShelterId, DateTimeOffset ProposedFor);
-
