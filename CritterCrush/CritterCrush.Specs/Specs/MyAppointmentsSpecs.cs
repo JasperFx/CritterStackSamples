@@ -13,6 +13,11 @@ namespace CritterCrush.Specs;
 /// Steps render from the marker comments in each test body; the verdict comes from the
 /// runner. [BobcatSlice] carries the BINDING only — the slice's domain, chapter and pattern
 /// are stated once, on the event model, and merge in by slice name.
+/// <para>
+/// [BobcatScenario] is what OPENS the recording each test's steps go into. Without it
+/// ScenarioRecorder.Current is null, every [BobcatStep] interceptor records into
+/// NoStep.Instance, and the suite goes green having rendered nothing at all (issue #379).
+/// </para>
 /// </remarks>
 [BobcatScenario]
 [BobcatFeature("MyAppointments")]
