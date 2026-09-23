@@ -1,44 +1,39 @@
 namespace CritterCrush.Volunteering;
 
-/// <summary>The volunteer visited and wrote it up</summary>
-public record HomeCheckReportSubmitted(
-    Guid ApplicationId,
-    Guid OwnerId,
-    Guid ShelterId,
-    string Outcome,
-    string Notes);
-
-public record SubmitHomeCheckReport(Guid HomeCheckId, string Outcome, string Notes);
-
-public record SubmitHomeCheckReportResponse();
+public record SubmitHomeCheckReport([property: Identity] Guid HomeCheckId, string Outcome, string Notes);
 
 /// <summary>
-/// The report leaves this boundary: the board's note says its only real consumer is
-/// ShelterReviewsApplication, and advisory there. No slice in this model handles it, and the model
-/// says so with an outbound external-system edge rather than leaving it dangling.
+/// The endpoint IS the handler: one transaction, honest status codes. Split a separate
+/// message handler out only when this command genuinely needs bus visibility — other
+/// callers, retry policies, scheduling — never for testability.
 /// </summary>
 public static class SubmitHomeCheckReportEndpoint
 {
-    public static ProblemDetails Validate(SubmitHomeCheckReport command, [ReadModel] HomeCheck? homeCheck)
+    public static ProblemDetails Validate(SubmitHomeCheckReport command, HomeCheck homeCheck)
     {
-        if (homeCheck is null) return VolunteeringRefusals.NoSuchHomeCheck;
-        if (homeCheck.Status != HomeCheckStatus.Assigned)
-        {
-            return new ProblemDetails { Detail = "Nobody has accepted this home check", Status = 400 };
-        }
-
+        // The model's refusing scenarios arrange prior events, so these refusals are about
+        // homeCheck's state, not the request's shape. It is never null — see the 404 below.
+        // TODO guard: return new ProblemDetails { Detail = "Nobody has accepted this home check", Status = 400 };
+        // 404 ("No home check with that id") is Wolverine's own guard on the required HomeCheck below:
+        // it answers before this method runs, so there is no guard to write here. A null
+        // check on homeCheck would be unreachable code that looks load-bearing.
         return WolverineContinue.NoProblems;
     }
 
+
     [WolverinePost("/api/volunteering/submithomecheckreport")]
-    public static (SubmitHomeCheckReportResponse, EventsToAppend) Post(SubmitHomeCheckReport command, [WriteModel] HomeCheck homeCheck) =>
-        (new SubmitHomeCheckReportResponse(),
-            [
-                new HomeCheckReportSubmitted(
-                    homeCheck.ApplicationId,
-                    homeCheck.OwnerId,
-                    homeCheck.ShelterId,
-                    command.Outcome,
-                    command.Notes)
-            ]);
+    [EmptyResponse]
+    public static EventsToAppend Post(SubmitHomeCheckReport command, [WriteModel] HomeCheck homeCheck)
+    {
+        // The decision. Nothing to append is `return [];` — never a nullable event (wolverine#4309).
+        // A computed stream id belongs on the request record: [Identity] public Guid ...Id => ...;
+        // Answering with a body instead of 204: drop [EmptyResponse], declare the response
+        // record, and return it beside the events as a tuple.
+        // Fill this in and delete the throw — the shape is:
+        //     return [new HomeCheckReportSubmitted(/* … */)];
+        throw new NotImplementedException("TODO: SubmitHomeCheckReport — decide which events this slice appends");
+    }
+
 }
+
+

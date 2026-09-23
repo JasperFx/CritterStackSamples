@@ -16,3 +16,4 @@ global using JasperFx;
 // on the Event Model is a cross-namespace reference in the code.
 global using CritterCrush.Scheduling;
 global using CritterCrush.Volunteering;
+global using JasperFx.Events;

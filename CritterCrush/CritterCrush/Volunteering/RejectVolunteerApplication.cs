@@ -1,30 +1,39 @@
 namespace CritterCrush.Volunteering;
 
-/// <summary>The applicant will not be volunteering</summary>
-public record VolunteerApplicationRejected(Guid ApplicantOwnerId, string Reason);
+public record RejectVolunteerApplication([property: Identity] Guid ApplicantOwnerId, string Reason);
 
-public record RejectVolunteerApplication(Guid ApplicantOwnerId, string Reason)
-{
-    [Identity] public Guid VolunteerApplicationId => ApplicantOwnerId;
-}
-
-public record RejectVolunteerApplicationResponse();
-
+/// <summary>
+/// The endpoint IS the handler: one transaction, honest status codes. Split a separate
+/// message handler out only when this command genuinely needs bus visibility — other
+/// callers, retry policies, scheduling — never for testability.
+/// </summary>
 public static class RejectVolunteerApplicationEndpoint
 {
-    public static ProblemDetails Validate(RejectVolunteerApplication command, [ReadModel] VolunteerApplication? volunteerApplication)
+    public static ProblemDetails Validate(RejectVolunteerApplication command, VolunteerApplication volunteerApplication)
     {
-        if (volunteerApplication is null) return VolunteeringRefusals.NoSuchApplication;
-        if (volunteerApplication.IsDecided)
-        {
-            return new ProblemDetails { Detail = "This application has already been decided", Status = 400 };
-        }
-
+        // The model's refusing scenarios arrange prior events, so these refusals are about
+        // volunteerApplication's state, not the request's shape. It is never null — see the 404 below.
+        // TODO guard: return new ProblemDetails { Detail = "This application has already been decided", Status = 400 };
+        // 404 ("No volunteer application with that id") is Wolverine's own guard on the required VolunteerApplication below:
+        // it answers before this method runs, so there is no guard to write here. A null
+        // check on volunteerApplication would be unreachable code that looks load-bearing.
         return WolverineContinue.NoProblems;
     }
 
+
     [WolverinePost("/api/volunteering/rejectvolunteerapplication")]
-    public static (RejectVolunteerApplicationResponse, EventsToAppend) Post(RejectVolunteerApplication command, [WriteModel] VolunteerApplication volunteerApplication) =>
-        (new RejectVolunteerApplicationResponse(),
-            [new VolunteerApplicationRejected(volunteerApplication.ApplicantOwnerId, command.Reason)]);
+    [EmptyResponse]
+    public static EventsToAppend Post(RejectVolunteerApplication command, [WriteModel] VolunteerApplication volunteerApplication)
+    {
+        // The decision. Nothing to append is `return [];` — never a nullable event (wolverine#4309).
+        // A computed stream id belongs on the request record: [Identity] public Guid ...Id => ...;
+        // Answering with a body instead of 204: drop [EmptyResponse], declare the response
+        // record, and return it beside the events as a tuple.
+        // Fill this in and delete the throw — the shape is:
+        //     return [new VolunteerApplicationRejected(/* … */)];
+        throw new NotImplementedException("TODO: RejectVolunteerApplication — decide which events this slice appends");
+    }
+
 }
+
+

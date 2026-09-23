@@ -37,6 +37,9 @@ nodes:
     specs:
       - BookingAppointments/A proposed appointment is confirmed
       - BookingAppointments/A cancelled appointment cannot be confirmed
+      - BookingAppointments/A completed appointment cannot be confirmed
+      - BookingAppointments/An appointment is not confirmed twice
+      - BookingAppointments/An appointment that does not exist is not found
   - id: request-reschedule
     kind: slice
     slice: RequestReschedule
@@ -47,6 +50,7 @@ nodes:
     specs:
       - BookingAppointments/A member asks to move a confirmed appointment
       - BookingAppointments/A completed appointment cannot be rescheduled
+      - BookingAppointments/Asking to move an appointment that does not exist is not found
   - id: reschedule-appointment
     kind: slice
     slice: RescheduleAppointment
@@ -57,6 +61,8 @@ nodes:
     specs:
       - BookingAppointments/The shelter moves an appointment a member asked to move
       - BookingAppointments/An appointment nobody asked to move is not moved
+      - BookingAppointments/A cancelled appointment is not moved even when a move was asked for
+      - BookingAppointments/Moving an appointment that does not exist is not found
   - id: complete-appointment
     kind: slice
     slice: CompleteAppointment
@@ -67,6 +73,7 @@ nodes:
     specs:
       - BookingAppointments/A confirmed appointment is completed
       - BookingAppointments/An appointment nobody confirmed is not completed
+      - BookingAppointments/Completing an appointment that does not exist is not found
   - id: cancel-appointment
     kind: slice
     slice: CancelAppointment
@@ -77,6 +84,7 @@ nodes:
     specs:
       - BookingAppointments/A confirmed appointment is cancelled
       - BookingAppointments/A completed appointment cannot be cancelled
+      - BookingAppointments/Cancelling an appointment that does not exist is not found
   - id: record-appointment-no-show
     kind: slice
     slice: RecordAppointmentNoShow
@@ -85,8 +93,10 @@ nodes:
     depends_on:
       - propose-home-check-appointment
     specs:
-      - BookingAppointments/A no-show is recorded against a confirmed appointment
-      - BookingAppointments/A completed appointment cannot be marked a no-show
+      - BookingAppointments/A no show is recorded against a confirmed appointment
+      - BookingAppointments/A completed appointment cannot be marked a no show
+      - BookingAppointments/An appointment nobody confirmed is not a no show
+      - BookingAppointments/Recording a no show against an appointment that does not exist is not found
   - id: appointments-queue
     kind: slice
     slice: AppointmentsQueue
@@ -119,7 +129,7 @@ nodes:
       - record-appointment-no-show
     specs:
       - MyAppointments/An owner sees an appointment awaiting their confirmation
-      - MyAppointments/An owner's page spans every appointment stream they have
+      - MyAppointments/An owner page spans every appointment stream they have
   - id: apply-to-volunteer
     kind: slice
     slice: ApplyToVolunteer
@@ -138,6 +148,7 @@ nodes:
     specs:
       - Volunteering/An admin reviews a submitted application
       - Volunteering/An application already decided is not reviewed again
+      - Volunteering/Reviewing an application that does not exist is not found
   - id: approve-volunteer
     kind: slice
     slice: ApproveVolunteer
@@ -148,6 +159,7 @@ nodes:
     specs:
       - Volunteering/A reviewed applicant is approved
       - Volunteering/An applicant nobody reviewed is not approved
+      - Volunteering/Approving an application that does not exist is not found
   - id: reject-volunteer-application
     kind: slice
     slice: RejectVolunteerApplication
@@ -158,6 +170,7 @@ nodes:
     specs:
       - Volunteering/A reviewed applicant is rejected with a reason
       - Volunteering/An approved volunteer is not then rejected
+      - Volunteering/Rejecting an application that does not exist is not found
   - id: request-home-check
     kind: slice
     slice: RequestHomeCheck
@@ -177,6 +190,7 @@ nodes:
       - HomeChecks/A volunteer accepts an assignment and proposes a time
       - HomeChecks/Accepting an assignment books the home check as an appointment
       - HomeChecks/An assignment already accepted is not accepted again
+      - HomeChecks/Accepting a home check that does not exist is not found
   - id: submit-home-check-report
     kind: slice
     slice: SubmitHomeCheckReport
@@ -187,6 +201,7 @@ nodes:
     specs:
       - HomeChecks/A volunteer reports on a visit they accepted
       - HomeChecks/A visit nobody accepted cannot be reported on
+      - HomeChecks/Reporting on a home check that does not exist is not found
   - id: volunteer-applications-queue
     kind: slice
     slice: VolunteerApplicationsQueue
