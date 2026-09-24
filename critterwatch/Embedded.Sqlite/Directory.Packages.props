@@ -27,14 +27,14 @@
   </ItemGroup>
 
   <ItemGroup Label="Critter Stack">
-    <PackageVersion Include="WolverineFx" Version="6.39.0" />
-    <PackageVersion Include="WolverineFx.Http" Version="6.39.0" />
-    <PackageVersion Include="WolverineFx.Fisher" Version="6.39.0" />
-    <PackageVersion Include="WolverineFx.Http.Fisher" Version="6.39.0" />
+    <PackageVersion Include="WolverineFx" Version="6.40.0" />
+    <PackageVersion Include="WolverineFx.Http" Version="6.40.0" />
+    <PackageVersion Include="WolverineFx.Fisher" Version="6.40.0" />
+    <PackageVersion Include="WolverineFx.Http.Fisher" Version="6.40.0" />
     <!-- ⚠️ Embedded generates the console's chains at RUNTIME (the host owns the
          runtime, so the console cannot use its own static registries). -->
-    <PackageVersion Include="WolverineFx.RuntimeCompilation" Version="6.39.0" />
-    <PackageVersion Include="Fisher" Version="1.11.0" />
+    <PackageVersion Include="WolverineFx.RuntimeCompilation" Version="6.40.0" />
+    <PackageVersion Include="Fisher" Version="1.12.0" />
   </ItemGroup>
 
   <ItemGroup Label="Tests">
