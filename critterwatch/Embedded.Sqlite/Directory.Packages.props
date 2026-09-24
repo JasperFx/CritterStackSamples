@@ -17,7 +17,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <!-- Bump when re-packing; a stale pack in the NuGet global cache silently
          shadows a newer one of the same version (CritterWatch #997). -->
-    <CritterWatchVersion>1.1.0-embedded.8</CritterWatchVersion>
+    <CritterWatchVersion>1.1.0-embedded.10</CritterWatchVersion>
   </PropertyGroup>
 
   <ItemGroup Label="CritterWatch — LOCAL FEED until 1.1 publishes">
