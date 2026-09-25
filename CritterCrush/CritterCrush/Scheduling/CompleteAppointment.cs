@@ -1,31 +1,24 @@
 namespace CritterCrush.Scheduling;
 
-/// <summary>The visit happened</summary>
-public record AppointmentCompleted(Guid OwnerId, Guid ShelterId, DateTimeOffset CompletedAt);
-
 public record CompleteAppointment(Guid AppointmentId);
 
-public record CompleteAppointmentResponse();
-
 /// <summary>
-/// Completion is reachable only from Confirmed, which is what lets AppointmentCompleted carry no
-/// prior-state flag: the counting views know it came out of their Confirmed bucket.
+/// The endpoint IS the handler: one transaction, honest status codes. Split a separate
+/// message handler out only when this command genuinely needs bus visibility — other
+/// callers, retry policies, scheduling — never for testability.
 /// </summary>
 public static class CompleteAppointmentEndpoint
 {
-    public static ProblemDetails Validate(CompleteAppointment command, [ReadModel] Appointment? appointment)
-    {
-        if (appointment is null) return Refusals.NoSuchAppointment;
-        if (appointment.Status != AppointmentStatus.Confirmed)
-        {
-            return new ProblemDetails { Detail = "This appointment has not been confirmed", Status = 400 };
-        }
+    /// <summary>A visit that happened was a visit somebody agreed to.</summary>
+    public static ProblemDetails Validate(Appointment appointment)
+        => appointment.Status == AppointmentStatus.Confirmed
+            ? WolverineContinue.NoProblems
+            : new ProblemDetails { Detail = "This appointment has not been confirmed", Status = 400 };
 
-        return WolverineContinue.NoProblems;
-    }
 
     [WolverinePost("/api/scheduling/completeappointment")]
-    public static (CompleteAppointmentResponse, EventsToAppend) Post(CompleteAppointment command, [WriteModel] Appointment appointment) =>
-        (new CompleteAppointmentResponse(),
-            [new AppointmentCompleted(appointment.OwnerId, appointment.ShelterId, DateTimeOffset.UtcNow)]);
+    [EmptyResponse]
+    public static AppointmentCompleted Post(CompleteAppointment command, [WriteModel] Appointment appointment)
+        => new AppointmentCompleted(appointment.OwnerId, appointment.ShelterId, DateTimeOffset.UtcNow);
+
 }

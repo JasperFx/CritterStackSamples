@@ -1,31 +1,25 @@
 namespace CritterCrush.Scheduling;
 
-/// <summary>The counterparty asked for a different time</summary>
-public record AppointmentRescheduleRequested(Guid OwnerId, Guid ShelterId, DateTimeOffset RequestedFor, string Reason);
-
 public record RequestReschedule(Guid AppointmentId, DateTimeOffset RequestedFor, string Reason);
 
-public record RequestRescheduleResponse();
-
 /// <summary>
-/// The counterparty asks; the shelter still owns the move itself, which is the RescheduleAppointment
-/// slice. Asking is deliberately not moving.
+/// The endpoint IS the handler: one transaction, honest status codes. Split a separate
+/// message handler out only when this command genuinely needs bus visibility — other
+/// callers, retry policies, scheduling — never for testability.
 /// </summary>
 public static class RequestRescheduleEndpoint
 {
-    public static ProblemDetails Validate(RequestReschedule command, [ReadModel] Appointment? appointment)
-    {
-        if (appointment is null) return Refusals.NoSuchAppointment;
-        if (appointment.IsClosed)
-        {
-            return new ProblemDetails { Detail = "This appointment is already closed", Status = 400 };
-        }
+    /// <summary>Only an appointment that is still going to happen can be moved.</summary>
+    public static ProblemDetails Validate(Appointment appointment)
+        => AppointmentStatus.IsClosed(appointment.Status)
+            ? new ProblemDetails { Detail = "This appointment is already closed", Status = 400 }
+            : WolverineContinue.NoProblems;
 
-        return WolverineContinue.NoProblems;
-    }
 
     [WolverinePost("/api/scheduling/requestreschedule")]
-    public static (RequestRescheduleResponse, EventsToAppend) Post(RequestReschedule command, [WriteModel] Appointment appointment) =>
-        (new RequestRescheduleResponse(),
-            [new AppointmentRescheduleRequested(appointment.OwnerId, appointment.ShelterId, command.RequestedFor, command.Reason)]);
+    [EmptyResponse]
+    public static AppointmentRescheduleRequested Post(RequestReschedule command, [WriteModel] Appointment appointment)
+        => new AppointmentRescheduleRequested(
+            appointment.OwnerId, appointment.ShelterId, command.RequestedFor, command.Reason);
+
 }

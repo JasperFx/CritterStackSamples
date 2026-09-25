@@ -1,33 +1,33 @@
 namespace CritterCrush.Scheduling;
 
-/// <summary>The shelter moved the appointment to a new time</summary>
-public record AppointmentRescheduled(Guid OwnerId, Guid ShelterId, DateTimeOffset ScheduledFor);
-
 public record RescheduleAppointment(Guid AppointmentId, DateTimeOffset ScheduledFor);
 
-public record RescheduleAppointmentResponse();
-
 /// <summary>
-/// Only a requested move is honoured. The board draws Reschedule strictly downstream of Request
-/// Reschedule, so a unilateral move is refused here — and the model carries that as a hotspot,
-/// because whether a shelter may move an appointment on its own is a real question the board did
-/// not settle.
+/// The endpoint IS the handler: one transaction, honest status codes. Split a separate
+/// message handler out only when this command genuinely needs bus visibility — other
+/// callers, retry policies, scheduling — never for testability.
 /// </summary>
 public static class RescheduleAppointmentEndpoint
 {
-    public static ProblemDetails Validate(RescheduleAppointment command, [ReadModel] Appointment? appointment)
+    /// <summary>
+    /// The board draws Reschedule only downstream of Request Reschedule, so a move nobody asked for
+    /// is refused. Whether the shelter may move an appointment unilaterally — a vet running late, a
+    /// volunteer calling in sick — is the model's open hotspot, not this code's to settle.
+    /// </summary>
+    public static ProblemDetails Validate(Appointment appointment)
     {
-        if (appointment is null) return Refusals.NoSuchAppointment;
-        if (!appointment.RescheduleRequested)
-        {
-            return new ProblemDetails { Detail = "Nobody asked to move this appointment", Status = 400 };
-        }
+        if (AppointmentStatus.IsClosed(appointment.Status))
+            return new ProblemDetails { Detail = "This appointment is already closed", Status = 400 };
 
-        return WolverineContinue.NoProblems;
+        return appointment.RescheduleRequested
+            ? WolverineContinue.NoProblems
+            : new ProblemDetails { Detail = "Nobody asked to move this appointment", Status = 400 };
     }
 
+
     [WolverinePost("/api/scheduling/rescheduleappointment")]
-    public static (RescheduleAppointmentResponse, EventsToAppend) Post(RescheduleAppointment command, [WriteModel] Appointment appointment) =>
-        (new RescheduleAppointmentResponse(),
-            [new AppointmentRescheduled(appointment.OwnerId, appointment.ShelterId, command.ScheduledFor)]);
+    [EmptyResponse]
+    public static AppointmentRescheduled Post(RescheduleAppointment command, [WriteModel] Appointment appointment)
+        => new AppointmentRescheduled(appointment.OwnerId, appointment.ShelterId, command.ScheduledFor);
+
 }

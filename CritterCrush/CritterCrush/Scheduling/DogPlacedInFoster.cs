@@ -6,4 +6,3 @@ namespace CritterCrush.Scheduling;
 /// rather than edit it: a breaking change is DogPlacedInFosterV2, never a changed field here.
 /// </summary>
 public record DogPlacedInFoster(Guid FosterApplicationId, Guid OwnerId, Guid ShelterId, DateTimeOffset ProposedFor);
-

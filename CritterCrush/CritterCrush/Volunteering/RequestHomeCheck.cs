@@ -1,35 +1,24 @@
 namespace CritterCrush.Volunteering;
 
-/// <summary>A home check is needed and awaits a volunteer</summary>
-public record HomeCheckRequested(Guid ApplicationId, Guid OwnerId, Guid ShelterId);
-
-public record RequestHomeCheck(Guid HomeCheckId, Guid ApplicationId, Guid OwnerId, Guid ShelterId);
-
-public record RequestHomeCheckResponse();
+public record RequestHomeCheck([property: Identity] Guid HomeCheckId, Guid ApplicationId, Guid OwnerId, Guid ShelterId);
 
 /// <summary>
-/// Starts the HomeCheck stream, and the caller supplies the id — which is the easy case: a
-/// client-supplied identity makes a creating command specifiable with no derivation at all.
-///
-/// `applicationId` is carried as data and nothing checks it. The board draws "Application Reviewed"
-/// before this step as context, and its own note calls the home check "deliberately advisory, not a
-/// hard precondition" — the model records that rather than inventing a rule.
+/// The endpoint IS the handler: one transaction, honest status codes. Split a separate
+/// message handler out only when this command genuinely needs bus visibility — other
+/// callers, retry policies, scheduling — never for testability.
 /// </summary>
 public static class RequestHomeCheckEndpoint
 {
-    public static ProblemDetails Validate(RequestHomeCheck command, [ReadModel] HomeCheck? homeCheck)
-    {
-        // Null is the expected state: this command creates the stream.
-        if (homeCheck is not null)
-        {
-            return new ProblemDetails { Detail = "This home check has already been requested", Status = 400 };
-        }
+    /// <summary>The caller names the home check's id, so asking twice is asking for a stream that exists.</summary>
+    public static ProblemDetails Validate(HomeCheck? homeCheck)
+        => homeCheck is null
+            ? WolverineContinue.NoProblems
+            : new ProblemDetails { Detail = "This home check has already been requested", Status = 400 };
 
-        return WolverineContinue.NoProblems;
-    }
 
     [WolverinePost("/api/volunteering/requesthomecheck")]
-    public static (RequestHomeCheckResponse, EventsToAppend) Post(RequestHomeCheck command, [WriteModel] HomeCheck? homeCheck) =>
-        (new RequestHomeCheckResponse(),
-            [new HomeCheckRequested(command.ApplicationId, command.OwnerId, command.ShelterId)]);
+    [EmptyResponse]
+    public static HomeCheckRequested Post(RequestHomeCheck command, [WriteModel] HomeCheck? homeCheck)
+        => new HomeCheckRequested(command.ApplicationId, command.OwnerId, command.ShelterId);
+
 }

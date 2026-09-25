@@ -9,14 +9,26 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <!-- Lane A: xUnit owns the entry point. Bobcat.Generators otherwise emits a Main that runs the
+         Bobcat.Mtp host (issue #207), which IS the process — so xUnit never runs and `dotnet test`
+         collects nothing. This is the documented opt-out. The .feature files still generate and
+         still read, they just no longer execute; that is the trade Lane A makes. -->
+    <BobcatGenerateEntryPoint>false</BobcatGenerateEntryPoint>
+    <!-- xunit.v3 runs on Microsoft.Testing.Platform; `dotnet test` needs the bridge turned on. -->
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Bobcat" Version="0.22.0" />
-    <PackageReference Include="Bobcat.Mtp" Version="0.22.0" />
-    <PackageReference Include="Bobcat.Generators" Version="0.22.0" />
-    <PackageReference Include="Bobcat.CritterStack" Version="0.22.0" />
-    <PackageReference Include="Bobcat.Alba" Version="0.22.0" />
+    <PackageReference Include="Bobcat" Version="0.27.3" />
+    <PackageReference Include="Bobcat.Mtp" Version="0.27.3" />
+    <PackageReference Include="Bobcat.Generators" Version="0.27.3" />
+    <PackageReference Include="Bobcat.Alba" Version="0.27.3" />
+    <!-- Lane A: the specs are ordinary xUnit tests bound to slices with [BobcatSlice], so the
+         runner is xUnit and Bobcat.Xunit is the adapter that reports each scenario's verdict.
+         Bobcat.Mtp stays for now — the .feature files are still here for side-by-side review. -->
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <PackageReference Include="Bobcat.Xunit" Version="0.27.3" />
     <AdditionalFiles Include="Features/**/*.feature" />
   </ItemGroup>
 

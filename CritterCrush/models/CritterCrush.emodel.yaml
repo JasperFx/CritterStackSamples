@@ -281,6 +281,63 @@ slices:
           then:
             - validationFails: This appointment was cancelled
 
+        - name: A completed appointment cannot be confirmed
+          given:
+            - event: HomeCheckAppointmentProposed
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                kind: HomeCheck
+                scheduledFor: "2026-10-01T15:00:00Z"
+            - event: AppointmentConfirmed
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+            - event: AppointmentCompleted
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                completedAt: "2026-10-01T16:00:00Z"
+          when:
+            command: ConfirmAppointment
+            with:
+              appointmentId: "{streamId}"
+          then:
+            - validationFails: This appointment is already closed
+        - name: An appointment is not confirmed twice
+          given:
+            - event: HomeCheckAppointmentProposed
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                kind: HomeCheck
+                scheduledFor: "2026-10-01T15:00:00Z"
+            - event: AppointmentConfirmed
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+          when:
+            command: ConfirmAppointment
+            with:
+              appointmentId: "{streamId}"
+          then:
+            - validationFails: This appointment is already confirmed
+
+        # Not a guard: Wolverine emits this 404 itself for a non-nullable [WriteModel], BEFORE
+        # Validate runs. Declaring it (bobcat#337) is how the scaffolder learns the parameter is
+        # required, so it binds it non-nullable and writes no guard TODO — a hand-written null
+        # check there is unreachable code that looks load-bearing. Before #337 the format could
+        # not say this, and the identity had to be carried as an orphan.
+        - name: An appointment that does not exist is not found
+          given: []
+          when:
+            command: ConfirmAppointment
+            with:
+              appointmentId: "{streamId}"
+          then:
+            - refusedWith:
+                status: 404
+                reason: No appointment with that id
   - name: RequestReschedule
     pattern: Command
     domain: Scheduling
@@ -356,6 +413,20 @@ slices:
               reason: Working that afternoon
           then:
             - validationFails: This appointment is already closed
+        # Not a guard: Wolverine emits this 404 itself for a non-nullable [WriteModel], BEFORE
+        # Validate runs. Declaring it is how the scaffolder learns the parameter is required.
+        - name: Asking to move an appointment that does not exist is not found
+          given: []
+          when:
+            command: RequestReschedule
+            with:
+              appointmentId: "{streamId}"
+              requestedFor: "2026-10-05T15:00:00Z"
+              reason: Working that afternoon
+          then:
+            - refusedWith:
+                status: 404
+                reason: No appointment with that id
 
   - name: RescheduleAppointment
     pattern: Command
@@ -432,6 +503,50 @@ slices:
           then:
             - validationFails: Nobody asked to move this appointment
 
+        - name: A cancelled appointment is not moved even when a move was asked for
+          given:
+            - event: HomeCheckAppointmentProposed
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                kind: HomeCheck
+                scheduledFor: "2026-10-01T15:00:00Z"
+            - event: AppointmentConfirmed
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+            - event: AppointmentRescheduleRequested
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                requestedFor: "2026-10-05T15:00:00Z"
+                reason: Working that afternoon
+            - event: AppointmentCancelled
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                wasConfirmed: true
+                reason: The volunteer withdrew
+          when:
+            command: RescheduleAppointment
+            with:
+              appointmentId: "{streamId}"
+              scheduledFor: "2026-10-05T15:00:00Z"
+          then:
+            - validationFails: This appointment is already closed
+        # Not a guard: Wolverine emits this 404 itself for a non-nullable [WriteModel], BEFORE
+        # Validate runs. Declaring it is how the scaffolder learns the parameter is required.
+        - name: Moving an appointment that does not exist is not found
+          given: []
+          when:
+            command: RescheduleAppointment
+            with:
+              appointmentId: "{streamId}"
+              scheduledFor: "2026-10-05T15:00:00Z"
+          then:
+            - refusedWith:
+                status: 404
+                reason: No appointment with that id
   - name: CompleteAppointment
     pattern: Command
     domain: Scheduling
@@ -485,6 +600,18 @@ slices:
             with: { appointmentId: "{streamId}" }
           then:
             - validationFails: This appointment has not been confirmed
+        # Not a guard: Wolverine emits this 404 itself for a non-nullable [WriteModel], BEFORE
+        # Validate runs. Declaring it is how the scaffolder learns the parameter is required.
+        - name: Completing an appointment that does not exist is not found
+          given: []
+          when:
+            command: CompleteAppointment
+            with:
+              appointmentId: "{streamId}"
+          then:
+            - refusedWith:
+                status: 404
+                reason: No appointment with that id
 
   - name: CancelAppointment
     pattern: Command
@@ -557,6 +684,19 @@ slices:
               reason: The volunteer withdrew
           then:
             - validationFails: This appointment is already closed
+        # Not a guard: Wolverine emits this 404 itself for a non-nullable [WriteModel], BEFORE
+        # Validate runs. Declaring it is how the scaffolder learns the parameter is required.
+        - name: Cancelling an appointment that does not exist is not found
+          given: []
+          when:
+            command: CancelAppointment
+            with:
+              appointmentId: "{streamId}"
+              reason: The volunteer withdrew
+          then:
+            - refusedWith:
+                status: 404
+                reason: No appointment with that id
 
   - name: RecordAppointmentNoShow
     pattern: Command
@@ -580,7 +720,7 @@ slices:
     specifications:
       feature: BookingAppointments
       scenarios:
-        - name: A no-show is recorded against a confirmed appointment
+        - name: A no show is recorded against a confirmed appointment
           given:
             - event: HomeCheckAppointmentProposed
               with:
@@ -598,7 +738,7 @@ slices:
           then:
             - event: AppointmentNoShowRecorded
               with: { ownerId: "0e5e0001-0000-0000-0000-000000000001" }
-        - name: A completed appointment cannot be marked a no-show
+        - name: A completed appointment cannot be marked a no show
           given:
             - event: HomeCheckAppointmentProposed
               with:
@@ -635,6 +775,32 @@ slices:
 # neither view consumes one. Declaring an event a projection never applies is the same
 # disagreement in the other direction.
 
+        - name: An appointment nobody confirmed is not a no show
+          given:
+            - event: HomeCheckAppointmentProposed
+              with:
+                ownerId: "0e5e0001-0000-0000-0000-000000000001"
+                shelterId: "5e110001-0000-0000-0000-000000000001"
+                kind: HomeCheck
+                scheduledFor: "2026-10-01T15:00:00Z"
+          when:
+            command: RecordAppointmentNoShow
+            with:
+              appointmentId: "{streamId}"
+          then:
+            - validationFails: This appointment has not been confirmed
+        # Not a guard: Wolverine emits this 404 itself for a non-nullable [WriteModel], BEFORE
+        # Validate runs. Declaring it is how the scaffolder learns the parameter is required.
+        - name: Recording a no show against an appointment that does not exist is not found
+          given: []
+          when:
+            command: RecordAppointmentNoShow
+            with:
+              appointmentId: "{streamId}"
+          then:
+            - refusedWith:
+                status: 404
+                reason: No appointment with that id
   - name: AppointmentsQueue
     pattern: View
     domain: Scheduling
@@ -786,7 +952,7 @@ slices:
                 AwaitingConfirmation: "1"
                 Confirmed: "0"
                 Closed: "0"
-        - name: An owner's page spans every appointment stream they have
+        - name: An owner page spans every appointment stream they have
           given:
             - event: HomeCheckAppointmentProposed
               with:
@@ -891,6 +1057,8 @@ slices:
           then:
             - event: VolunteerApplicationSubmitted
               with: { areasOfInterest: HomeChecks }
+            # bobcat#360: the identity, which `event:` cannot reach.
+            - startsStream: VolunteerApplication
         - name: Applying twice is refused
           given:
             - event: VolunteerApplicationSubmitted
@@ -945,6 +1113,18 @@ slices:
             with: { applicantOwnerId: "{streamId}" }
           then:
             - validationFails: This application has already been decided
+        # Not a guard: Wolverine emits this 404 itself for a non-nullable [WriteModel], BEFORE
+        # Validate runs. Declaring it is how the scaffolder learns the parameter is required.
+        - name: Reviewing an application that does not exist is not found
+          given: []
+          when:
+            command: ReviewVolunteerApplication
+            with:
+              applicantOwnerId: "{streamId}"
+          then:
+            - refusedWith:
+                status: 404
+                reason: No volunteer application with that id
 
   - name: ApproveVolunteer
     pattern: Command
@@ -988,6 +1168,18 @@ slices:
             with: { applicantOwnerId: "{streamId}" }
           then:
             - validationFails: This application has not been reviewed
+        # Not a guard: Wolverine emits this 404 itself for a non-nullable [WriteModel], BEFORE
+        # Validate runs. Declaring it is how the scaffolder learns the parameter is required.
+        - name: Approving an application that does not exist is not found
+          given: []
+          when:
+            command: ApproveVolunteer
+            with:
+              applicantOwnerId: "{streamId}"
+          then:
+            - refusedWith:
+                status: 404
+                reason: No volunteer application with that id
 
   - name: RejectVolunteerApplication
     pattern: Command
@@ -1041,6 +1233,19 @@ slices:
   # ---- Home checks -------------------------------------------------------------------------------
   # A separate aggregate with a separate lifecycle: requested, assigned and accepted, reported on.
   # The acceptance is the event BookingAppointments waits for.
+        # Not a guard: Wolverine emits this 404 itself for a non-nullable [WriteModel], BEFORE
+        # Validate runs. Declaring it is how the scaffolder learns the parameter is required.
+        - name: Rejecting an application that does not exist is not found
+          given: []
+          when:
+            command: RejectVolunteerApplication
+            with:
+              applicantOwnerId: "{streamId}"
+              reason: Not enough availability
+          then:
+            - refusedWith:
+                status: 404
+                reason: No volunteer application with that id
 
   - name: RequestHomeCheck
     pattern: Command
@@ -1099,6 +1304,8 @@ slices:
               with:
                 applicationId: "a99a0001-0000-0000-0000-000000000001"
                 ownerId: "0e5e0011-0000-0000-0000-000000000011"
+            # bobcat#360: the identity, which `event:` cannot reach.
+            - startsStream: HomeCheck
         - name: Requesting the same home check twice is refused
           given:
             - event: HomeCheckRequested
@@ -1217,6 +1424,20 @@ slices:
               proposedFor: "2026-10-02T15:00:00Z"
           then:
             - validationFails: This home check is already assigned
+        # Not a guard: Wolverine emits this 404 itself for a non-nullable [WriteModel], BEFORE
+        # Validate runs. Declaring it is how the scaffolder learns the parameter is required.
+        - name: Accepting a home check that does not exist is not found
+          given: []
+          when:
+            command: AcceptHomeCheckAssignment
+            with:
+              homeCheckId: "{streamId}"
+              volunteerOwnerId: "0e5e0099-0000-0000-0000-000000000099"
+              proposedFor: "2026-10-01T15:00:00Z"
+          then:
+            - refusedWith:
+                status: 404
+                reason: No home check with that id
 
   - name: SubmitHomeCheckReport
     pattern: Command
@@ -1293,6 +1514,20 @@ slices:
   # application's own stream. No `fanOut:`, so `Then the {readmodel} read model contains` loads by
   # the scenario's stream rather than by a routing id — the contrast with BookingAppointments' two
   # multi-stream views is the point.
+        # Not a guard: Wolverine emits this 404 itself for a non-nullable [WriteModel], BEFORE
+        # Validate runs. Declaring it is how the scaffolder learns the parameter is required.
+        - name: Reporting on a home check that does not exist is not found
+          given: []
+          when:
+            command: SubmitHomeCheckReport
+            with:
+              homeCheckId: "{streamId}"
+              outcome: Pass
+              notes: Secure garden, calm household, good fit for a shy dog
+          then:
+            - refusedWith:
+                status: 404
+                reason: No home check with that id
   - name: VolunteerApplicationsQueue
     pattern: View
     domain: Volunteering

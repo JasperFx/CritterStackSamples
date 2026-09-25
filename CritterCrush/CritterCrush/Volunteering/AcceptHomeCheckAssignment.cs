@@ -1,48 +1,37 @@
 namespace CritterCrush.Volunteering;
 
+public record AcceptHomeCheckAssignment([property: Identity] Guid HomeCheckId, Guid VolunteerOwnerId, DateTimeOffset ProposedFor);
+
 /// <summary>
-/// A volunteer took the assignment and proposed a time to visit. This is the event
-/// BookingAppointments waits for — the cross-chapter link, and the reason
-/// ProposeHomeCheckAppointment declares no inbound external system.
-///
-/// AssignmentId is the ASSIGNMENT's own identity, minted here, and deliberately NOT this home
-/// check's stream id: BookingAppointments uses it as the Appointment's stream id, and Marten's
-/// stream id space is global across aggregate types, so reusing this stream's id would collide.
-/// Once written it never changes, so redelivery still lands on the same appointment.
+/// The endpoint IS the handler: one transaction, honest status codes. Split a separate
+/// message handler out only when this command genuinely needs bus visibility — other
+/// callers, retry policies, scheduling — never for testability.
 /// </summary>
-public record HomeCheckAssignmentAccepted(
-    Guid AssignmentId,
-    Guid OwnerId,
-    Guid ShelterId,
-    Guid VolunteerOwnerId,
-    DateTimeOffset ProposedFor);
-
-public record AcceptHomeCheckAssignment(Guid HomeCheckId, Guid VolunteerOwnerId, DateTimeOffset ProposedFor);
-
-public record AcceptHomeCheckAssignmentResponse();
-
 public static class AcceptHomeCheckAssignmentEndpoint
 {
-    public static ProblemDetails Validate(AcceptHomeCheckAssignment command, [ReadModel] HomeCheck? homeCheck)
-    {
-        if (homeCheck is null) return VolunteeringRefusals.NoSuchHomeCheck;
-        if (homeCheck.Status != HomeCheckStatus.Requested)
-        {
-            return new ProblemDetails { Detail = "This home check is already assigned", Status = 400 };
-        }
+    /// <summary>Only an unclaimed home check is there to be taken.</summary>
+    public static ProblemDetails Validate(HomeCheck homeCheck)
+        => homeCheck.Status == HomeCheckStatus.Requested
+            ? WolverineContinue.NoProblems
+            : new ProblemDetails { Detail = "This home check is already assigned", Status = 400 };
 
-        return WolverineContinue.NoProblems;
-    }
 
     [WolverinePost("/api/volunteering/accepthomecheckassignment")]
-    public static (AcceptHomeCheckAssignmentResponse, EventsToAppend) Post(AcceptHomeCheckAssignment command, [WriteModel] HomeCheck homeCheck) =>
-        (new AcceptHomeCheckAssignmentResponse(),
-            [
-                new HomeCheckAssignmentAccepted(
-                    Guid.NewGuid(),
-                    homeCheck.OwnerId,
-                    homeCheck.ShelterId,
-                    command.VolunteerOwnerId,
-                    command.ProposedFor)
-            ]);
+    [EmptyResponse]
+    public static HomeCheckAssignmentAccepted Post(AcceptHomeCheckAssignment command, [WriteModel] HomeCheck homeCheck)
+    {
+        // The assignment gets its OWN identity, minted here, and that id becomes the Appointment's
+        // stream downstream. It cannot be command.HomeCheckId: Marten's stream id space is GLOBAL
+        // across aggregate types, so the Appointment would be claiming an id the HomeCheck already
+        // owns — `Stream #… already exists in the database`, which is what happens if you try it.
+        // Minting it HERE rather than in the automation is what keeps the appointment's stream
+        // predictable: an id the automation invents is an id no scenario can assert on.
+        return new HomeCheckAssignmentAccepted(
+            Guid.NewGuid(),
+            homeCheck.OwnerId,
+            homeCheck.ShelterId,
+            command.VolunteerOwnerId,
+            command.ProposedFor);
+    }
+
 }

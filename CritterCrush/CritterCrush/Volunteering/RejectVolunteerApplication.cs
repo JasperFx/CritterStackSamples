@@ -1,30 +1,24 @@
 namespace CritterCrush.Volunteering;
 
-/// <summary>The applicant will not be volunteering</summary>
-public record VolunteerApplicationRejected(Guid ApplicantOwnerId, string Reason);
+public record RejectVolunteerApplication([property: Identity] Guid ApplicantOwnerId, string Reason);
 
-public record RejectVolunteerApplication(Guid ApplicantOwnerId, string Reason)
-{
-    [Identity] public Guid VolunteerApplicationId => ApplicantOwnerId;
-}
-
-public record RejectVolunteerApplicationResponse();
-
+/// <summary>
+/// The endpoint IS the handler: one transaction, honest status codes. Split a separate
+/// message handler out only when this command genuinely needs bus visibility — other
+/// callers, retry policies, scheduling — never for testability.
+/// </summary>
 public static class RejectVolunteerApplicationEndpoint
 {
-    public static ProblemDetails Validate(RejectVolunteerApplication command, [ReadModel] VolunteerApplication? volunteerApplication)
-    {
-        if (volunteerApplication is null) return VolunteeringRefusals.NoSuchApplication;
-        if (volunteerApplication.IsDecided)
-        {
-            return new ProblemDetails { Detail = "This application has already been decided", Status = 400 };
-        }
+    /// <summary>A decision is made once.</summary>
+    public static ProblemDetails Validate(VolunteerApplication volunteerApplication)
+        => VolunteerApplicationStatus.IsDecided(volunteerApplication.Status)
+            ? new ProblemDetails { Detail = "This application has already been decided", Status = 400 }
+            : WolverineContinue.NoProblems;
 
-        return WolverineContinue.NoProblems;
-    }
 
     [WolverinePost("/api/volunteering/rejectvolunteerapplication")]
-    public static (RejectVolunteerApplicationResponse, EventsToAppend) Post(RejectVolunteerApplication command, [WriteModel] VolunteerApplication volunteerApplication) =>
-        (new RejectVolunteerApplicationResponse(),
-            [new VolunteerApplicationRejected(volunteerApplication.ApplicantOwnerId, command.Reason)]);
+    [EmptyResponse]
+    public static VolunteerApplicationRejected Post(RejectVolunteerApplication command, [WriteModel] VolunteerApplication volunteerApplication)
+        => new VolunteerApplicationRejected(volunteerApplication.ApplicantOwnerId, command.Reason);
+
 }

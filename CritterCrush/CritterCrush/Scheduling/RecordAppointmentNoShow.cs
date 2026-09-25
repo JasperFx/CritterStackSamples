@@ -1,31 +1,32 @@
 namespace CritterCrush.Scheduling;
 
-/// <summary>The counterparty never arrived</summary>
-public record AppointmentNoShowRecorded(Guid OwnerId, Guid ShelterId, DateTimeOffset RecordedAt);
-
 public record RecordAppointmentNoShow(Guid AppointmentId);
 
-public record RecordAppointmentNoShowResponse();
-
 /// <summary>
-/// A no-show is a kind of completion — somebody turned up to an empty doorstep — so like completion
-/// it is reachable only from Confirmed.
+/// The endpoint IS the handler: one transaction, honest status codes. Split a separate
+/// message handler out only when this command genuinely needs bus visibility — other
+/// callers, retry policies, scheduling — never for testability.
 /// </summary>
 public static class RecordAppointmentNoShowEndpoint
 {
-    public static ProblemDetails Validate(RecordAppointmentNoShow command, [ReadModel] Appointment? appointment)
-    {
-        if (appointment is null) return Refusals.NoSuchAppointment;
-        if (appointment.IsClosed)
+    /// <summary>
+    /// Only a confirmed appointment can be a no-show: somebody has to have agreed to be there.
+    /// Stated as the state required rather than the states excluded — the closed check and the
+    /// unconfirmed check are one question, and asking it as two `if`s is how a state that is both
+    /// gets told the wrong reason.
+    /// </summary>
+    public static ProblemDetails Validate(Appointment appointment)
+        => appointment.Status switch
         {
-            return new ProblemDetails { Detail = "This appointment is already closed", Status = 400 };
-        }
+            AppointmentStatus.Confirmed => WolverineContinue.NoProblems,
+            AppointmentStatus.Proposed => new ProblemDetails { Detail = "This appointment has not been confirmed", Status = 400 },
+            _ => new ProblemDetails { Detail = "This appointment is already closed", Status = 400 }
+        };
 
-        return WolverineContinue.NoProblems;
-    }
 
     [WolverinePost("/api/scheduling/recordappointmentnoshow")]
-    public static (RecordAppointmentNoShowResponse, EventsToAppend) Post(RecordAppointmentNoShow command, [WriteModel] Appointment appointment) =>
-        (new RecordAppointmentNoShowResponse(),
-            [new AppointmentNoShowRecorded(appointment.OwnerId, appointment.ShelterId, DateTimeOffset.UtcNow)]);
+    [EmptyResponse]
+    public static AppointmentNoShowRecorded Post(RecordAppointmentNoShow command, [WriteModel] Appointment appointment)
+        => new AppointmentNoShowRecorded(appointment.OwnerId, appointment.ShelterId, DateTimeOffset.UtcNow);
+
 }

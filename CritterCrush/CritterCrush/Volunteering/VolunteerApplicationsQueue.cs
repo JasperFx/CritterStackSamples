@@ -8,28 +8,29 @@ public class VolunteerApplicationsQueue
     public string Status { get; set; } = string.Empty;
 }
 
-/// <summary>
-/// The other view shape, deliberately: SINGLE-stream, one document per application, folded from
-/// that application's own stream. No identity rules, because the stream id IS the document id —
-/// the contrast with BookingAppointments' two multi-stream views is the point of having both.
-///
-/// Async lifecycle: register with the daemon RUNNING (AddAsyncDaemon), or this never advances.
-/// </summary>
+
+// Async lifecycle: register with the daemon RUNNING (AddAsyncDaemon), or this never advances.
 public class VolunteerApplicationsQueueProjection : SingleStreamProjection<VolunteerApplicationsQueue, Guid>
 {
-    public void Apply(VolunteerApplicationSubmitted e, VolunteerApplicationsQueue view)
+    public void Apply(VolunteerApplicationSubmitted submitted, VolunteerApplicationsQueue view)
     {
-        view.ApplicantOwnerId = e.ApplicantOwnerId;
-        view.AreasOfInterest = e.AreasOfInterest;
+        view.ApplicantOwnerId = submitted.ApplicantOwnerId;
+        view.AreasOfInterest = submitted.AreasOfInterest;
         view.Status = VolunteerApplicationStatus.Submitted;
     }
 
-    public void Apply(VolunteerApplicationReviewed _, VolunteerApplicationsQueue view) =>
-        view.Status = VolunteerApplicationStatus.Reviewed;
+    public void Apply(VolunteerApplicationReviewed _, VolunteerApplicationsQueue view)
+        => view.Status = VolunteerApplicationStatus.Reviewed;
 
-    public void Apply(VolunteerApproved _, VolunteerApplicationsQueue view) =>
-        view.Status = VolunteerApplicationStatus.Approved;
+    public void Apply(VolunteerApproved _, VolunteerApplicationsQueue view)
+        => view.Status = VolunteerApplicationStatus.Approved;
 
-    public void Apply(VolunteerApplicationRejected _, VolunteerApplicationsQueue view) =>
-        view.Status = VolunteerApplicationStatus.Rejected;
+    public void Apply(VolunteerApplicationRejected _, VolunteerApplicationsQueue view)
+        => view.Status = VolunteerApplicationStatus.Rejected;
+}
+
+public static class GetVolunteerApplicationsQueueEndpoint
+{
+    [WolverineGet("/api/volunteerapplicationsqueue/{id}")]
+    public static VolunteerApplicationsQueue Get([Entity(Required = true)] VolunteerApplicationsQueue volunteerApplicationsQueue) => volunteerApplicationsQueue;
 }

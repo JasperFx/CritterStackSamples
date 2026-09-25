@@ -18,10 +18,22 @@ builder.Services.AddWolverineHttp();
 builder.Services.AddEventModelFile(
     Path.Combine(builder.Environment.ContentRootPath, "..", "models", "CritterCrush.emodel.yaml"));
 
-builder.Services.AddMarten(opts =>
+builder.Services.AddMarten((StoreOptions opts) =>
     {
-        opts.Connection(builder.Configuration.GetConnectionString("Marten")
-                        ?? "Host=localhost;Port=5433;Database=crittercrush;Username=postgres;Password=postgres");
+        var connection = builder.Configuration.GetConnectionString("Marten")
+                         ?? "Host=localhost;Port=5433;Database=crittercrush;Username=postgres;Password=postgres";
+
+        opts.Connection(connection);
+
+        // Clone, `docker compose up -d`, run. Without this the database is a manual CREATE DATABASE
+        // step the README has to remember to tell you about — and one that fails much later than it
+        // should: Marten reports `3D000: database "crittercrush" does not exist` from deep inside
+        // daemon start-up, which reads as a broken application rather than a missing setup step.
+        // It also self-heals, which matters on a shared Postgres where something else may drop it.
+        opts.CreateDatabasesForTenants(c =>
+            c.MaintenanceDatabase(connection.Replace("Database=crittercrush", "Database=postgres"))
+                .ForTenant()
+                .CheckAgainstPgDatabase());
         // Configurable so a parallel build can isolate itself: every spec run resets the event
         // store, so two agents sharing one schema wipe each other's data mid-run. See
         // CritterCrush.Specs/SuiteConfiguration.cs.
@@ -49,7 +61,12 @@ builder.Services.AddMarten(opts =>
     })
     .IntegrateWithWolverine(m => m.UseFastEventForwarding = true)
     .AddAsyncDaemon(DaemonMode.Solo)
-    .UseLightweightSessions();
+    .UseLightweightSessions()
+    // CreateDatabasesForTenants above only takes effect when something actually asks Marten to
+    // apply its database changes at startup. Without this the creation check never runs and the
+    // first connection fails with `3D000: database "crittercrush" does not exist` — which is
+    // exactly what a clone-and-run hits.
+    .ApplyAllDatabaseChangesOnStartup();
 
 builder.Host.UseWolverine(opts =>
 {
