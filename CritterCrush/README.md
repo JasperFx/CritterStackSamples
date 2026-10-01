@@ -134,6 +134,13 @@ because each test resets the event store and two resetting concurrently would wi
 arranged history. xUnit owns the entry point (`BobcatGenerateEntryPoint=false`), so `dotnet test`
 and running the `CritterCrush.Specs` executable directly are equivalent.
 
+To run one spec class, give the filter to the test executable. `dotnet test --filter` is ignored
+under Microsoft.Testing.Platform and quietly runs all 88:
+
+```bash
+dotnet run --project CritterCrush.Specs -- --filter-class "*ProposalSpecs"
+```
+
 **A run prints no specification.** The steps are published to a monitor, and the receiver is
 [Stoat](https://stoat.jasperfx.net), listening on `http://localhost:5525` by default. With a Stoat
 console running, the suite publishes each scenario's steps to it, and this publishes the Event Model
