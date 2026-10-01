@@ -22,14 +22,15 @@ Spec/K9CRUSH.emlang.v3.2026-07-31.yaml   (the board's own export, 161 slices)
         ▼
 models/CritterCrush.emodel.yaml           ← CURATED: the aggregate, the field shapes, the
         │                                    routing ids, the edge cases, the hotspots
+models/CritterCrush.spec-ownership.yaml   ← how each slice is specified: here, all projected
         │  models/Scaffolder  (Bobcat.EventModel.Scaffolding)
         ▼
-CritterCrush/{Scheduling,Volunteering}/    ← 30 files: every mechanical decision made,
-CritterCrush.Specs/Features/*.feature        every judgment a named TODO
+CritterCrush/{Scheduling,Volunteering}/    ← 33 files: every mechanical decision made,
+CritterCrush.Specs/Specs/*.cs                every judgment a named TODO that compiles and throws
 models/crittercrush-plan.yaml             ← the Stoat plan, derived from the same model
         │  the critterstack-sdd skills fill the judgment
         ▼
-37 scenarios green
+52 scenarios green
 ```
 
 The board export is **not** committed here. It belongs to the upstream repository and is fetched
@@ -38,7 +39,7 @@ design.
 
 ## What the import knew, and what curation had to decide
 
-The import got all eleven slices, all three automation patterns, and — because the board says so in
+The import got all eleven BookingAppointments slices, all three automation patterns, and — because the board says so in
 prose — which flow triggers each one. It knew nothing else, and said so: the board's own comment
 records that its props were *"intentionally omitted rather than invented"*.
 
@@ -58,23 +59,41 @@ appointment nobody asked to move, and what happens when one source entity needs 
 
 ## Reading the current state
 
-Nineteen slices across two chapters, every one specified and built, **37 scenarios green**. All six
-`.feature` files regenerate from the model **byte for byte**; see `models/README.md`. Two of the
-thirty scaffolded files ship exactly as the generator emitted them — the inbound integration
-contracts for the two trigger events no chapter here owns — and two files are hand-written additions
-the scaffold has no opinion about (the shared 404 refusals).
+Nineteen slices across two chapters, every one specified and built: **52 scenarios green**, 88 tests
+in all. The other 36 are `AppointmentQueueInvariants`, an ordinary xUnit theory over every
+state-and-command pair; it carries no `[BobcatFeature]`, so it runs in the same suite and publishes
+no specification.
 
-Two of those scenarios are worth singling out, because each was deliberately broken to prove it can
-fail before it was believed:
+Every slice is specified in the **projected** lane, which `models/CritterCrush.spec-ownership.yaml`
+states once for the whole model: each scenario is an ordinary xUnit test, bound to its slice with
+`[BobcatSlice]`, whose steps render from the `[BobcatStep]` helpers in `CritterCrushSpec.cs`. There
+are no `.feature` files. The step text binds at run time, so a rendered step carries the stream id
+and route that scenario actually used.
 
-- **`An owner's page spans every appointment stream they have`** is the fan-out check. Route one of
-  the projection's identity rules to the wrong key and this scenario alone goes red
-  (`AwaitingConfirmation: expected 1, was 0`). It needs `stream:` in the curated `given:`
-  ([bobcat#311](https://github.com/JasperFx/bobcat/issues/311), Bobcat 0.21.0) to arrange two
-  streams in one scenario at all.
+The scaffold is committed as it was emitted, at the repository root in `.scaffold-output/`, and
+`../review.sh <path>` puts any file beside its implemented twin. Any difference between the two is a
+decision somebody made here; anything objectionable in `.scaffold-output/` is the scaffolder's. It
+regenerates from the model **byte for byte** — see `models/README.md`.
+
+What the scaffold does not write, and was written by hand: `CritterCrushHost.cs` (the one host every
+spec class shares), `CritterCrushSpec.cs` (the step vocabulary), the invariants, `Program.cs`,
+`GlobalUsings.cs` and `AppointmentKind.cs`. The status vocabularies (`AppointmentStatus`,
+`HomeCheckStatus`, `VolunteerApplicationStatus`) were added inside the scaffolded aggregate files,
+because the curated format has no enum type. Seven Volunteering commands also needed
+`[property: Identity]` by hand, since nothing in the format says which field is the stream id.
+
+Three of those scenarios are worth singling out, because each was deliberately broken to prove it
+can fail before it was believed:
+
+- **`An owner page spans every appointment stream they have`** is the fan-out check. Key the owner
+  view by the wrong id and it goes red, along with the two other scenarios that read that view. It
+  needs `stream:` in the curated `given:`
+  ([bobcat#311](https://github.com/JasperFx/bobcat/issues/311), Bobcat 0.21.0), and `GivenEventsOn`
+  in the test, to arrange two streams in one scenario at all.
 - **`An appointment cancelled before anyone confirmed it leaves the awaiting count`** is what makes
-  `wasConfirmed` load-bearing. Decrement the naive counter instead and this scenario alone goes red
-  (`Confirmed: expected 0, was -1`).
+  `wasConfirmed` load-bearing. Decrement the naive counter instead and this is the one specification
+  that goes red (`AwaitingConfirmation: expected 0, was 1`), along with the seven invariant cases
+  that pass through a cancellation.
 - **`Accepting an assignment books the home check as an appointment`** is the only scenario that
   crosses the chapter boundary at runtime: a POST to Volunteering, and an assertion on an
   Appointments read model two hops later. Put `[WolverineIgnore]` on the appointments automation and
@@ -103,18 +122,33 @@ single-stream, one document per application folded from that application's own s
 ## Running it
 
 ```bash
-docker compose up -d                                    # Postgres on 5433, from the repo root
-docker exec -it $(docker ps -qf "publish=5433") psql -U postgres -c "CREATE DATABASE crittercrush;"
-./CritterCrush.Specs/bin/Debug/net10.0/CritterCrush.Specs
+docker compose up -d        # Postgres on 5433, from the repository root
+cd CritterCrush
+dotnet test                 # all 88 tests
 dotnet run --project CritterCrush
 ```
 
-⚠️ **`dotnet test CritterCrush.Specs` collects zero tests here and exits 0** — a green that ran
-nothing. The specs are a Microsoft.Testing.Platform executable; run the binary. `--filter-feature
-BookingAppointments` narrows it to one feature.
+There is no database to create: the app creates `crittercrush` on first use and applies its schema
+on startup. The spec classes share one host through an xUnit collection and run one at a time,
+because each test resets the event store and two resetting concurrently would wipe each other's
+arranged history. xUnit owns the entry point (`BobcatGenerateEntryPoint=false`), so `dotnet test`
+and running the `CritterCrush.Specs` executable directly are equivalent.
 
-The spec project has **no hand-written `Main`**: Bobcat's generator emits the entry point and calls
-`[BobcatConfiguration]` (see `SuiteConfiguration.cs`).
+To run one spec class, give the filter to the test executable. `dotnet test --filter` is ignored
+under Microsoft.Testing.Platform and quietly runs all 88:
+
+```bash
+dotnet run --project CritterCrush.Specs -- --filter-class "*ProposalSpecs"
+```
+
+**A run prints no specification.** The steps are published to a monitor, and the receiver is
+[Stoat](https://stoat.jasperfx.net), listening on `http://localhost:5525` by default. With a Stoat
+console running, the suite publishes each scenario's steps to it, and this publishes the Event Model
+Wolverine reads out of the code:
+
+```bash
+dotnet run --project CritterCrush -- event-model --url http://localhost:5525/api/event-model
+```
 
 ## The parked v1
 
