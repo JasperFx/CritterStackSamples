@@ -1,6 +1,8 @@
+using System.Text.RegularExpressions;
 using Alba;
 using Bobcat;
 using Bobcat.CritterStack;
+using JasperFx.Events.EventModeling;
 
 namespace BankAccountES.Tests;
 
@@ -20,9 +22,21 @@ public abstract class BankAccountSpec(BankAccountHost app) : CritterStackSpec(ap
 
     protected IAlbaHost Alba => app.Host;
 
-    /// <summary>POST <paramref name="command" /> to <paramref name="url" />.</summary>
-    public Task WhenPosted(object command, string url)
-        => WhenActing($"{command.GetType().Name} is posted to {url}", async _ =>
+    /// <summary>
+    /// POST <paramref name="command" /> to <paramref name="route" />, written as the endpoint's template
+    /// (<c>"/api/accounts/{accountId}/deposits"</c>) with its values after it, in order. A constant template
+    /// is what reaches the Event Model as the slice's route.
+    /// </summary>
+    /// <remarks>
+    /// The generator reads the Event Model roles off the method a test calls, never off what that method
+    /// calls, so a wrapper act has to declare them itself.
+    /// </remarks>
+    [EventModelRole(SliceRole.Command, nameof(command))]
+    [EventModelTrigger(TriggerKind.Http, Route = nameof(route), HttpMethod = "POST")]
+    public Task WhenPosted(object command, string route, params object[] routeValues)
+    {
+        var url = fill(route, routeValues);
+        return WhenActing($"{command.GetType().Name} is posted to {route}", async _ =>
         {
             _lastResponse = await Alba.Scenario(x =>
             {
@@ -32,10 +46,15 @@ public abstract class BankAccountSpec(BankAccountHost app) : CritterStackSpec(ap
                 x.IgnoreStatusCode();
             });
         });
+    }
 
-    /// <summary>GET <paramref name="url" /> and keep the response.</summary>
-    public Task WhenReading(string url)
-        => WhenActing($"GET {url} is read", async _ =>
+    /// <summary>GET <paramref name="route" /> (a template, as for <see cref="WhenPosted" />) and keep the response, read as a <typeparamref name="T" />.</summary>
+    [EventModelRole(SliceRole.ReadModel, nameof(T))]
+    [EventModelTrigger(TriggerKind.Http, Route = nameof(route), HttpMethod = "GET")]
+    public Task WhenReading<T>(string route, params object[] routeValues) where T : class
+    {
+        var url = fill(route, routeValues);
+        return WhenActing($"GET {route} is read", async _ =>
         {
             _lastResponse = await Alba.Scenario(x =>
             {
@@ -43,6 +62,17 @@ public abstract class BankAccountSpec(BankAccountHost app) : CritterStackSpec(ap
                 x.IgnoreStatusCode();
             });
         });
+    }
+
+    // "/api/accounts/{accountId}/deposits" + [id] => "/api/accounts/<id>/deposits"
+    private static string fill(string route, object[] values)
+    {
+        var i = 0;
+        var url = Regex.Replace(route, @"\{[^}]+\}", m => i < values.Length ? Uri.EscapeDataString(values[i++].ToString()!) : m.Value);
+        if (i != values.Length)
+            throw new ArgumentException($"Route '{route}' has {i} placeholder(s) but was given {values.Length} value(s).");
+        return url;
+    }
 
     [Then("the response status is {status}")]
     public void ThenTheResponseStatusIs(int status)

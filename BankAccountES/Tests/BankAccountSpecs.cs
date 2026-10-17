@@ -39,7 +39,7 @@ public class BankAccountSpecs(BankAccountHost app) : BankAccountSpec(app)
         var accountId = Guid.NewGuid();
         await GivenEvents<Account>(accountId, new AccountOpened(accountId, Guid.NewGuid(), "USD"));
 
-        await WhenPosted(new DepositFunds(accountId, 500m), $"/api/accounts/{accountId}/deposits");
+        await WhenPosted(new DepositFunds(accountId, 500m), "/api/accounts/{accountId}/deposits", accountId);
 
         ThenTheResponseStatusIs(204);
         ThenEvents(new FundsDeposited(accountId, 500m, 500m));
@@ -54,14 +54,14 @@ public class BankAccountSpecs(BankAccountHost app) : BankAccountSpec(app)
             new AccountOpened(accountId, Guid.NewGuid(), "USD"),
             new FundsDeposited(accountId, 100m, 100m));
 
-        await WhenPosted(new WithdrawFunds(accountId, 500m), $"/api/accounts/{accountId}/withdrawals");
+        await WhenPosted(new WithdrawFunds(accountId, 500m), "/api/accounts/{accountId}/withdrawals", accountId);
 
         ThenTheResponseStatusIs(400);
         ThenNoEvents();
         await ThenAggregate<Account>(accountId, Specify<Account>().With(x => x.Balance, 100m));
     }
 
-    [BobcatSpec]
+    [BobcatSpec(SliceName = "GET /api/accounts/{accountId}/transactions")]
     public async Task transaction_history_records_every_deposit_and_withdrawal()
     {
         var accountId = Guid.NewGuid();
@@ -70,7 +70,7 @@ public class BankAccountSpecs(BankAccountHost app) : BankAccountSpec(app)
             new FundsDeposited(accountId, 1000m, 1000m),
             new FundsWithdrawn(accountId, 200m, 800m));
 
-        await WhenReading($"/api/accounts/{accountId}/transactions");
+        await WhenReading<AccountTransactions>("/api/accounts/{accountId}/transactions", accountId);
 
         ThenTheResponseStatusIs(200);
         var history = await TheResponse<AccountTransactions>();

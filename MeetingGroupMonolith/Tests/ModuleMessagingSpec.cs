@@ -1,3 +1,5 @@
+using JasperFx.Events.EventModeling;
+using System.Text.RegularExpressions;
 using Alba;
 using Bobcat;
 using Marten;
@@ -18,13 +20,17 @@ public abstract class ModuleMessagingSpec(MeetingGroupsHost app) : WolverineSpec
 
     protected IAlbaHost Alba => app.Host;
 
-    /// <summary>POST <paramref name="command" /> to <paramref name="url" /> and wait for every message it cascades.</summary>
-    public Task WhenPosted(object command, string url)
-        => WhenTracked($"{command.GetType().Name} is posted to {url}", () => post(command, url));
+    /// <summary>POST <paramref name="command" /> to <paramref name="route" /> (a template with its values after it, in order) and wait for every message it cascades.</summary>
+    /// <remarks>Declares its Event Model roles: the generator reads them off the method a test calls.</remarks>
+    [EventModelRole(SliceRole.Command, nameof(command))]
+    [EventModelTrigger(TriggerKind.Http, Route = nameof(route), HttpMethod = "POST")]
+    public Task WhenPosted(object command, string route, params object[] routeValues)
+        => WhenTracked($"{command.GetType().Name} is posted to {route}", () => post(command, fill(route, routeValues)));
 
-    /// <summary>POST to <paramref name="url" /> with an empty body, for an endpoint that reads only its route.</summary>
-    public Task WhenPostedTo(string url)
-        => WhenTracked($"POST {url}", () => post(new { }, url));
+    /// <summary>POST to <paramref name="route" /> with an empty body, for an endpoint that reads only its route.</summary>
+    [EventModelTrigger(TriggerKind.Http, Route = nameof(route), HttpMethod = "POST")]
+    public Task WhenPostedTo(string route, params object[] routeValues)
+        => WhenTracked($"POST {route}", () => post(new { }, fill(route, routeValues)));
 
     private async Task post(object body, string url)
     {
@@ -33,6 +39,16 @@ public abstract class ModuleMessagingSpec(MeetingGroupsHost app) : WolverineSpec
             x.Post.Json(body).ToUrl(url);
             x.IgnoreStatusCode();
         });
+    }
+
+    // "/api/things/{id}/x" + [id] => "/api/things/<id>/x"
+    private static string fill(string route, object[] values)
+    {
+        var i = 0;
+        var url = Regex.Replace(route, @"\{[^}]+\}", m => i < values.Length ? Uri.EscapeDataString(values[i++].ToString()!) : m.Value);
+        if (i != values.Length)
+            throw new ArgumentException($"Route '{route}' has {i} placeholder(s) but was given {values.Length} value(s).");
+        return url;
     }
 
     [Then("the response status is {status}")]

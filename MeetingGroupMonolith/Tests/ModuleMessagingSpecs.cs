@@ -44,7 +44,7 @@ public class ModuleMessagingSpecs(MeetingGroupsHost app) : ModuleMessagingSpec(a
             LocationCity = "Seattle", LocationCountryCode = "US", ProposalUserId = proposerId,
         });
 
-        await WhenPostedTo($"/api/administration/proposals/{proposalId}/accept");
+        await WhenPostedTo("/api/administration/proposals/{proposalId}/accept", proposalId);
 
         ThenTheResponseStatusIs(200);
         var proposal = await ThenDocument<MeetingGroupProposal>(proposalId,
@@ -66,7 +66,7 @@ public class ModuleMessagingSpecs(MeetingGroupsHost app) : ModuleMessagingSpec(a
         });
         var memberId = Guid.NewGuid();
 
-        await WhenPosted(new AddAttendee(meetingId, memberId), $"/api/meetings/{meetingId}/attendees");
+        await WhenPosted(new AddAttendee(meetingId, memberId), "/api/meetings/{meetingId}/attendees", meetingId);
 
         ThenTheResponseStatusIs(200);
         await ThenTheMeetingHasTheAttendee(meetingId, memberId);

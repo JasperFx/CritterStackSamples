@@ -76,27 +76,27 @@ public class BookingSpecs(BookingMonolithHost app) : BookingMonolithSpec(app)
         ThenNoEvents();
     }
 
-    [BobcatSpec]
+    [BobcatSpec(SliceName = "GET /api/bookings")]
     public async Task get_bookings_returns_list()
     {
         var bookingId = Guid.NewGuid();
         await GivenEvents<BookingRecord>(bookingId,
             new BookingCreatedDomainEvent(bookingId, Guid.NewGuid(), "List Test", Guid.NewGuid(), "FL600", 100m, null, null));
 
-        await WhenReading("/api/bookings");
+        await WhenReading<BookingRecord>("/api/bookings");
 
         ThenTheResponseStatusIs(200);
         TheBookingsInclude(await TheResponse<List<BookingRecord>>(), bookingId);
     }
 
-    [BobcatSpec]
+    [BobcatSpec(SliceName = "GET /api/bookings/{id}")]
     public async Task get_booking_by_id_returns_booking()
     {
         var bookingId = Guid.NewGuid();
         await GivenEvents<BookingRecord>(bookingId,
             new BookingCreatedDomainEvent(bookingId, Guid.NewGuid(), "ById Test", Guid.NewGuid(), "FL700", 350m, "Test booking", null));
 
-        await WhenReading($"/api/bookings/{bookingId}");
+        await WhenReading<BookingRecord>("/api/bookings/{id}", bookingId);
 
         ThenTheResponseStatusIs(200);
         ThenMatches(await TheResponse<BookingRecord>(), Specify<BookingRecord>()

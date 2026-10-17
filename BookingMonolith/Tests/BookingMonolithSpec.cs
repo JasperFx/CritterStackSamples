@@ -1,6 +1,8 @@
+using System.Text.RegularExpressions;
 using Alba;
 using Bobcat;
 using Bobcat.CritterStack;
+using JasperFx.Events.EventModeling;
 
 namespace Tests;
 
@@ -20,29 +22,44 @@ public abstract class BookingMonolithSpec(BookingMonolithHost app) : CritterStac
 
     protected IAlbaHost Alba => app.Host;
 
-    /// <summary>POST <paramref name="command" /> to <paramref name="url" />.</summary>
-    public Task WhenPosted(object command, string url)
-        => WhenActing($"{command.GetType().Name} is posted to {url}", async _ =>
+    /// <summary>POST <paramref name="command" /> to <paramref name="route" />, a template with its values after it, in order.</summary>
+    /// <remarks>Declares its Event Model roles: the generator reads them off the method a test calls.</remarks>
+    [EventModelRole(SliceRole.Command, nameof(command))]
+    [EventModelTrigger(TriggerKind.Http, Route = nameof(route), HttpMethod = "POST")]
+    public Task WhenPosted(object command, string route, params object[] routeValues)
+        => WhenActing($"{command.GetType().Name} is posted to {route}", async _ =>
         {
             _lastResponse = await Alba.Scenario(x =>
             {
-                x.Post.Json(command).ToUrl(url);
+                x.Post.Json(command).ToUrl(fill(route, routeValues));
 
                 // A refusal is an answer to assert on, not an exception
                 x.IgnoreStatusCode();
             });
         });
 
-    /// <summary>GET <paramref name="url" /> and keep the response.</summary>
-    public Task WhenReading(string url)
-        => WhenActing($"GET {url} is read", async _ =>
+    /// <summary>GET <paramref name="route" /> (a template, as for WhenPosted) and keep the response.</summary>
+    [EventModelRole(SliceRole.ReadModel, nameof(T))]
+    [EventModelTrigger(TriggerKind.Http, Route = nameof(route), HttpMethod = "GET")]
+    public Task WhenReading<T>(string route, params object[] routeValues) where T : class
+        => WhenActing($"GET {route} is read", async _ =>
         {
             _lastResponse = await Alba.Scenario(x =>
             {
-                x.Get.Url(url);
+                x.Get.Url(fill(route, routeValues));
                 x.IgnoreStatusCode();
             });
         });
+
+    // "/api/things/{id}/x" + [id] => "/api/things/<id>/x"
+    private static string fill(string route, object[] values)
+    {
+        var i = 0;
+        var url = Regex.Replace(route, @"\{[^}]+\}", m => i < values.Length ? Uri.EscapeDataString(values[i++].ToString()!) : m.Value);
+        if (i != values.Length)
+            throw new ArgumentException($"Route '{route}' has {i} placeholder(s) but was given {values.Length} value(s).");
+        return url;
+    }
 
     [Then("the response status is {status}")]
     public void ThenTheResponseStatusIs(int status)
