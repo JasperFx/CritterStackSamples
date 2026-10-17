@@ -6,18 +6,20 @@ using Shouldly;
 
 namespace Tests;
 
+// The original tests, on xUnit v3. Six of them now live in CatalogSpecs as Bobcat specifications;
+// these stay plain: validation variants and list reads that the six specs already exemplify.
 public class CatalogTests : IAsyncLifetime
 {
     private IAlbaHost _host = null!;
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _host = await AlbaHost.For<Program>();
         var store = _host.Services.GetRequiredService<IDocumentStore>();
         await store.Advanced.Clean.DeleteAllDocumentsAsync();
     }
 
-    public async Task DisposeAsync() => await _host.DisposeAsync();
+    public async ValueTask DisposeAsync() => await _host.DisposeAsync();
 
     #region Helpers
 
@@ -34,28 +36,6 @@ public class CatalogTests : IAsyncLifetime
     #endregion
 
     #region Create Product
-
-    [Fact]
-    public async Task create_product_returns_product()
-    {
-        var product = await CreateProduct("Test Phone", ["Smart Phone"], "A test phone", 599.99m);
-
-        product.Id.ShouldNotBe(Guid.Empty);
-        product.Name.ShouldBe("Test Phone");
-        product.Category.ShouldContain("Smart Phone");
-        product.Description.ShouldBe("A test phone");
-        product.Price.ShouldBe(599.99m);
-    }
-
-    [Fact]
-    public async Task create_product_rejects_empty_name()
-    {
-        await _host.Scenario(x =>
-        {
-            x.Post.Json(new CreateProduct("", ["Phone"], "desc", "img.png", 100m)).ToUrl("/products");
-            x.StatusCodeShouldBe(400);
-        });
-    }
 
     [Fact]
     public async Task create_product_rejects_empty_category()
@@ -98,22 +78,6 @@ public class CatalogTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task get_product_by_id_returns_product()
-    {
-        var created = await CreateProduct("ById Product", ["Cat"], "Desc", 150m);
-
-        var result = await _host.Scenario(x =>
-        {
-            x.Get.Url($"/products/{created.Id}");
-            x.StatusCodeShouldBeOk();
-        });
-
-        var product = result.ReadAsJson<Product>()!;
-        product.Id.ShouldBe(created.Id);
-        product.Name.ShouldBe("ById Product");
-    }
-
-    [Fact]
     public async Task get_product_by_id_returns_404_for_missing()
     {
         await _host.Scenario(x =>
@@ -148,25 +112,6 @@ public class CatalogTests : IAsyncLifetime
     #region Update Product
 
     [Fact]
-    public async Task update_product_modifies_fields()
-    {
-        var created = await CreateProduct("Original", ["Cat"], "Original desc", 100m);
-
-        var result = await _host.Scenario(x =>
-        {
-            x.Put.Json(new UpdateProduct(created.Id, "Updated", ["New Cat"], "Updated desc", "updated.png", 250m)).ToUrl("/products");
-            x.StatusCodeShouldBeOk();
-        });
-
-        var updated = result.ReadAsJson<Product>()!;
-        updated.Id.ShouldBe(created.Id);
-        updated.Name.ShouldBe("Updated");
-        updated.Category.ShouldContain("New Cat");
-        updated.Description.ShouldBe("Updated desc");
-        updated.Price.ShouldBe(250m);
-    }
-
-    [Fact]
     public async Task update_product_rejects_empty_name()
     {
         var created = await CreateProduct("ToUpdate", ["Cat"], "Desc", 100m);
@@ -190,38 +135,9 @@ public class CatalogTests : IAsyncLifetime
         });
     }
 
-    [Fact]
-    public async Task update_nonexistent_product_returns_404()
-    {
-        await _host.Scenario(x =>
-        {
-            x.Put.Json(new UpdateProduct(Guid.NewGuid(), "Name", ["Cat"], "Desc", "img.png", 100m)).ToUrl("/products");
-            x.StatusCodeShouldBe(404);
-        });
-    }
-
     #endregion
 
     #region Delete Product
-
-    [Fact]
-    public async Task delete_product_removes_it()
-    {
-        var created = await CreateProduct("ToDelete", ["Cat"], "Desc", 100m);
-
-        await _host.Scenario(x =>
-        {
-            x.Delete.Url($"/products/{created.Id}");
-            x.StatusCodeShouldBe(204);
-        });
-
-        // Verify it's gone
-        await _host.Scenario(x =>
-        {
-            x.Get.Url($"/products/{created.Id}");
-            x.StatusCodeShouldBe(404);
-        });
-    }
 
     [Fact]
     public async Task delete_nonexistent_product_returns_404()
