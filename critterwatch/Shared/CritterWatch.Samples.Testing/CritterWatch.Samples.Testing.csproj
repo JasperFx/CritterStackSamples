@@ -20,8 +20,9 @@
     <!-- Aspire test host: DistributedApplicationTestingBuilder, CreateHttpClient, ResourceNotifications. -->
     <PackageReference Include="Aspire.Hosting.Testing" />
 
-    <!-- xUnit so the fixture can implement IAsyncLifetime and ship the [CollectionDefinition]. -->
-    <PackageReference Include="xunit" />
+    <!-- xUnit v3's extensibility surface, so the fixture can implement IAsyncLifetime and ship the
+         [CollectionDefinition] without making this library a test host. -->
+    <PackageReference Include="xunit.v3.extensibility.core" />
 
     <!-- Fluent assertions used by the helper methods. -->
     <PackageReference Include="Shouldly" />

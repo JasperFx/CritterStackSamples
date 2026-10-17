@@ -10,22 +10,18 @@ namespace CritterCrush.Specs;
 /// Projected specifications for MyAppointments.
 /// </summary>
 /// <remarks>
-/// Steps render from the marker comments in each test body; the verdict comes from the
-/// runner. [BobcatSlice] carries the BINDING only — the slice's domain, chapter and pattern
-/// are stated once, on the event model, and merge in by slice name.
-/// <para>
-/// [BobcatScenario] is what OPENS the recording each test's steps go into. Without it
-/// ScenarioRecorder.Current is null, every [BobcatStep] interceptor records into
-/// NoStep.Instance, and the suite goes green having rendered nothing at all (issue #379).
-/// </para>
+/// Steps render from the decorated helpers on <see cref="CritterCrushSpec"/>; the verdict comes from
+/// the runner. <c>[BobcatSpec]</c> is the <c>[Fact]</c>, opens the recording and carries the slice
+/// BINDING only — the slice's domain, chapter and pattern are stated once, on the event model
+/// (CritterCrushEventModel.cs in the app), and merge in by slice name. Through Bobcat 0.27 this was
+/// <c>[Fact]</c> + <c>[BobcatSlice]</c> with <c>[BobcatScenario]</c> on the class, and forgetting the
+/// last one rendered nothing at all (issue #379); <c>[BobcatSpec]</c> cannot come apart that way.
 /// </remarks>
-[BobcatScenario]
 [BobcatFeature("MyAppointments")]
-[BobcatSlice(SliceType = typeof(MyAppointments))]
 [Collection(CritterCrushHost.CollectionName)]
 public class MyAppointmentsSpecs(CritterCrushHost host) : CritterCrushSpec(host)
 {
-    [Fact]
+    [BobcatSpec(typeof(MyAppointments))]
     public async Task An_owner_sees_an_appointment_awaiting_their_confirmation()
     {
         var ownerId = Guid.NewGuid();
@@ -43,10 +39,10 @@ public class MyAppointmentsSpecs(CritterCrushHost host) : CritterCrushSpec(host)
         Assert.Equal(0, mine.Closed);
     }
 
-    [Fact]
     /// <summary>
     /// The multi-stream fold from the owner's side: one person, two appointment streams, one page.
     /// </summary>
+    [BobcatSpec(typeof(MyAppointments))]
     public async Task An_owner_page_spans_every_appointment_stream_they_have()
     {
         var ownerId = Guid.NewGuid();

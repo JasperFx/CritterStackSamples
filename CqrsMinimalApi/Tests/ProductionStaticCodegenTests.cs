@@ -1,5 +1,6 @@
 using Alba;
 using Microsoft.AspNetCore.Hosting;
+using Wolverine;
 
 namespace CqrsMinimalApi.Tests;
 
@@ -17,6 +18,7 @@ namespace CqrsMinimalApi.Tests;
 // The complementary claim — that a Release publish ships WITHOUT WolverineFx.RuntimeCompilation /
 // Roslyn at all — is proven by verify-production-build.sh and the Dockerfile (a Release build,
 // which this Debug test cannot demonstrate since the package is present in Debug).
+// Not a Bobcat specification: it proves how the application boots, not a behaviour of it.
 public class ProductionStaticCodegenTests
 {
     [Fact]
@@ -25,6 +27,11 @@ public class ProductionStaticCodegenTests
         await using var host = await AlbaHost.For<Program>(builder =>
         {
             builder.UseEnvironment("Production");
+
+            // Under xUnit v3 the test project is the entry assembly, and Static mode looks for the
+            // pre-generated types in Wolverine's ApplicationAssembly, so point it back at the app
+            builder.ConfigureServices(services =>
+                services.ConfigureWolverine(opts => opts.ApplicationAssembly = typeof(Program).Assembly));
         });
 
         // A generated endpoint actually executes — confirming the pre-generated handler runs.
