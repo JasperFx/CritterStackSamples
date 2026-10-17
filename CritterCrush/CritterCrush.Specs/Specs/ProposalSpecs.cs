@@ -10,18 +10,14 @@ namespace CritterCrush.Specs;
 /// Projected specifications for ProposeHomeCheckAppointment.
 /// </summary>
 /// <remarks>
-/// Steps render from the marker comments in each test body; the verdict comes from the
-/// runner. [BobcatSlice] carries the BINDING only — the slice's domain, chapter and pattern
-/// are stated once, on the event model, and merge in by slice name.
-/// <para>
-/// [BobcatScenario] is what OPENS the recording each test's steps go into. Without it
-/// ScenarioRecorder.Current is null, every [BobcatStep] interceptor records into
-/// NoStep.Instance, and the suite goes green having rendered nothing at all (issue #379).
-/// </para>
+/// Steps render from the decorated helpers on <see cref="CritterCrushSpec"/>; the verdict comes from
+/// the runner. <c>[BobcatSpec]</c> is the <c>[Fact]</c>, opens the recording and carries the slice
+/// BINDING only — the slice's domain, chapter and pattern are stated once, on the event model
+/// (CritterCrushEventModel.cs in the app), and merge in by slice name. Through Bobcat 0.27 this was
+/// <c>[Fact]</c> + <c>[BobcatSlice]</c> with <c>[BobcatScenario]</c> on the class, and forgetting the
+/// last one rendered nothing at all (issue #379); <c>[BobcatSpec]</c> cannot come apart that way.
 /// </remarks>
-[BobcatScenario]
 [BobcatFeature("BookingAppointments")]
-[BobcatSlice(SliceName = "ProposeHomeCheckAppointment")]
 [Collection(CritterCrushHost.CollectionName)]
 public class ProposalSpecs(CritterCrushHost host) : CritterCrushSpec(host)
 {
@@ -31,7 +27,7 @@ public class ProposalSpecs(CritterCrushHost host) : CritterCrushSpec(host)
     /// it — at-least-once delivery then collides on StartStream instead of booking a second visit —
     /// and this asserts it directly rather than through the store.
     /// </summary>
-    [Fact]
+    [BobcatSpec(SliceName = "ProposeHomeCheckAppointment", Pattern = "Automation")]
     public async Task An_accepted_home_check_assignment_proposes_a_visit()
     {
         var assignmentId = Guid.NewGuid();

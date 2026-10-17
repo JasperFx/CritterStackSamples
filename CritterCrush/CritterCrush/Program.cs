@@ -1,7 +1,8 @@
-using Bobcat.EventModel;
+using CritterCrush;
 using CritterCrush.Scheduling;
 using JasperFx;
 using JasperFx.Events.Daemon;
+using JasperFx.Events.EventModeling;
 using JasperFx.Events.Projections;
 using Marten;
 using Wolverine;
@@ -15,8 +16,10 @@ builder.Services.AddWolverineHttp();
 // The declared model, alongside the one Wolverine and Marten derive from the code. Both feed the
 // same merged EventModelDescriptor, and where they disagree the merge says so — which is how this
 // application answers "does the code still do what the board said" without anybody reading both.
-builder.Services.AddEventModelFile(
-    Path.Combine(builder.Environment.ContentRootPath, "..", "models", "CritterCrush.emodel.yaml"));
+// C# EventModelDefinitions (CritterCrushEventModel.cs) since Bobcat retired the curated YAML file and
+// AddEventModelFile (bobcat#406).
+builder.Services.AddEventModel<BookingAppointmentsModel>();
+builder.Services.AddEventModel<VolunteeringAndHomeChecksModel>();
 
 builder.Services.AddMarten((StoreOptions opts) =>
     {

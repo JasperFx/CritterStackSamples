@@ -2,6 +2,7 @@ using Alba;
 using Bobcat;
 using Bobcat.CritterStack;
 using JasperFx.Events;
+using JasperFx.Events.EventModeling;
 using Marten;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
@@ -11,30 +12,32 @@ using Xunit;
 namespace CritterCrush.Specs;
 
 /// <summary>
-/// The store vocabulary for CritterCrush's projected specs — the Lane A counterpart of
-/// <c>CritterStackFixture</c>, for tests that run under xUnit rather than inside a Bobcat run.
+/// The store vocabulary for CritterCrush's projected specs: a hand-written scenario base over Bobcat's
+/// public store primitives (<see cref="EventStoreAuthoring"/>, <see cref="EventStores"/>).
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Why this exists at all.</b> <c>CritterStackFixture</c>'s typed steps are public, but every one
-/// of them reaches the store through an <c>IStepContext</c>, which only exists inside a Bobcat run.
-/// A plain <c>[Fact]</c> has none. Bobcat 0.25.0 made <see cref="EventStoreAuthoring"/> public, so
-/// the arrange and read-model halves are now reachable directly; what is left to write here is the
-/// host, the act, and the rendering.
+/// <b>Why not <c>CritterStackSpec</c> / <c>WolverineSpec</c>.</b> Bobcat 1.0 ships both, and the bus act
+/// here is exactly <c>WolverineSpec.WhenReceived</c>. But this application is mostly collapsed HTTP
+/// endpoints, and without WolverineFx.Bobcat.Http (which drags in Alba 9 prereleases) an HTTP act is
+/// <c>WhenTracked</c>, which (checked against WolverineFx.Bobcat 6.51.0-alpha.1) counts every event the
+/// request's cascade appended as the act's own, so <c>ThenEvents(typeof(HomeCheckAssignmentAccepted))</c>
+/// fails on the automation's <c>HomeCheckAppointmentProposed</c>, and does not see a 400 ProblemDetails
+/// as a refusal, so <c>ThenRefusedWith</c> says the act succeeded. This base reads the delta of the
+/// stream the scenario arranged and keeps the response, which is what these specs assert on.
 /// </para>
 /// <para>
-/// <b>Every helper carries <see cref="BobcatStepAttribute"/>.</b> That is the whole leverage of this
-/// lane: decorate the shared helpers once and every test that calls them renders as steps, with no
-/// marker comments in the test bodies. Marten's <c>DaemonContext</c> is the precedent — eight
-/// decorated helpers rendered hundreds of existing tests without touching a test file.
+/// <b>Every helper is a step.</b> <c>[Given]</c>/<c>[When]</c>/<c>[Then]</c> (until 1.0 spelled
+/// <c>[BobcatStep(..., Keyword = "...")]</c>, which still works) on the shared helpers renders every test
+/// that calls them, with no marker comments in the test bodies. <c>[EventModelRole]</c> /
+/// <c>[EventModelTrigger]</c> on the methods the tests call hand the generator each slice's command,
+/// aggregate, events and read models (bobcat#462), as the shipped vocabularies do; a wrapper has to
+/// re-declare them, since the generator reads the method the test calls, not what it calls.
 /// </para>
 /// <para>
 /// <b>Which is why every step helper is <c>public</c> and not <c>protected</c>.</b> The generated
-/// interceptor is an extension method — a requirement of the interceptor feature rather than a
-/// choice — and an extension method cannot see a protected member. So the two ideas collide: a base
-/// class naturally wants protected members, and <c>[BobcatStep]</c> forbids them. Marking them
-/// protected is not a degraded experience but a hard CS0122 from generated code, which reads as a
-/// compiler bug until you know the rule.
+/// interceptor is an extension method, which cannot see a protected member. Since 1.0 that is
+/// BOBCAT039 at the helper rather than a CS0122 from generated code.
 /// </para>
 /// </remarks>
 public abstract class CritterCrushSpec : IAsyncLifetime
@@ -42,7 +45,7 @@ public abstract class CritterCrushSpec : IAsyncLifetime
     private readonly CritterCrushHost _host;
     private object? _stream;
     private Type? _aggregate;
-    private ActExecution _last = ActExecution.None;
+    private ActCapture _last = ActCapture.None;
     private IScenarioResult? _response;
 
     protected CritterCrushSpec(CritterCrushHost host) => _host = host;
@@ -68,24 +71,28 @@ public abstract class CritterCrushSpec : IAsyncLifetime
     // ---- arrange ---------------------------------------------------------------------------
 
     /// <summary>The stream this scenario acts against has no events yet.</summary>
+    [EventModelRole(SliceRole.Aggregate, nameof(T))]
     public Task GivenNoEvents<T>(Guid id) where T : class => GivenEvents(typeof(T), id);
 
     /// <summary>The stream starts with exactly these events — the prior history a command runs against.</summary>
+    [EventModelRole(SliceRole.Aggregate, nameof(T))]
+    [EventModelRole(SliceRole.ArrangedEvent, nameof(events))]
     public Task GivenEvents<T>(Guid id, params object[] events) where T : class
         => GivenEvents(typeof(T), id, events);
 
     /// <summary>
-    /// The stepped core. Non-generic on purpose: <c>[BobcatStep]</c> generates an INTERCEPTOR, and
+    /// The stepped core. Non-generic on purpose: a step attribute generates an INTERCEPTOR, and
     /// an interceptor is an extension method whose type arguments have to be inferable from the call
     /// site — which they never are for <c>GivenEvents&lt;Appointment&gt;(id)</c>, where the aggregate
     /// appears only as a type argument. That is CS0411 from generated code.
     /// </summary>
     /// <remarks>
-    /// So the generic wrappers above give the call site its ergonomics and this carries the
-    /// rendering. The shipped Gherkin fixture takes <c>Type</c> here too, for its own reasons; the
-    /// shapes agreeing is a happy accident rather than a plan.
+    /// So the generic wrappers above give the call site its ergonomics (and carry the Event Model roles)
+    /// and this carries the rendering. Bobcat 1.0 does intercept a generic step with its type arguments
+    /// (bobcat#534), but the <c>{aggregate}</c> placeholder binds by parameter name, so the Type-taking
+    /// core stays.
     /// </remarks>
-    [BobcatStep("{aggregate} \"{id}\" has already recorded these events", Keyword = "Given")]
+    [Given("{aggregate} \"{id}\" has already recorded these events")]
     public async Task GivenEvents(Type aggregate, Guid id, params object[] events)
     {
         _stream = id;
@@ -108,18 +115,21 @@ public abstract class CritterCrushSpec : IAsyncLifetime
     /// and the recorder decides how it reads.
     /// </para>
     /// </remarks>
+    [EventModelRole(SliceRole.Aggregate, nameof(T))]
+    [EventModelRole(SliceRole.ArrangedEvent, nameof(events))]
     public Task GivenEventsOn<T>(Guid id, params object[] events) where T : class
         => GivenEventsOn(typeof(T), id, events);
 
     /// <inheritdoc cref="GivenEventsOn{T}"/>
-    [BobcatStep("{aggregate} \"{id}\" has already recorded these events", Keyword = "Given")]
+    [Given("{aggregate} \"{id}\" has already recorded these events")]
     public Task GivenEventsOn(Type aggregate, Guid id, params object[] events)
         => events.Length == 0 ? Task.CompletedTask : EventStoreAuthoring.AppendAsync(Store, aggregate, id, events);
 
     // ---- act -------------------------------------------------------------------------------
 
     /// <summary>Dispatch a message over the bus and wait for everything it caused to settle.</summary>
-    [BobcatStep("{message} is received", Keyword = "When")]
+    [When("{message} is received")]
+    [EventModelRole(SliceRole.Command, nameof(message))]
     public Task WhenReceived(object message)
         => actAsync(() => Host.TrackActivity().IncludeExternalTransports().SendMessageAndWaitAsync(message));
 
@@ -127,7 +137,9 @@ public abstract class CritterCrushSpec : IAsyncLifetime
     /// POST to a collapsed endpoint inside a tracked session, so the events it appends and the
     /// messages it cascades are both captured — the HTTP twin of <see cref="WhenReceived"/>.
     /// </summary>
-    [BobcatStep("{command} is posted to \"{route}\"", Keyword = "When")]
+    [When("{command} is posted to \"{route}\"")]
+    [EventModelRole(SliceRole.Command, nameof(command))]
+    [EventModelTrigger(TriggerKind.Http, Route = nameof(route), HttpMethod = "POST")]
     public async Task WhenPosted(object command, string route)
     {
         // Typed explicitly: an async lambda matches both the Task and ValueTask overloads, which
@@ -168,25 +180,23 @@ public abstract class CritterCrushSpec : IAsyncLifetime
                 ? (IReadOnlyList<IEvent>)(await EventStores.FetchStreamAsync(Store, streamId)).Skip(before.Count).ToList()
                 : await EventStores.QueryEventsSinceAsync(Store, floor!.Value + 1);
 
-            // The Outcome seam stays null on purpose. 0.27.0 split the capture so the grammar in
-            // core knows only an IActOutcome, and Bobcat.Wolverine's WolverineActOutcome is what
-            // carries the ITrackedSession across it. Nothing here reads the session — awaiting it
-            // is what makes the cascade settle, and every assertion below works off NewEvents or
-            // Error — so taking the package to hold a value no step reads would be a dependency
-            // for nothing. It earns its place the day a step asserts on messages sent.
+            // Nothing here reads the session: awaiting it is what makes the cascade settle, and every
+            // assertion below works off the appended events or the error. (Bobcat 1.0 removed the
+            // ActExecution record this used to be captured into, so ActCapture below is our own.)
             _ = session;
-            _last = new ActExecution(null, appended, null);
+            _last = new ActCapture(appended, null);
         }
         catch (Exception e)
         {
-            _last = new ActExecution(null, [], e);
+            _last = new ActCapture([], e);
         }
     }
 
     // ---- assert ----------------------------------------------------------------------------
 
     /// <summary>The act appended exactly these event types, in order.</summary>
-    [BobcatStep("{event} is emitted", Keyword = "Then")]
+    [Then("{event} is emitted")]
+    [EventModelRole(SliceRole.Event, nameof(@event))]
     public void ThenEvents(params Type[] @event)
     {
         rethrowUnexpected();
@@ -194,11 +204,12 @@ public abstract class CritterCrushSpec : IAsyncLifetime
     }
 
     /// <summary>The act appended nothing — the refusal half of a guard.</summary>
-    [BobcatStep("no events are emitted", Keyword = "Then")]
+    [Then("no events are emitted")]
     public void ThenNoEvents() => Assert.Empty(_last.NewEvents);
 
     /// <summary>The single event the act appended, for asserting on its fields. Not a step — it
     /// reads the capture rather than doing anything, and the assertion that follows is the step.</summary>
+    [EventModelRole(SliceRole.Event, nameof(T))]
     public T TheEvent<T>()
     {
         rethrowUnexpected();
@@ -206,7 +217,7 @@ public abstract class CritterCrushSpec : IAsyncLifetime
     }
 
     /// <summary>A collapsed endpoint refuses with ProblemDetails and a status, not by throwing.</summary>
-    [BobcatStep("the response is {status}", Keyword = "Then")]
+    [Then("the response is {status}")]
     public void ThenResponseIs(int status)
         => Assert.Equal(status, (_response ?? throw new InvalidOperationException(
             "No HTTP response was captured — this scenario acted over the bus, where a refusal throws. "
@@ -221,7 +232,7 @@ public abstract class CritterCrushSpec : IAsyncLifetime
     /// ConfirmAppointment's three `if`s as one `switch` left the message as the only thing telling
     /// the branches apart, and nothing asserted it.
     /// </remarks>
-    [BobcatStep("refused with \"{message}\"", Keyword = "Then")]
+    [Then("refused with \"{message}\"")]
     public async Task ThenRefusedWith(string message)
     {
         ThenResponseIs(400);
@@ -233,7 +244,7 @@ public abstract class CritterCrushSpec : IAsyncLifetime
     }
 
     /// <summary>A bus-dispatched command refuses by throwing, which the act captured.</summary>
-    [BobcatStep("validation fails with \"{message}\"", Keyword = "Then")]
+    [Then("validation fails with \"{message}\"")]
     public void ThenValidationFails(string message)
     {
         var error = _last.Error ?? throw new InvalidOperationException(
@@ -254,7 +265,8 @@ public abstract class CritterCrushSpec : IAsyncLifetime
     /// Non-generic and taking Type for the same reason <see cref="GivenEvents(Type, Guid, object[])"/>
     /// is — an interceptor is an extension method whose type arguments must be inferable.
     /// </remarks>
-    [BobcatStep("a {aggregate} stream is started with id \"{id}\"", Keyword = "Then")]
+    [Then("a {aggregate} stream is started with id \"{id}\"")]
+    [EventModelRole(SliceRole.Aggregate, nameof(aggregate))]
     public async Task ThenStreamIsStarted(Type aggregate, Guid id)
     {
         rethrowUnexpected();
@@ -271,6 +283,7 @@ public abstract class CritterCrushSpec : IAsyncLifetime
     /// A read model, after the async daemon has caught up. The wait is the point: these projections
     /// are async and multi-stream, so reading straight after the act reads a stale document.
     /// </summary>
+    [EventModelRole(SliceRole.ReadModel, nameof(T))]
     public async Task<T> ThenReadModel<T>(Guid id) where T : class
     {
         await ThenProjectionsAreCaughtUp(typeof(T));
@@ -283,11 +296,13 @@ public abstract class CritterCrushSpec : IAsyncLifetime
 
     /// <summary>The stepped half of <see cref="ThenReadModel{T}"/>; see <see cref="GivenEvents(Type, Guid, object[])"/>
     /// for why the rendering hangs off a non-generic method.</summary>
-    [BobcatStep("the {readmodel} read model has caught up", Keyword = "Then")]
+    [Then("the {readmodel} read model has caught up")]
+    [EventModelRole(SliceRole.ReadModel, nameof(readmodel))]
     public Task ThenProjectionsAreCaughtUp(Type readmodel)
         => EventStores.WaitForNonStaleProjectionsAsync(Store, EventStores.DefaultProjectionTimeout);
 
     /// <summary>The write model, folded from its stream.</summary>
+    [EventModelRole(SliceRole.Aggregate, nameof(T))]
     public Task<T?> TheAggregate<T>(Guid id) where T : class => EventStores.AggregateStreamAsync<T>(Store, id);
 
     /// <summary>
@@ -301,5 +316,11 @@ public abstract class CritterCrushSpec : IAsyncLifetime
         {
             throw new InvalidOperationException($"The act failed: {error.Message}", error);
         }
+    }
+
+    /// <summary>What one act appended, and the failure it raised if it raised one.</summary>
+    private sealed record ActCapture(IReadOnlyList<IEvent> NewEvents, Exception? Error)
+    {
+        public static readonly ActCapture None = new([], null);
     }
 }

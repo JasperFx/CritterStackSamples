@@ -22,15 +22,24 @@ Spec/K9CRUSH.emlang.v3.2026-07-31.yaml   (the board's own export, 161 slices)
         ▼
 models/CritterCrush.emodel.yaml           ← CURATED: the aggregate, the field shapes, the
         │                                    routing ids, the edge cases, the hotspots
-        │  models/Scaffolder  (Bobcat.EventModel.Scaffolding)
+        │  models/Scaffolder  (Bobcat.EventModel.Scaffolding 0.30.0, the last one published)
         ▼
 CritterCrush/{Scheduling,Volunteering}/    ← 30 files: every mechanical decision made,
-CritterCrush.Specs/Features/*.feature        every judgment a named TODO
+CritterCrush.Specs/Specs/*Specs.cs           every judgment a named TODO
 models/crittercrush-plan.yaml             ← the Stoat plan, derived from the same model
         │  the critterstack-sdd skills fill the judgment
         ▼
-37 scenarios green
+52 projected specs + 36 invariant checks green
 ```
+
+**On Bobcat 1.0 the curated file is no longer what the application registers.** Bobcat retired the
+curated YAML format as an authoring surface ([bobcat#406](https://github.com/JasperFx/bobcat/issues/406)):
+`AddEventModelFile` is gone, and so is `Bobcat.EventModel.Scaffolding` (slice scaffolding is Wolverine's
+`scaffold` command now). The model's slice-level declarations (pattern, chapter, trigger, aggregate,
+events, views, external systems, hotspots) are therefore ported to C# in
+`CritterCrush/CritterCrushEventModel.cs`, two `EventModelDefinition`s registered with
+`AddEventModel<T>()`. The YAML stays as the scaffolder's input only, and the scaffolder stays pinned to
+the last versions that read it; see `models/README.md`.
 
 The board export is **not** committed here. It belongs to the upstream repository and is fetched
 when the model is re-derived, so this repository never carries a stale copy of somebody else's
@@ -58,20 +67,20 @@ appointment nobody asked to move, and what happens when one source entity needs 
 
 ## Reading the current state
 
-Nineteen slices across two chapters, every one specified and built, **37 scenarios green**. All six
-`.feature` files regenerate from the model **byte for byte**; see `models/README.md`. Two of the
-thirty scaffolded files ship exactly as the generator emitted them — the inbound integration
-contracts for the two trigger events no chapter here owns — and two files are hand-written additions
-the scaffold has no opinion about (the shared 404 refusals).
+Nineteen slices across two chapters, every one specified and built. The specs are xUnit v3 tests,
+every one a Bobcat projected specification (`[BobcatSpec]`, bound to its slice), plus one 36-row
+theory in `Invariants/` that checks the shelter queue's arithmetic for every state × command pair and
+is deliberately not a specification. Two of the thirty scaffolded files ship exactly as the generator
+emitted them — the inbound integration contracts for the two trigger events no chapter here owns —
+and two files are hand-written additions the scaffold has no opinion about (the shared 404 refusals).
 
 Two of those scenarios are worth singling out, because each was deliberately broken to prove it can
 fail before it was believed:
 
 - **`An owner's page spans every appointment stream they have`** is the fan-out check. Route one of
   the projection's identity rules to the wrong key and this scenario alone goes red
-  (`AwaitingConfirmation: expected 1, was 0`). It needs `stream:` in the curated `given:`
-  ([bobcat#311](https://github.com/JasperFx/bobcat/issues/311), Bobcat 0.21.0) to arrange two
-  streams in one scenario at all.
+  (`AwaitingConfirmation: expected 1, was 0`). It arranges two streams in one scenario
+  (`GivenEventsOn<Appointment>` beside `GivenEvents<Appointment>`).
 - **`An appointment cancelled before anyone confirmed it leaves the awaiting count`** is what makes
   `wasConfirmed` load-bearing. Decrement the naive counter instead and this scenario alone goes red
   (`Confirmed: expected 0, was -1`).
@@ -104,17 +113,23 @@ single-stream, one document per application folded from that application's own s
 
 ```bash
 docker compose up -d                                    # Postgres on 5433, from the repo root
-docker exec -it $(docker ps -qf "publish=5433") psql -U postgres -c "CREATE DATABASE crittercrush;"
-./CritterCrush.Specs/bin/Debug/net10.0/CritterCrush.Specs
+dotnet test                                             # from this folder: 88 tests, 52 of them specs
 dotnet run --project CritterCrush
 ```
 
-⚠️ **`dotnet test CritterCrush.Specs` collects zero tests here and exits 0** — a green that ran
-nothing. The specs are a Microsoft.Testing.Platform executable; run the binary. `--filter-feature
-BookingAppointments` narrows it to one feature.
+The database is created on start-up if it is missing (`CreateDatabasesForTenants` in `Program.cs`).
 
-The spec project has **no hand-written `Main`**: Bobcat's generator emits the entry point and calls
-`[BobcatConfiguration]` (see `SuiteConfiguration.cs`).
+`global.json` here selects Microsoft.Testing.Platform for `dotnet test`, which xunit.v3 4.x on
+Microsoft.Testing.Platform 2 requires on the .NET 10 SDK; without it `dotnet test` refuses to run the
+project. The spec project is also an executable, and running it directly works too:
+
+```bash
+BOBCAT_SPEC_CONSOLE=1 BOBCAT_SPEC_CONSOLE_FILE=specs.txt ./CritterCrush.Specs/bin/Debug/net10.0/CritterCrush.Specs
+```
+
+writes every specification, step by step, to `specs.txt`. xUnit owns the entry point: there is no
+generated `Main` and no `[BobcatConfiguration]` any more (Bobcat.Mtp and its runner are gone in 1.0).
+The host is `CritterCrush.Specs/CritterCrushHost.cs`.
 
 ## The parked v1
 

@@ -10,22 +10,18 @@ namespace CritterCrush.Specs;
 /// Projected specifications for ProposeFosterHandoverAppointment, ProposeSurrenderIntakeAppointment, ConfirmAppointment, RequestReschedule, RescheduleAppointment, CompleteAppointment, CancelAppointment, RecordAppointmentNoShow.
 /// </summary>
 /// <remarks>
-/// Steps render from the marker comments in each test body; the verdict comes from the
-/// runner. [BobcatSlice] carries the BINDING only — the slice's domain, chapter and pattern
-/// are stated once, on the event model, and merge in by slice name.
-/// <para>
-/// [BobcatScenario] is what OPENS the recording each test's steps go into. Without it
-/// ScenarioRecorder.Current is null, every [BobcatStep] interceptor records into
-/// NoStep.Instance, and the suite goes green having rendered nothing at all (issue #379).
-/// </para>
+/// Steps render from the decorated helpers on <see cref="CritterCrushSpec"/>; the verdict comes from
+/// the runner. <c>[BobcatSpec]</c> is the <c>[Fact]</c>, opens the recording and carries the slice
+/// BINDING only — the slice's domain, chapter and pattern are stated once, on the event model
+/// (CritterCrushEventModel.cs in the app), and merge in by slice name. Through Bobcat 0.27 this was
+/// <c>[Fact]</c> + <c>[BobcatSlice]</c> with <c>[BobcatScenario]</c> on the class, and forgetting the
+/// last one rendered nothing at all (issue #379); <c>[BobcatSpec]</c> cannot come apart that way.
 /// </remarks>
-[BobcatScenario]
 [BobcatFeature("BookingAppointments")]
 [Collection(CritterCrushHost.CollectionName)]
 public class BookingAppointmentsSpecs(CritterCrushHost host) : CritterCrushSpec(host)
 {
-    [Fact]
-    [BobcatSlice(SliceName = "ProposeFosterHandoverAppointment")]
+    [BobcatSpec(SliceName = "ProposeFosterHandoverAppointment", Pattern = "Automation")]
     public async Task A_dog_placed_in_foster_proposes_a_handover()
     {
         var fosterApplicationId = Guid.NewGuid();
@@ -43,8 +39,7 @@ public class BookingAppointmentsSpecs(CritterCrushHost host) : CritterCrushSpec(
         Assert.Equal(fosterApplicationId, proposed.SourceId);
     }
 
-    [Fact]
-    [BobcatSlice(SliceName = "ProposeSurrenderIntakeAppointment")]
+    [BobcatSpec(SliceName = "ProposeSurrenderIntakeAppointment", Pattern = "Automation")]
     public async Task A_reviewed_surrender_request_proposes_an_intake()
     {
         var surrenderRequestId = Guid.NewGuid();
@@ -61,8 +56,7 @@ public class BookingAppointmentsSpecs(CritterCrushHost host) : CritterCrushSpec(
         Assert.Equal(surrenderRequestId, proposed.SourceId);
     }
 
-    [Fact]
-    [BobcatSlice(SliceType = typeof(ConfirmAppointment))]
+    [BobcatSpec(typeof(ConfirmAppointment))]
     public async Task A_proposed_appointment_is_confirmed()
     {
         var id = Guid.NewGuid();
@@ -79,8 +73,7 @@ public class BookingAppointmentsSpecs(CritterCrushHost host) : CritterCrushSpec(
         Assert.Equal(ownerId, TheEvent<AppointmentConfirmed>().OwnerId);
     }
 
-    [Fact]
-    [BobcatSlice(SliceType = typeof(ConfirmAppointment))]
+    [BobcatSpec(typeof(ConfirmAppointment))]
     public async Task A_cancelled_appointment_cannot_be_confirmed()
     {
         var id = Guid.NewGuid();
@@ -105,8 +98,7 @@ public class BookingAppointmentsSpecs(CritterCrushHost host) : CritterCrushSpec(
     /// and its guard checked only IsClosed, so an appointment nobody had confirmed could be marked
     /// a no-show — leaving the shelter queue at Confirmed=-1, Awaiting=1, Closed=1.
     /// </summary>
-    [Fact]
-    [BobcatSlice(SliceType = typeof(RecordAppointmentNoShow))]
+    [BobcatSpec(typeof(RecordAppointmentNoShow))]
     public async Task An_appointment_nobody_confirmed_is_not_a_no_show()
     {
         var id = Guid.NewGuid();
@@ -140,8 +132,7 @@ public class BookingAppointmentsSpecs(CritterCrushHost host) : CritterCrushSpec(
     /// <c>refusedWith:</c> and the model declares it now — which is also how the scaffolder knows
     /// to bind the write model non-nullable and write no guard here.
     /// </remarks>
-    [Fact]
-    [BobcatSlice(SliceType = typeof(ConfirmAppointment))]
+    [BobcatSpec(typeof(ConfirmAppointment))]
     public async Task An_appointment_that_does_not_exist_is_not_found()
     {
         await WhenPosted(new ConfirmAppointment(Guid.NewGuid()), "/api/scheduling/confirmappointment");
@@ -155,8 +146,7 @@ public class BookingAppointmentsSpecs(CritterCrushHost host) : CritterCrushSpec(
     /// siblings checked IsClosed, so this returned 200 and appended AppointmentConfirmed to a
     /// closed stream — which also decremented a queue bucket the appointment had already left.
     /// </summary>
-    [Fact]
-    [BobcatSlice(SliceType = typeof(ConfirmAppointment))]
+    [BobcatSpec(typeof(ConfirmAppointment))]
     public async Task A_completed_appointment_cannot_be_confirmed()
     {
         var id = Guid.NewGuid();
@@ -179,8 +169,7 @@ public class BookingAppointmentsSpecs(CritterCrushHost host) : CritterCrushSpec(
     /// The other route into a negative count: two AppointmentConfirmed events decrement
     /// AwaitingConfirmation twice having incremented it once.
     /// </summary>
-    [Fact]
-    [BobcatSlice(SliceType = typeof(ConfirmAppointment))]
+    [BobcatSpec(typeof(ConfirmAppointment))]
     public async Task An_appointment_is_not_confirmed_twice()
     {
         var id = Guid.NewGuid();
@@ -202,8 +191,7 @@ public class BookingAppointmentsSpecs(CritterCrushHost host) : CritterCrushSpec(
     /// Added during review. RescheduleRequested survives a cancellation, and this guard checked
     /// only that flag — so asking to move an appointment and then cancelling it left it movable.
     /// </summary>
-    [Fact]
-    [BobcatSlice(SliceType = typeof(RescheduleAppointment))]
+    [BobcatSpec(typeof(RescheduleAppointment))]
     public async Task A_cancelled_appointment_is_not_moved_even_when_a_move_was_asked_for()
     {
         var id = Guid.NewGuid();
@@ -224,8 +212,7 @@ public class BookingAppointmentsSpecs(CritterCrushHost host) : CritterCrushSpec(
         ThenNoEvents();
     }
 
-    [Fact]
-    [BobcatSlice(SliceType = typeof(RequestReschedule))]
+    [BobcatSpec(typeof(RequestReschedule))]
     public async Task A_member_asks_to_move_a_confirmed_appointment()
     {
         var id = Guid.NewGuid();
@@ -248,8 +235,7 @@ public class BookingAppointmentsSpecs(CritterCrushHost host) : CritterCrushSpec(
         Assert.Equal("Working that afternoon", requested.Reason);
     }
 
-    [Fact]
-    [BobcatSlice(SliceType = typeof(RequestReschedule))]
+    [BobcatSpec(typeof(RequestReschedule))]
     public async Task A_completed_appointment_cannot_be_rescheduled()
     {
         var id = Guid.NewGuid();
@@ -271,8 +257,7 @@ public class BookingAppointmentsSpecs(CritterCrushHost host) : CritterCrushSpec(
         ThenNoEvents();
     }
 
-    [Fact]
-    [BobcatSlice(SliceType = typeof(RescheduleAppointment))]
+    [BobcatSpec(typeof(RescheduleAppointment))]
     public async Task The_shelter_moves_an_appointment_a_member_asked_to_move()
     {
         var id = Guid.NewGuid();
@@ -292,8 +277,7 @@ public class BookingAppointmentsSpecs(CritterCrushHost host) : CritterCrushSpec(
         Assert.Equal(requestedFor, TheEvent<AppointmentRescheduled>().ScheduledFor);
     }
 
-    [Fact]
-    [BobcatSlice(SliceType = typeof(RescheduleAppointment))]
+    [BobcatSpec(typeof(RescheduleAppointment))]
     public async Task An_appointment_nobody_asked_to_move_is_not_moved()
     {
         var id = Guid.NewGuid();
@@ -313,8 +297,7 @@ public class BookingAppointmentsSpecs(CritterCrushHost host) : CritterCrushSpec(
         ThenNoEvents();
     }
 
-    [Fact]
-    [BobcatSlice(SliceType = typeof(CompleteAppointment))]
+    [BobcatSpec(typeof(CompleteAppointment))]
     public async Task A_confirmed_appointment_is_completed()
     {
         var id = Guid.NewGuid();
@@ -332,8 +315,7 @@ public class BookingAppointmentsSpecs(CritterCrushHost host) : CritterCrushSpec(
         Assert.Equal(ownerId, TheEvent<AppointmentCompleted>().OwnerId);
     }
 
-    [Fact]
-    [BobcatSlice(SliceType = typeof(CompleteAppointment))]
+    [BobcatSpec(typeof(CompleteAppointment))]
     public async Task An_appointment_nobody_confirmed_is_not_completed()
     {
         var id = Guid.NewGuid();
@@ -351,8 +333,7 @@ public class BookingAppointmentsSpecs(CritterCrushHost host) : CritterCrushSpec(
         ThenNoEvents();
     }
 
-    [Fact]
-    [BobcatSlice(SliceType = typeof(CancelAppointment))]
+    [BobcatSpec(typeof(CancelAppointment))]
     public async Task A_confirmed_appointment_is_cancelled()
     {
         var id = Guid.NewGuid();
@@ -375,8 +356,7 @@ public class BookingAppointmentsSpecs(CritterCrushHost host) : CritterCrushSpec(
         Assert.Equal("The volunteer withdrew", cancelled.Reason);
     }
 
-    [Fact]
-    [BobcatSlice(SliceType = typeof(CancelAppointment))]
+    [BobcatSpec(typeof(CancelAppointment))]
     public async Task A_completed_appointment_cannot_be_cancelled()
     {
         var id = Guid.NewGuid();
@@ -396,8 +376,7 @@ public class BookingAppointmentsSpecs(CritterCrushHost host) : CritterCrushSpec(
         ThenNoEvents();
     }
 
-    [Fact]
-    [BobcatSlice(SliceType = typeof(RecordAppointmentNoShow))]
+    [BobcatSpec(typeof(RecordAppointmentNoShow))]
     public async Task A_no_show_is_recorded_against_a_confirmed_appointment()
     {
         var id = Guid.NewGuid();
@@ -415,8 +394,7 @@ public class BookingAppointmentsSpecs(CritterCrushHost host) : CritterCrushSpec(
         Assert.Equal(ownerId, TheEvent<AppointmentNoShowRecorded>().OwnerId);
     }
 
-    [Fact]
-    [BobcatSlice(SliceType = typeof(RecordAppointmentNoShow))]
+    [BobcatSpec(typeof(RecordAppointmentNoShow))]
     public async Task A_completed_appointment_cannot_be_marked_a_no_show()
     {
         var id = Guid.NewGuid();
@@ -442,8 +420,7 @@ public class BookingAppointmentsSpecs(CritterCrushHost host) : CritterCrushSpec(
     /// (bobcat#337) rather than carried as an orphan: that declaration is what makes the write
     /// model non-nullable, which is what makes a hand-written null check unreachable.
     /// </summary>
-    [Fact]
-    [BobcatSlice(SliceType = typeof(CompleteAppointment))]
+    [BobcatSpec(typeof(CompleteAppointment))]
     public async Task Completing_an_appointment_that_does_not_exist_is_not_found()
     {
         await WhenPosted(new CompleteAppointment(Guid.NewGuid()), "/api/scheduling/completeappointment");
@@ -457,8 +434,7 @@ public class BookingAppointmentsSpecs(CritterCrushHost host) : CritterCrushSpec(
     /// (bobcat#337) rather than carried as an orphan: that declaration is what makes the write
     /// model non-nullable, which is what makes a hand-written null check unreachable.
     /// </summary>
-    [Fact]
-    [BobcatSlice(SliceType = typeof(CancelAppointment))]
+    [BobcatSpec(typeof(CancelAppointment))]
     public async Task Cancelling_an_appointment_that_does_not_exist_is_not_found()
     {
         await WhenPosted(new CancelAppointment(Guid.NewGuid(), "The volunteer withdrew"), "/api/scheduling/cancelappointment");
@@ -472,8 +448,7 @@ public class BookingAppointmentsSpecs(CritterCrushHost host) : CritterCrushSpec(
     /// (bobcat#337) rather than carried as an orphan: that declaration is what makes the write
     /// model non-nullable, which is what makes a hand-written null check unreachable.
     /// </summary>
-    [Fact]
-    [BobcatSlice(SliceType = typeof(RecordAppointmentNoShow))]
+    [BobcatSpec(typeof(RecordAppointmentNoShow))]
     public async Task Recording_a_no_show_against_an_appointment_that_does_not_exist_is_not_found()
     {
         await WhenPosted(new RecordAppointmentNoShow(Guid.NewGuid()), "/api/scheduling/recordappointmentnoshow");
@@ -487,8 +462,7 @@ public class BookingAppointmentsSpecs(CritterCrushHost host) : CritterCrushSpec(
     /// (bobcat#337) rather than carried as an orphan: that declaration is what makes the write
     /// model non-nullable, which is what makes a hand-written null check unreachable.
     /// </summary>
-    [Fact]
-    [BobcatSlice(SliceType = typeof(RequestReschedule))]
+    [BobcatSpec(typeof(RequestReschedule))]
     public async Task Asking_to_move_an_appointment_that_does_not_exist_is_not_found()
     {
         await WhenPosted(new RequestReschedule(Guid.NewGuid(), new DateTimeOffset(2026, 10, 5, 15, 0, 0, TimeSpan.Zero), "Working that afternoon"), "/api/scheduling/requestreschedule");
@@ -502,8 +476,7 @@ public class BookingAppointmentsSpecs(CritterCrushHost host) : CritterCrushSpec(
     /// (bobcat#337) rather than carried as an orphan: that declaration is what makes the write
     /// model non-nullable, which is what makes a hand-written null check unreachable.
     /// </summary>
-    [Fact]
-    [BobcatSlice(SliceType = typeof(RescheduleAppointment))]
+    [BobcatSpec(typeof(RescheduleAppointment))]
     public async Task Moving_an_appointment_that_does_not_exist_is_not_found()
     {
         await WhenPosted(new RescheduleAppointment(Guid.NewGuid(), new DateTimeOffset(2026, 10, 5, 15, 0, 0, TimeSpan.Zero)), "/api/scheduling/rescheduleappointment");

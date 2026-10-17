@@ -10,22 +10,18 @@ namespace CritterCrush.Specs;
 /// Projected specifications for VolunteerApplicationsQueue.
 /// </summary>
 /// <remarks>
-/// Steps render from the marker comments in each test body; the verdict comes from the
-/// runner. [BobcatSlice] carries the BINDING only — the slice's domain, chapter and pattern
-/// are stated once, on the event model, and merge in by slice name.
-/// <para>
-/// [BobcatScenario] is what OPENS the recording each test's steps go into. Without it
-/// ScenarioRecorder.Current is null, every [BobcatStep] interceptor records into
-/// NoStep.Instance, and the suite goes green having rendered nothing at all (issue #379).
-/// </para>
+/// Steps render from the decorated helpers on <see cref="CritterCrushSpec"/>; the verdict comes from
+/// the runner. <c>[BobcatSpec]</c> is the <c>[Fact]</c>, opens the recording and carries the slice
+/// BINDING only — the slice's domain, chapter and pattern are stated once, on the event model
+/// (CritterCrushEventModel.cs in the app), and merge in by slice name. Through Bobcat 0.27 this was
+/// <c>[Fact]</c> + <c>[BobcatSlice]</c> with <c>[BobcatScenario]</c> on the class, and forgetting the
+/// last one rendered nothing at all (issue #379); <c>[BobcatSpec]</c> cannot come apart that way.
 /// </remarks>
-[BobcatScenario]
 [BobcatFeature("VolunteerApplicationsQueue")]
-[BobcatSlice(SliceType = typeof(VolunteerApplicationsQueue))]
 [Collection(CritterCrushHost.CollectionName)]
 public class VolunteerApplicationsQueueSpecs(CritterCrushHost host) : CritterCrushSpec(host)
 {
-    [Fact]
+    [BobcatSpec(typeof(VolunteerApplicationsQueue))]
     public async Task A_new_application_shows_as_submitted()
     {
         var applicantOwnerId = Guid.NewGuid();
@@ -39,7 +35,7 @@ public class VolunteerApplicationsQueueSpecs(CritterCrushHost host) : CritterCru
         Assert.Equal(VolunteerApplicationStatus.Submitted, row.Status);
     }
 
-    [Fact]
+    [BobcatSpec(typeof(VolunteerApplicationsQueue))]
     public async Task An_approved_application_shows_the_decision()
     {
         var applicantOwnerId = Guid.NewGuid();
