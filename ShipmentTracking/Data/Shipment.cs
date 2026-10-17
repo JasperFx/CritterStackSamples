@@ -22,7 +22,12 @@ public class Shipment : IRevisioned
 {
     public Guid Id { get; set; }
 
-    /// <summary>Managed by Polecat. Read on load, checked on update, incremented on save.</summary>
+    /// <summary>
+    /// Managed by Polecat. Read on load; on an update it is the revision being written, and the write
+    /// only lands when the stored revision is older. Since Polecat 5.42 a handler that re-stores a loaded
+    /// document must therefore claim the next revision (<c>Version++</c>) first: re-storing the revision it
+    /// was loaded with is refused as a concurrency conflict.
+    /// </summary>
     public int Version { get; set; }
 
     public string Origin { get; set; } = string.Empty;

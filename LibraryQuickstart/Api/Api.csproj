@@ -11,11 +11,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Marten" Version="9.32.1" />
-    <PackageReference Include="WolverineFx.Http.Marten" Version="6.34.0" />
+    <PackageReference Include="Marten" Version="9.50.3" />
+    <PackageReference Include="WolverineFx.Http.Marten" Version="6.51.0" />
     <!-- Wolverine 6 moved Roslyn runtime compilation into this package; the Dynamic
          TypeLoadMode used in dev/test needs it to compile handlers. -->
-    <PackageReference Include="WolverineFx.RuntimeCompilation" Version="6.34.0" />
+    <PackageReference Include="WolverineFx.RuntimeCompilation" Version="6.51.0" />
   </ItemGroup>
 
   <ItemGroup>

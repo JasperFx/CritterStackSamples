@@ -67,6 +67,10 @@ public static class RecordTrackingNumberHandler
             shipment.Status = "Labelled";
         }
 
+        // Polecat 5.42+: an IRevisioned document's Version is the revision being WRITTEN, guarded as
+        // "the stored revision is older than this one", so claim the next revision for this update.
+        shipment.Version++;
+
         return Storage.Update(shipment);
     }
 }
