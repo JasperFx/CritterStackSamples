@@ -75,9 +75,9 @@
   </ItemGroup>
 
   <ItemGroup Label="Bobcat (projected specs; the same version for all three)">
-    <PackageVersion Include="Bobcat" Version="1.0.0-alpha.1" />
-    <PackageVersion Include="Bobcat.Generators" Version="1.0.0-alpha.1" />
-    <PackageVersion Include="Bobcat.Xunit" Version="1.0.0-alpha.1" />
+    <PackageVersion Include="Bobcat" Version="1.0.0-rc.1" />
+    <PackageVersion Include="Bobcat.Generators" Version="1.0.0-rc.1" />
+    <PackageVersion Include="Bobcat.Xunit" Version="1.0.0-rc.1" />
   </ItemGroup>
 
 </Project>

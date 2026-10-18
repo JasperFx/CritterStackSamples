@@ -42,7 +42,7 @@ public abstract class ShipmentSpec : WolverineSpec, IAsyncLifetime
 
     public IAlbaHost Alba { get; }
 
-    /// <summary>The Polecat store. (CritterStackSpec.Store is the event store.)</summary>
+    /// <summary>The Polecat store. (CritterStackSpec.EventStore is the event store.)</summary>
     public IDocumentStore Documents => Alba.DocumentStore();
 
     /// <summary>A clean slate per specification, as for the original tests.</summary>
@@ -153,15 +153,8 @@ public abstract class ShipmentSpec : WolverineSpec, IAsyncLifetime
     public void ThenNotHandled(Type messageType)
         => SpecAssert.Check($"{messageType.Name} handled", executed(messageType), 0);
 
-    [Then("the act completes with no exceptions")]
-    public void ThenTheActSucceeded()
-    {
-        var session = LastAct.Session;
-        SpecAssert.Check("status", session?.Status.ToString(), nameof(TrackingStatus.Completed));
-        SpecAssert.Check("exceptions",
-            string.Join("; ", (session?.AllExceptions() ?? []).Append(LastAct.Error).OfType<Exception>().Select(x => x.Message)),
-            "");
-    }
+    // "The act succeeded" is Bobcat's own ThenTheActSucceeded() (bobcat#683): it fails on an act whose tracked
+    // session threw anywhere or timed out (WolverineScenario captures both as the act's error) and on a refusal.
 
     private int executed(Type messageType)
         => LastAct.Session?.Executed.Envelopes().Count(x => x.Message?.GetType() == messageType) ?? 0;

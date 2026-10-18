@@ -74,7 +74,11 @@ public class ModuleMessagingSpecs(MeetingGroupsHost app) : ModuleMessagingSpec(a
             .With(x => x.MeetingId, meetingId)
             .With(x => x.AttendeeId, memberId)
             .With(x => x.MeetingGroupId, groupId));
-        ThenAMeetingFeeWasOpened(memberId, meetingId);
+        // The Payments module's handler starts the fee stream off the cascaded MeetingAttendeeAddedEvent, so the
+        // fee is among what the act caused, not the act's own events that ThenEvents / ThenEmitted judge
+        ThenCaused(Specify<MeetingFeeCreated>()
+            .With(x => x.PayerId, memberId)
+            .With(x => x.MeetingId, meetingId));
     }
 
     [Then("the decision is dated")]
@@ -85,7 +89,7 @@ public class ModuleMessagingSpecs(MeetingGroupsHost app) : ModuleMessagingSpec(a
     public async Task ThenTheMeetingGroupExists(string name, string city, Guid organizerId)
     {
         // The Meetings module's handler mints the group's id, so it is found by name
-        var groups = (await AllDocuments<MeetingGroup>()).Where(x => x.Name == name).ToList();
+        var groups = (await TheDocuments<MeetingGroup>()).Where(x => x.Name == name).ToList();
         SpecAssert.Check("meeting groups named " + name, groups.Count, 1);
         if (groups.Count != 1) return;
 
@@ -100,17 +104,4 @@ public class ModuleMessagingSpecs(MeetingGroupsHost app) : ModuleMessagingSpec(a
         var meeting = await ThenDocument<Meeting>(meetingId);
         SpecAssert.Check("attendees", string.Join(", ", meeting.Attendees.Select(a => a.MemberId)), memberId.ToString());
     }
-
-    /// <summary>
-    /// The Payments module's handler starts the fee stream off the cascaded MeetingAttendeeAddedEvent, so the
-    /// event is in <c>LastAct.AllNewEvents</c> (everything the tracked session saw committed), not in the
-    /// act's own events that <c>ThenEvents</c> judges.
-    /// </summary>
-    [Then("the Payments module opened a meeting fee for {memberId} on meeting {meetingId}")]
-    public void ThenAMeetingFeeWasOpened(Guid memberId, Guid meetingId)
-        => SpecAssert.Fact(
-            LastAct.AllNewEvents.Any(e => e.Data is MeetingFeeCreated fee && fee.PayerId == memberId && fee.MeetingId == meetingId),
-            $"No MeetingFeeCreated for member {memberId} on meeting {meetingId} among the " +
-            $"{LastAct.AllNewEvents.Count} event(s) the act caused: " +
-            string.Join(", ", LastAct.AllNewEvents.Select(e => e.Data.GetType().Name)));
 }

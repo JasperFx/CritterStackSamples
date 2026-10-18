@@ -16,7 +16,7 @@
     <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
     <!-- The app has InternalsVisibleTo Include="Tests", so the assembly keeps its default name -->
     <!-- The same version for all three Bobcat packages -->
-    <BobcatVersion>1.0.0-alpha.1</BobcatVersion>
+    <BobcatVersion>1.0.0-rc.1</BobcatVersion>
   </PropertyGroup>
 
   <ItemGroup>
