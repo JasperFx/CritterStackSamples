@@ -58,11 +58,4 @@ public abstract class ModuleMessagingSpec(MeetingGroupsHost app) : WolverineSpec
     /// <summary>The last response's body, read as JSON. Not a step: the assertion that follows it is.</summary>
     public Task<T> TheResponse<T>()
         => (_lastResponse ?? throw new InvalidOperationException("No request has been sent yet.")).ReadAsJsonAsync<T>()!;
-
-    /// <summary>Every stored document of <typeparamref name="T" />, for a document whose id a handler minted.</summary>
-    public async Task<IReadOnlyList<T>> AllDocuments<T>() where T : notnull
-    {
-        await using var session = Alba.Services.GetRequiredService<IDocumentStore>().QuerySession();
-        return await session.Query<T>().ToListAsync();
-    }
 }

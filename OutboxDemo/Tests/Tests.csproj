@@ -17,7 +17,7 @@
     <AssemblyName>OutboxDemo.Tests</AssemblyName>
     <RootNamespace>OutboxDemo.Tests</RootNamespace>
     <!-- The same version for all three Bobcat packages -->
-    <BobcatVersion>1.0.0-alpha.1</BobcatVersion>
+    <BobcatVersion>1.0.0-rc.1</BobcatVersion>
   </PropertyGroup>
 
   <ItemGroup>
