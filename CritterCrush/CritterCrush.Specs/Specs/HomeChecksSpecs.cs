@@ -10,22 +10,18 @@ namespace CritterCrush.Specs;
 /// Projected specifications for RequestHomeCheck, AcceptHomeCheckAssignment, SubmitHomeCheckReport.
 /// </summary>
 /// <remarks>
-/// Steps render from the marker comments in each test body; the verdict comes from the
-/// runner. [BobcatSlice] carries the BINDING only — the slice's domain, chapter and pattern
-/// are stated once, on the event model, and merge in by slice name.
-/// <para>
-/// [BobcatScenario] is what OPENS the recording each test's steps go into. Without it
-/// ScenarioRecorder.Current is null, every [BobcatStep] interceptor records into
-/// NoStep.Instance, and the suite goes green having rendered nothing at all (issue #379).
-/// </para>
+/// Steps render from the decorated helpers on <see cref="CritterCrushSpec"/>; the verdict comes from
+/// the runner. <c>[BobcatSpec]</c> is the <c>[Fact]</c>, opens the recording and carries the slice
+/// BINDING only — the slice's domain, chapter and pattern are stated once, on the event model
+/// (CritterCrushEventModel.cs in the app), and merge in by slice name. Through Bobcat 0.27 this was
+/// <c>[Fact]</c> + <c>[BobcatSlice]</c> with <c>[BobcatScenario]</c> on the class, and forgetting the
+/// last one rendered nothing at all (issue #379); <c>[BobcatSpec]</c> cannot come apart that way.
 /// </remarks>
-[BobcatScenario]
 [BobcatFeature("HomeChecks")]
 [Collection(CritterCrushHost.CollectionName)]
 public class HomeChecksSpecs(CritterCrushHost host) : CritterCrushSpec(host)
 {
-    [Fact]
-    [BobcatSlice(SliceType = typeof(RequestHomeCheck))]
+    [BobcatSpec(typeof(RequestHomeCheck))]
     public async Task An_admin_requests_a_home_check()
     {
         var homeCheckId = Guid.NewGuid();
@@ -45,8 +41,7 @@ public class HomeChecksSpecs(CritterCrushHost host) : CritterCrushSpec(host)
         Assert.Equal(ownerId, requested.OwnerId);
     }
 
-    [Fact]
-    [BobcatSlice(SliceType = typeof(RequestHomeCheck))]
+    [BobcatSpec(typeof(RequestHomeCheck))]
     public async Task Requesting_the_same_home_check_twice_is_refused()
     {
         var homeCheckId = Guid.NewGuid();
@@ -64,8 +59,7 @@ public class HomeChecksSpecs(CritterCrushHost host) : CritterCrushSpec(host)
         ThenNoEvents();
     }
 
-    [Fact]
-    [BobcatSlice(SliceType = typeof(AcceptHomeCheckAssignment))]
+    [BobcatSpec(typeof(AcceptHomeCheckAssignment))]
     public async Task A_volunteer_accepts_an_assignment_and_proposes_a_time()
     {
         var homeCheckId = Guid.NewGuid();
@@ -86,14 +80,13 @@ public class HomeChecksSpecs(CritterCrushHost host) : CritterCrushSpec(host)
         Assert.Equal(proposedFor, accepted.ProposedFor);
     }
 
-    [Fact]
-    [BobcatSlice(SliceType = typeof(AcceptHomeCheckAssignment))]
     /// <summary>
     /// The scenario the manifest names as <c>coveredBy</c> for ProposeHomeCheckAppointment: the
     /// chain from this command, through the bus, into the automation that starts the appointment
     /// stream, and on into the async projection. That chain is not expressible in the model, which
     /// is exactly why the cover has to be declared rather than inferred.
     /// </summary>
+    [BobcatSpec(typeof(AcceptHomeCheckAssignment))]
     public async Task Accepting_an_assignment_books_the_home_check_as_an_appointment()
     {
         var homeCheckId = Guid.NewGuid();
@@ -112,8 +105,7 @@ public class HomeChecksSpecs(CritterCrushHost host) : CritterCrushSpec(host)
         Assert.Equal(0, mine.Closed);
     }
 
-    [Fact]
-    [BobcatSlice(SliceType = typeof(AcceptHomeCheckAssignment))]
+    [BobcatSpec(typeof(AcceptHomeCheckAssignment))]
     public async Task An_assignment_already_accepted_is_not_accepted_again()
     {
         var homeCheckId = Guid.NewGuid();
@@ -133,8 +125,7 @@ public class HomeChecksSpecs(CritterCrushHost host) : CritterCrushSpec(host)
         ThenNoEvents();
     }
 
-    [Fact]
-    [BobcatSlice(SliceType = typeof(SubmitHomeCheckReport))]
+    [BobcatSpec(typeof(SubmitHomeCheckReport))]
     public async Task A_volunteer_reports_on_a_visit_they_accepted()
     {
         var homeCheckId = Guid.NewGuid();
@@ -157,8 +148,7 @@ public class HomeChecksSpecs(CritterCrushHost host) : CritterCrushSpec(host)
         Assert.Equal(notes, submitted.Notes);
     }
 
-    [Fact]
-    [BobcatSlice(SliceType = typeof(SubmitHomeCheckReport))]
+    [BobcatSpec(typeof(SubmitHomeCheckReport))]
     public async Task A_visit_nobody_accepted_cannot_be_reported_on()
     {
         var homeCheckId = Guid.NewGuid();
@@ -180,8 +170,7 @@ public class HomeChecksSpecs(CritterCrushHost host) : CritterCrushSpec(host)
     /// (bobcat#337) rather than carried as an orphan: that declaration is what makes the write
     /// model non-nullable, which is what makes a hand-written null check unreachable.
     /// </summary>
-    [Fact]
-    [BobcatSlice(SliceType = typeof(AcceptHomeCheckAssignment))]
+    [BobcatSpec(typeof(AcceptHomeCheckAssignment))]
     public async Task Accepting_a_home_check_that_does_not_exist_is_not_found()
     {
         await WhenPosted(new AcceptHomeCheckAssignment(Guid.NewGuid(), Guid.NewGuid(), new DateTimeOffset(2026, 10, 1, 15, 0, 0, TimeSpan.Zero)), "/api/volunteering/accepthomecheckassignment");
@@ -195,8 +184,7 @@ public class HomeChecksSpecs(CritterCrushHost host) : CritterCrushSpec(host)
     /// (bobcat#337) rather than carried as an orphan: that declaration is what makes the write
     /// model non-nullable, which is what makes a hand-written null check unreachable.
     /// </summary>
-    [Fact]
-    [BobcatSlice(SliceType = typeof(SubmitHomeCheckReport))]
+    [BobcatSpec(typeof(SubmitHomeCheckReport))]
     public async Task Reporting_on_a_home_check_that_does_not_exist_is_not_found()
     {
         await WhenPosted(new SubmitHomeCheckReport(Guid.NewGuid(), "Pass", "Secure garden, calm household, good fit for a shy dog"), "/api/volunteering/submithomecheckreport");

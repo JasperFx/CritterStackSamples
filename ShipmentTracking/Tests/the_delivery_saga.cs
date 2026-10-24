@@ -1,6 +1,6 @@
+using Bobcat;
+using Bobcat.Xunit;
 using JasperFx.Core;
-using Microsoft.Extensions.DependencyInjection;
-using Polecat;
 using ShipmentTracking.Sagas;
 
 namespace Tests;
@@ -11,99 +11,89 @@ namespace Tests;
 /// rather than in Wolverine's own lightweight saga table. You can see the table it
 /// creates: shipments.pc_doc_shipmentdeliverysaga.
 /// </summary>
-public class the_delivery_saga(AppFixture fixture) : IntegrationContext(fixture)
+/// <remarks>
+/// The original saga tests as Bobcat specifications. A shipment is arranged through the real handlers
+/// (Given steps), and "five days later" is the booking's own scheduled <c>DeliverySlaExpired</c>, delivered
+/// inline as the act (WhenTheTimeoutComesDue).
+/// </remarks>
+[BobcatFeature("The delivery saga")]
+public class the_delivery_saga(AppFixture fixture) : ShipmentSpec(fixture)
 {
-    [Fact]
+    [BobcatSpec(typeof(BookShipment))]
     public async Task booking_starts_the_saga_and_schedules_the_sla_timeout()
     {
         var id = Guid.NewGuid();
 
-        var tracked = await Track()
-            .InvokeMessageAndWaitAsync(new BookShipment(id, "Dallas", "Austin", "acme", 1m));
+        await WhenReceived(new BookShipment(id, "Dallas", "Austin", "acme", 1m));
 
         // Start(ShipmentBooked) returns only the timeout, and the delay lives on the
         // message type, so nothing in the saga schedules anything explicitly.
-        var timeout = tracked.Sent.SingleMessage<DeliverySlaExpired>();
-        timeout.ShipmentId.ShouldBe(id);
-
-        var saga = await LoadSaga(id);
-        saga.ShouldNotBeNull();
-        saga.Delivered.ShouldBeFalse();
+        ThenMessageSent(Specify<DeliverySlaExpired>().With(x => x.ShipmentId, id));
 
         // BookShipment cascaded GenerateLabel, whose chain ends in LabelGenerated,
         // which the saga also handles.
-        saga.LabelGenerated.ShouldBeTrue();
+        await ThenDocument<ShipmentDeliverySaga>(id, Specify<ShipmentDeliverySaga>()
+            .With(x => x.Delivered, false)
+            .With(x => x.LabelGenerated, true));
     }
 
-    [Fact]
+    [BobcatSpec(typeof(BookShipment))]
     public async Task the_sla_timeout_is_scheduled_five_days_out_not_executed()
     {
         var id = Guid.NewGuid();
 
-        var tracked = await Track()
-            .InvokeMessageAndWaitAsync(new BookShipment(id, "Dallas", "Austin", "acme", 1m));
+        await WhenReceived(new BookShipment(id, "Dallas", "Austin", "acme", 1m));
 
-        var scheduled = tracked.Scheduled.SingleMessage<DeliverySlaExpired>();
-        scheduled.ShipmentId.ShouldBe(id);
+        ThenMessageScheduled<DeliverySlaExpired>(5.Days());
 
         // It has NOT run -- the saga is still open and nothing escalated
-        tracked.Executed.MessagesOf<DeliverySlaExpired>().ShouldBeEmpty();
-        (await LoadSaga(id)).ShouldNotBeNull();
+        ThenNotHandled(typeof(DeliverySlaExpired));
+        await ThenDocument<ShipmentDeliverySaga>(id);
     }
 
-    [Fact]
+    [BobcatSpec(typeof(DeliverySlaExpired))]
     public async Task an_undelivered_shipment_escalates_when_the_sla_expires()
     {
         var id = Guid.NewGuid();
+        await GivenABookedShipment(id);
 
-        var initial = await Track()
-            .InvokeMessageAndWaitAsync(new BookShipment(id, "Dallas", "Austin", "acme", 1m));
+        // Five days, in no time at all: the timeout the booking scheduled, delivered now
+        await WhenTheTimeoutComesDue(TheScheduledSlaTimeout());
 
-        // Five days, in no time at all. PlayScheduledMessagesAsync replays the captured
-        // scheduled envelopes immediately and hands back a fresh tracked session. This
-        // is the alternative to a sleep that could not work anyway -- no test is going
-        // to wait out a five day delay.
-        var played = await initial.PlayScheduledMessagesAsync(30.Seconds());
-
-        played.Executed.SingleMessage<DeliverySlaExpired>().ShipmentId.ShouldBe(id);
-
-        var escalation = played.Sent.SingleMessage<EscalateLateShipment>();
-        escalation.ShipmentId.ShouldBe(id);
+        ThenHandled(typeof(DeliverySlaExpired));
+        ThenMessageSent(Specify<EscalateLateShipment>().With(x => x.ShipmentId, id));
 
         // MarkCompleted() ran, so the saga document is gone
-        (await LoadSaga(id)).ShouldBeNull();
+        await ThenNoReadModel<ShipmentDeliverySaga>(id);
     }
 
-    [Fact]
+    [BobcatSpec(typeof(DeliverySlaExpired))]
     public async Task a_delivered_shipment_does_not_escalate()
     {
         var id = Guid.NewGuid();
-
-        var initial = await Track()
-            .InvokeMessageAndWaitAsync(new BookShipment(id, "Dallas", "Austin", "acme", 1m));
-
-        await Track().InvokeMessageAndWaitAsync(
-            new RecordCarrierScan(id, "Austin TX", "DELIVERED", DateTimeOffset.UtcNow));
+        await GivenABookedShipment(id);
+        await GivenTheShipmentIsDelivered(id, DateTimeOffset.UtcNow);
 
         // Handle(ShipmentDelivered) marks the saga complete, so the timeout arrives to
         // no saga at all and there is nothing to escalate.
-        (await LoadSaga(id)).ShouldBeNull();
+        await GivenTheSagaHasCompleted(id);
 
-        var played = await initial.PlayScheduledMessagesAsync(30.Seconds());
-        played.Sent.MessagesOf<EscalateLateShipment>().ShouldBeEmpty();
+        await WhenTheTimeoutComesDue(TheScheduledSlaTimeout());
+
+        ThenHandled(typeof(DeliverySlaExpired));
+        ThenNoMessageSent<EscalateLateShipment>();
     }
 
-    [Fact]
+    [BobcatSpec(typeof(CancelShipment))]
     public async Task cancelling_completes_the_saga()
     {
         var id = Guid.NewGuid();
+        await GivenABookedShipment(id);
+        await GivenTheSagaIsOpen(id);
 
-        await Track().InvokeMessageAndWaitAsync(new BookShipment(id, "Dallas", "Austin", "acme", 1m));
-        (await LoadSaga(id)).ShouldNotBeNull();
+        await WhenReceived(new CancelShipment(id, "changed my mind"));
 
-        await Track().InvokeMessageAndWaitAsync(new CancelShipment(id, "changed my mind"));
-
-        (await LoadSaga(id)).ShouldBeNull();
+        await ThenNoReadModel<ShipmentDeliverySaga>(id);
     }
 
     // =======================================================================
@@ -115,73 +105,68 @@ public class the_delivery_saga(AppFixture fixture) : IntegrationContext(fixture)
     // the saga-bound event.
     // =======================================================================
 
-    [Fact]
+    [BobcatSpec(typeof(LabelGenerated))]
     public async Task a_label_landing_after_cancellation_does_not_blow_up_the_saga()
     {
-        var id = await BookShipment();
-        await Track().InvokeMessageAndWaitAsync(new CancelShipment(id, "changed my mind"));
-        (await LoadSaga(id)).ShouldBeNull();
+        var id = Guid.NewGuid();
+        await GivenABookedShipment(id);
+        await GivenTheShipmentIsCancelled(id, "changed my mind");
+        await GivenTheSagaHasCompleted(id);
 
         // The carrier call was in flight when the cancellation landed.
-        var tracked = await Track().InvokeMessageAndWaitAsync(new LabelGenerated(id, "ACME-LATE12345"));
+        await WhenReceived(new LabelGenerated(id, "ACME-LATE12345"));
 
-        tracked.Status.ShouldBe(TrackingStatus.Completed);
-        tracked.AllExceptions().ShouldBeEmpty();
+        ThenHandled(typeof(LabelGenerated));
+        ThenTheActSucceeded();
     }
 
-    [Fact]
+    [BobcatSpec(typeof(RecordCarrierScan))]
     public async Task a_duplicate_delivery_notification_does_not_blow_up_the_saga()
     {
-        var id = await BookShipment();
+        var id = Guid.NewGuid();
         var first = new DateTimeOffset(2026, 8, 25, 10, 0, 0, TimeSpan.Zero);
-
-        await Track().InvokeMessageAndWaitAsync(new RecordCarrierScan(id, "Austin TX", "DELIVERED", first));
-        (await LoadSaga(id)).ShouldBeNull();
+        await GivenABookedShipment(id);
+        await GivenTheShipmentIsDelivered(id, first);
+        await GivenTheSagaHasCompleted(id);
 
         // A newer DELIVERED scan passes the staleness guard and publishes the event again.
-        var tracked = await Track().InvokeMessageAndWaitAsync(
-            new RecordCarrierScan(id, "Austin TX", "DELIVERED", first.AddHours(1)));
+        await WhenReceived(new RecordCarrierScan(id, "Austin TX", "DELIVERED", first.AddHours(1)));
 
-        tracked.Status.ShouldBe(TrackingStatus.Completed);
-        tracked.AllExceptions().ShouldBeEmpty();
+        ThenHandled(typeof(ShipmentDelivered));
+        ThenTheActSucceeded();
     }
 
-    [Fact]
+    [BobcatSpec(typeof(CancelShipment))]
     public async Task cancelling_twice_does_not_blow_up_the_saga()
     {
-        var id = await BookShipment();
-        await Track().InvokeMessageAndWaitAsync(new CancelShipment(id, "first"));
+        var id = Guid.NewGuid();
+        await GivenABookedShipment(id);
+        await GivenTheShipmentIsCancelled(id, "first");
 
         // CancelShipmentHandler only refuses a DELIVERED shipment, so a second cancel of
         // an already-cancelled one goes through and publishes ShipmentCancelled again.
-        var tracked = await Track().InvokeMessageAndWaitAsync(new CancelShipment(id, "second"));
+        await WhenReceived(new CancelShipment(id, "second"));
 
-        tracked.Status.ShouldBe(TrackingStatus.Completed);
-        tracked.AllExceptions().ShouldBeEmpty();
+        ThenHandled(typeof(ShipmentCancelled));
+        ThenTheActSucceeded();
     }
 
-    [Fact]
+    [BobcatSpec(typeof(DeliverySlaExpired))]
     public async Task the_sla_timeout_needs_no_NotFound_because_it_is_a_TimeoutMessage()
     {
-        var id = await BookShipment();
-        await Track().InvokeMessageAndWaitAsync(
-            new RecordCarrierScan(id, "Austin TX", "DELIVERED", DateTimeOffset.UtcNow));
-        (await LoadSaga(id)).ShouldBeNull();
+        var id = Guid.NewGuid();
+        await GivenABookedShipment(id);
+        await GivenTheShipmentIsDelivered(id, DateTimeOffset.UtcNow);
+        await GivenTheSagaHasCompleted(id);
 
         // DeliverySlaExpired subclasses TimeoutMessage, and Wolverine emits
         //     if (saga == null) return;
         // for those instead of the throw it emits for every other saga message.
         // ShipmentDeliverySaga deliberately declares no NotFound(DeliverySlaExpired).
-        var tracked = await Track().InvokeMessageAndWaitAsync(new DeliverySlaExpired(id));
+        await WhenTheTimeoutComesDue(new DeliverySlaExpired(id));
 
-        tracked.Status.ShouldBe(TrackingStatus.Completed);
-        tracked.AllExceptions().ShouldBeEmpty();
-        tracked.Sent.MessagesOf<EscalateLateShipment>().ShouldBeEmpty();
-    }
-
-    private async Task<ShipmentDeliverySaga?> LoadSaga(Guid id)
-    {
-        await using var session = Store.QuerySession();
-        return await session.LoadAsync<ShipmentDeliverySaga>(id);
+        ThenHandled(typeof(DeliverySlaExpired));
+        ThenTheActSucceeded();
+        ThenNoMessageSent<EscalateLateShipment>();
     }
 }

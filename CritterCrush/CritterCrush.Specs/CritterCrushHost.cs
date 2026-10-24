@@ -1,4 +1,5 @@
 using Alba;
+using Wolverine;
 using Xunit;
 
 namespace CritterCrush.Specs;
@@ -8,10 +9,10 @@ namespace CritterCrush.Specs;
 /// </summary>
 /// <remarks>
 /// <para>
-/// This is what <c>SuiteConfiguration.Configure</c> used to register on the Bobcat runner. Lane A
-/// hands the entry point to xUnit (<c>BobcatGenerateEntryPoint=false</c>), so nothing calls that
-/// method any more — BOBCAT017 says so at build time — and the host, the schema name and the reset
-/// all have to live somewhere xUnit will run them. This is that somewhere.
+/// This is what <c>SuiteConfiguration.Configure</c> used to register on the Bobcat runner. Bobcat 1.0
+/// has no runner of its own (Bobcat.Mtp and the Gherkin lane are gone), xUnit owns the entry point,
+/// and the host, the schema name and the reset live somewhere xUnit will run them. This is that
+/// somewhere.
 /// </para>
 /// <para>
 /// Booted once per run rather than per class: starting Wolverine, Marten and the async daemon costs
@@ -35,7 +36,11 @@ public sealed class CritterCrushHost : IAsyncLifetime
         // worktrees, so it names the schema. Carried over from SuiteConfiguration.cs.
         Environment.SetEnvironmentVariable("Marten__SchemaName", schemaName());
 
-        Host = await AlbaHost.For<Program>();
+        Host = await AlbaHost.For<Program>(x => x.ConfigureServices(services =>
+            // Under xUnit v3 the test project is the entry assembly. Program.cs already includes the
+            // app assembly in discovery; naming it the application assembly as well silences
+            // Wolverine 6.51's "adopted application assembly 'CritterCrush.Specs'" warning.
+            services.ConfigureWolverine(opts => opts.ApplicationAssembly = typeof(Program).Assembly)));
     }
 
     public async ValueTask DisposeAsync() => await Host.DisposeAsync();
@@ -61,8 +66,8 @@ public sealed class CritterCrushHost : IAsyncLifetime
 /// </summary>
 /// <remarks>
 /// Serial is not a default worth fighting here: the specs reset the event store between tests, and
-/// two classes resetting concurrently would each wipe the other's arranged history. The Gherkin
-/// lane got this from the Bobcat runner; under xUnit it is the collection that provides it.
+/// two classes resetting concurrently would each wipe the other's arranged history. The retired
+/// Gherkin lane got this from the Bobcat runner; under xUnit it is the collection that provides it.
 /// </remarks>
 [CollectionDefinition(CritterCrushHost.CollectionName)]
 public sealed class CritterCrushCollection : ICollectionFixture<CritterCrushHost>;

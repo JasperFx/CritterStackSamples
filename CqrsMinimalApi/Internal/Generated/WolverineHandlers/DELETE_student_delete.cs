@@ -24,8 +24,6 @@ namespace Internal.Generated.WolverineHandlers
             _wolverineRuntime = wolverineRuntime;
         }
 
-
-
         public override async System.Threading.Tasks.Task Handle(Microsoft.AspNetCore.Http.HttpContext httpContext)
         {
             var messageContext = new Wolverine.Runtime.MessageContext(_wolverineRuntime);
@@ -37,7 +35,6 @@ namespace Internal.Generated.WolverineHandlers
 
             if (id_rawValue != null && int.TryParse(id_rawValue, System.Globalization.CultureInfo.InvariantCulture, out id))
             {
-
             }
 
             
@@ -65,11 +62,9 @@ namespace Internal.Generated.WolverineHandlers
             // Wolverine automatically sets the status code to 204 for empty responses
             if (httpContext.Response is { HasStarted: false, StatusCode: 200 }) httpContext.Response.StatusCode = 204;
         }
-
     }
 
     // END: DELETE_student_delete
     
     
 }
-
