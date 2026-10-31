@@ -34,7 +34,7 @@
     <!-- ⚠️ Embedded generates the console's chains at RUNTIME (the host owns the
          runtime, so the console cannot use its own static registries). -->
     <PackageVersion Include="WolverineFx.RuntimeCompilation" Version="6.59.1" />
-    <PackageVersion Include="Fisher" Version="1.24.1" />
+    <PackageVersion Include="Fisher" Version="1.25.0" />
   </ItemGroup>
 
   <ItemGroup Label="Tests">
