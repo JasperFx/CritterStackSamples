@@ -25,11 +25,15 @@ public class optimistic_concurrency(AppFixture fixture) : IntegrationContext(fix
 
         forScan.Version.ShouldBe(forCancel.Version);
 
+        // Polecat 5.42+: the Version a stored document carries is the revision being written,
+        // so each writer claims the next one, exactly as the handlers do
         forScan.LastLocation = "Waco TX";
+        forScan.Version++;
         first.Update(forScan);
         await first.SaveChangesAsync();
 
         forCancel.Status = "Cancelled";
+        forCancel.Version++;
         second.Update(forCancel);
 
         // Without IRevisioned this would silently overwrite the scan. Program.cs retries

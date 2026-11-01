@@ -6,35 +6,22 @@ using Shouldly;
 
 namespace CleanArchitectureTodos.Tests;
 
+// The original tests, on xUnit v3. Five of them now live in TodoListSpecs as Bobcat specifications;
+// the rest stay plain tests: five specifications are enough to show the pattern in this sample.
 public class TodoListTests : IAsyncLifetime
 {
     private IAlbaHost _host = null!;
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _host = await AlbaHost.For<Program>();
         var store = _host.Services.GetRequiredService<IDocumentStore>();
         await store.Advanced.Clean.DeleteAllDocumentsAsync();
     }
 
-    public async Task DisposeAsync() => await _host.DisposeAsync();
+    public async ValueTask DisposeAsync() => await _host.DisposeAsync();
 
     // --- TodoList CRUD ---
-
-    [Fact]
-    public async Task create_todo_list()
-    {
-        var result = await _host.Scenario(x =>
-        {
-            x.Post.Json(new CreateTodoListRequest("Groceries", "#FF0000")).ToUrl("/api/todolists");
-            x.StatusCodeShouldBe(200);
-        });
-
-        var list = result.ReadAsJson<TodoList>();
-        list.ShouldNotBeNull();
-        list!.Title.ShouldBe("Groceries");
-        list.Colour.ShouldBe("#FF0000");
-    }
 
     [Fact]
     public async Task create_todo_list_uses_default_colour()
@@ -48,45 +35,6 @@ public class TodoListTests : IAsyncLifetime
         var list = result.ReadAsJson<TodoList>();
         list.ShouldNotBeNull();
         list!.Colour.ShouldBe("#808080");
-    }
-
-    [Fact]
-    public async Task create_todo_list_duplicate_title_returns_400()
-    {
-        await _host.Scenario(x =>
-        {
-            x.Post.Json(new CreateTodoListRequest("Duplicate", null)).ToUrl("/api/todolists");
-            x.StatusCodeShouldBe(200);
-        });
-
-        await _host.Scenario(x =>
-        {
-            x.Post.Json(new CreateTodoListRequest("Duplicate", null)).ToUrl("/api/todolists");
-            x.StatusCodeShouldBe(400);
-        });
-    }
-
-    [Fact]
-    public async Task update_todo_list()
-    {
-        var createResult = await _host.Scenario(x =>
-        {
-            x.Post.Json(new CreateTodoListRequest("Original", "#0000FF")).ToUrl("/api/todolists");
-            x.StatusCodeShouldBe(200);
-        });
-
-        var created = createResult.ReadAsJson<TodoList>()!;
-
-        var updateResult = await _host.Scenario(x =>
-        {
-            x.Put.Json(new UpdateTodoListRequest("Updated", "#FF0000")).ToUrl($"/api/todolists/{created.Id}");
-            x.StatusCodeShouldBe(200);
-        });
-
-        var updated = updateResult.ReadAsJson<TodoList>();
-        updated.ShouldNotBeNull();
-        updated!.Title.ShouldBe("Updated");
-        updated.Colour.ShouldBe("#FF0000");
     }
 
     [Fact]
@@ -110,24 +58,6 @@ public class TodoListTests : IAsyncLifetime
         {
             x.Put.Json(new UpdateTodoListRequest("First", null)).ToUrl($"/api/todolists/{secondList.Id}");
             x.StatusCodeShouldBe(400);
-        });
-    }
-
-    [Fact]
-    public async Task delete_todo_list()
-    {
-        var createResult = await _host.Scenario(x =>
-        {
-            x.Post.Json(new CreateTodoListRequest("To Delete", null)).ToUrl("/api/todolists");
-            x.StatusCodeShouldBe(200);
-        });
-
-        var created = createResult.ReadAsJson<TodoList>()!;
-
-        await _host.Scenario(x =>
-        {
-            x.Delete.Url($"/api/todolists/{created.Id}");
-            x.StatusCodeShouldBe(204);
         });
     }
 
@@ -197,29 +127,6 @@ public class TodoListTests : IAsyncLifetime
         await _host.Scenario(x =>
         {
             x.Put.Json(new UpdateTodoItemRequest("Updated Item", true)).ToUrl($"/api/todoitems/{item.Id}");
-            x.StatusCodeShouldBe(204);
-        });
-    }
-
-    [Fact]
-    public async Task update_todo_item_detail()
-    {
-        var listResult = await _host.Scenario(x =>
-        {
-            x.Post.Json(new CreateTodoListRequest("Detail List", null)).ToUrl("/api/todolists");
-        });
-        var list = listResult.ReadAsJson<TodoList>()!;
-
-        var itemResult = await _host.Scenario(x =>
-        {
-            x.Post.Json(new CreateTodoItemRequest(list.Id, "Detail Item")).ToUrl("/api/todoitems");
-        });
-        var item = itemResult.ReadAsJson<TodoItem>()!;
-
-        await _host.Scenario(x =>
-        {
-            x.Patch.Json(new UpdateTodoItemDetailRequest(list.Id, PriorityLevel.High, "Important note"))
-                .ToUrl($"/api/todoitems/detail/{item.Id}");
             x.StatusCodeShouldBe(204);
         });
     }

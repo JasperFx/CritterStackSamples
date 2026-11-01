@@ -10,9 +10,12 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <!-- Pinned to 0.30.0, the last Bobcat.EventModel.Scaffolding ever published: Bobcat retired the
+       curated .emodel.yaml format and this package (bobcat#406), and nothing in Bobcat 1.0 reads the
+       file. See models/README.md. A separate executable, so the pin reaches nothing else. -->
   <ItemGroup>
-    <PackageReference Include="Bobcat.EventModel" Version="0.27.3" />
-    <PackageReference Include="Bobcat.EventModel.Scaffolding" Version="0.27.3" />
+    <PackageReference Include="Bobcat.EventModel" Version="0.30.0" />
+    <PackageReference Include="Bobcat.EventModel.Scaffolding" Version="0.30.0" />
   </ItemGroup>
 
 </Project>

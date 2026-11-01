@@ -1,35 +1,42 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- The 0.10.0 zero-ceremony setup (bobcat #207): no hand-written Main. Bobcat.Generators
-       sees Bobcat.Mtp referenced with no entry point declared and emits one; resources are
-       registered on a [BobcatConfiguration] method. -->
+  <!--
+    xUnit v3 on Microsoft.Testing.Platform 2, with every spec a Bobcat projected specification.
+    ../global.json puts `dotnet test` into the platform's own mode, which Microsoft.Testing.Platform 2.x
+    requires on the .NET 10 SDK.
+
+    Bobcat 1.0 has no runner of its own any more: Bobcat.Mtp (and with it the generated Main and
+    BobcatGenerateEntryPoint) and the Gherkin lane are gone (bobcat#471), so xUnit owns the entry point
+    with nothing to opt out of. Bobcat.Alba is gone too (last 0.41.0): HTTP acts are Alba scenarios
+    driven from CritterCrushSpec.
+  -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
-    <!-- Lane A: xUnit owns the entry point. Bobcat.Generators otherwise emits a Main that runs the
-         Bobcat.Mtp host (issue #207), which IS the process — so xUnit never runs and `dotnet test`
-         collects nothing. This is the documented opt-out. The .feature files still generate and
-         still read, they just no longer execute; that is the trade Lane A makes. -->
-    <BobcatGenerateEntryPoint>false</BobcatGenerateEntryPoint>
-    <!-- xunit.v3 runs on Microsoft.Testing.Platform; `dotnet test` needs the bridge turned on. -->
-    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
     <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <!-- The same version for all three Bobcat packages -->
+    <BobcatVersion>1.0.0-alpha.1</BobcatVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Bobcat" Version="0.27.3" />
-    <PackageReference Include="Bobcat.Mtp" Version="0.27.3" />
-    <PackageReference Include="Bobcat.Generators" Version="0.27.3" />
-    <PackageReference Include="Bobcat.Alba" Version="0.27.3" />
-    <!-- Lane A: the specs are ordinary xUnit tests bound to slices with [BobcatSlice], so the
-         runner is xUnit and Bobcat.Xunit is the adapter that reports each scenario's verdict.
-         Bobcat.Mtp stays for now — the .feature files are still here for side-by-side review. -->
-    <PackageReference Include="xunit.v3" Version="3.2.2" />
-    <PackageReference Include="Bobcat.Xunit" Version="0.27.3" />
-    <AdditionalFiles Include="Features/**/*.feature" />
+    <PackageReference Include="Alba" Version="8.5.3" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+    <PackageReference Include="xunit.v3" Version="4.0.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1" PrivateAssets="all" />
+
+    <PackageReference Include="Bobcat" Version="$(BobcatVersion)" />
+    <PackageReference Include="Bobcat.Generators" Version="$(BobcatVersion)" PrivateAssets="all" />
+    <PackageReference Include="Bobcat.Xunit" Version="$(BobcatVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
   </ItemGroup>
 
   <ItemGroup>
