@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>JasperFxCrm</RootNamespace>
+  </PropertyGroup>
+
+  <!-- The public sample rule: this project references no vendor SDK. Stripe, DocuSign,
+       QuickBooks, Slack and Discord are interfaces under Vendors/ with in-process fakes;
+       the real clients live in JasperFx's private host, which composes this project. -->
+  <ItemGroup>
+    <PackageReference Include="Marten" Version="9.57.0" />
+    <PackageReference Include="WolverineFx.Http.Marten" Version="6.61.0" />
+    <PackageReference Include="WolverineFx.RuntimeCompilation" Version="6.61.0" />
+    <!-- the scaffold, write-specs and describe-event-model commands -->
+    <PackageReference Include="WolverineFx.Bobcat.EventModel" Version="6.61.0" />
+  </ItemGroup>
+
+</Project>
