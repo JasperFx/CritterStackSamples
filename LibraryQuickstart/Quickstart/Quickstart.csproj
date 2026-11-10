@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Marten" Version="9.32.1" />
+    <PackageReference Include="Marten" Version="9.50.3" />
   </ItemGroup>
 
   <ItemGroup>

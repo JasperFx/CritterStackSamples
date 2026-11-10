@@ -8,6 +8,10 @@
   <PropertyGroup>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <!-- xUnit v3 is its own test host on Microsoft.Testing.Platform; ../global.json opts dotnet test into it. -->
+    <OutputType>Exe</OutputType>
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,9 +24,17 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
-    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.v3" />
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="Shouldly" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Bobcat projected specs. An out-of-process Aspire suite has no in-process host for
+         CritterStackSpec or WolverineSpec to stand on, so these specs are step helpers + SpecAssert. -->
+    <PackageReference Include="Bobcat" />
+    <PackageReference Include="Bobcat.Generators" PrivateAssets="all" />
+    <PackageReference Include="Bobcat.Xunit" />
   </ItemGroup>
 
 </Project>

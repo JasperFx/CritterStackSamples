@@ -77,7 +77,7 @@ if (planPath is not null)
 }
 
 Console.WriteLine();
-Console.WriteLine($"{files.Count} file(s) into {outDir}. Copy the .feature over the committed one;");
+Console.WriteLine($"{files.Count} file(s) into {outDir}. The Specs/ skeletons are a starting point only;");
 Console.WriteLine("copy a slice's .cs ONLY if that slice is still unimplemented — regenerating a");
 Console.WriteLine("filled-in slice overwrites the work.");
 return 0;

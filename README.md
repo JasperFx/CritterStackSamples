@@ -44,6 +44,7 @@ docker compose down
 - **`Results.NoContent()`** — preferred over `[EmptyResponse]` for 204 responses with cascading messages
 - **FluentValidation** — `UseFluentValidationProblemDetailMiddleware()` in `MapWolverineEndpoints()`
 - **Alba + Shouldly** — integration tests with `CleanAllMartenDataAsync()` for test isolation
+- **[Bobcat](https://github.com/JasperFx/bobcat) specifications** — every `Tests/` project is xUnit v3 with some of its tests written as Bobcat projected specs (`[BobcatFeature]` / `[BobcatSpec]`): `CritterStackSpec` for the event-sourced samples, `WolverineSpec` (WolverineFx.Bobcat) for the messaging ones, so a run renders each one as Given/When/Then steps
 
 ## Running
 
@@ -53,3 +54,17 @@ Each sample has its own `.sln` file and `Tests/` subfolder. Requires PostgreSQL:
 cd BankAccountES
 dotnet test
 ```
+
+The test projects run on xUnit v3 and Microsoft.Testing.Platform, so each sample folder carries a
+`global.json` that opts `dotnet test` into the platform's own mode. To see the specifications a run
+produced, write them to a file:
+
+```bash
+cd BankAccountES
+dotnet build Tests
+BOBCAT_SPEC_CONSOLE=1 BOBCAT_SPEC_CONSOLE_FILE=specs.txt dotnet Tests/bin/Debug/net9.0/BankAccountES.Tests.dll
+```
+
+ShipmentTracking also needs SQL Server 2025 and RabbitMQ (its own `docker-compose.yml`), LibraryQuickstart
+starts Postgres through Testcontainers, and the `critterwatch/` Aspire suites start their own containers, so
+those need Docker.

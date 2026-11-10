@@ -24,8 +24,6 @@ namespace Internal.Generated.WolverineHandlers
             _wolverineRuntime = wolverineRuntime;
         }
 
-
-
         public override async System.Threading.Tasks.Task Handle(Microsoft.AspNetCore.Http.HttpContext httpContext)
         {
             var messageContext = new Wolverine.Runtime.MessageContext(_wolverineRuntime);
@@ -37,7 +35,6 @@ namespace Internal.Generated.WolverineHandlers
 
             if (id_rawValue != null && int.TryParse(id_rawValue, System.Globalization.CultureInfo.InvariantCulture, out id))
             {
-
             }
 
             
@@ -54,14 +51,20 @@ namespace Internal.Generated.WolverineHandlers
             // The actual HTTP request handler execution
             var student_response = CqrsMinimalApi.StudentEndpoints.GetById(id, student);
 
-            // Writing the response body to JSON because this was the first 'return variable' in the method signature
-            await WriteJsonAsync(httpContext, student_response);
-        }
+            
+            // Save all pending changes to this Marten session
+            await documentSession.SaveChangesAsync(httpContext.RequestAborted).ConfigureAwait(false);
 
+            
+            // Have to flush outgoing messages just in case Marten did nothing because of https://github.com/JasperFx/wolverine/issues/536
+            await messageContext.FlushOutgoingMessagesAsync().ConfigureAwait(false);
+
+            // Writing the response body to JSON because this was the first 'return variable' in the method signature
+            await WriteJsonAsync(httpContext, student_response, 404);
+        }
     }
 
     // END: GET_student_get_by_id
     
     
 }
-

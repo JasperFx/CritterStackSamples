@@ -36,12 +36,12 @@ as five Event Modeling slices:
   actually running (`AddAsyncDaemon(DaemonMode.Solo)`).
 - **Modular-monolith rails on from day one**: `MultipleHandlerBehavior.Separated`,
   `MessageIdentity.IdAndDestination`, durable local queues.
-- **Specs are the tests, driven over HTTP**: `CritterCrush.Specs` drives the collapsed slices
-  with Alba inside Wolverine tracked sessions (a hand-rolled TrackedHttpCall — bobcat#211), so
-  even the automation cascade settles before assertions run. Scenario names reproduce the
-  identities declared in [`models/CritterCrush.emodel.yaml`](models/CritterCrush.emodel.yaml)
-  exactly, which is what binds run evidence onto the Event Model; the custom step vocabulary is
-  the interim cost of the collapsed shape until bobcat#210's HTTP grammar ships.
+- **Specs are the tests, driven over HTTP**: `CritterCrush.Specs` is xUnit v3, every test a Bobcat
+  projected specification (`[BobcatSpec]`) on `CritterStackSpec`. The collapsed slices are driven
+  with Alba inside a Wolverine tracked session (`CritterCrushSpec.WhenPosted`), so even the
+  automation cascade settles before assertions run. Test names reproduce the scenario identities
+  declared in [`models/CritterCrush.emodel.yaml`](models/CritterCrush.emodel.yaml) exactly, which is
+  what binds run evidence onto the Event Model.
 
 ## Running it
 
@@ -50,17 +50,25 @@ as five Event Modeling slices:
 docker compose up -d
 docker exec -it $(docker ps -qf "publish=5433") psql -U postgres -c "CREATE DATABASE crittercrush;"
 
-# The specs — a self-executing Bobcat suite
-dotnet run --project CritterCrush.Specs
+# The specs: xUnit v3 on Microsoft.Testing.Platform (global.json selects it for dotnet test)
+dotnet test
+
+# The same run, with every specification rendered step by step into specs.txt
+BOBCAT_SPEC_CONSOLE=1 BOBCAT_SPEC_CONSOLE_FILE=specs.txt ./CritterCrush.Specs/bin/Debug/net10.0/CritterCrush.Specs
 
 # The app itself
 dotnet run --project CritterCrush
 ```
 
+Until Bobcat 0.50 the specs were Gherkin (`Features/*.feature`) run by a self-executing Bobcat suite
+(`dotnet run --project CritterCrush.Specs`). That lane is gone (bobcat#471); each scenario is now a
+`[BobcatSpec]` test of the same name in `CritterCrush.Specs/Specs/`.
+
 ## The Event Model
 
 [`models/CritterCrush.emodel.yaml`](models/CritterCrush.emodel.yaml) is the declared model in the
-curated format. With a Bobcat console 0.9.2+ (`bobcat import-event-model models/CritterCrush.emodel.yaml
---url http://localhost:5525`) it renders on the Event Model canvas; the specs' generated source
-contributes the same slices from the code side, and the two merge by slice name — declared-only
-slices are the backlog, spec-bound green slices are done. Status is derived, never asserted.
+curated format, kept as the record of what was declared. Bobcat 1.0 no longer reads it: the curated
+format is retired as an authoring surface (bobcat#406), and `bobcat import-event-model` now takes an
+eventmodelers.ai board export and refuses a curated file. A declared model would today be an
+`EventModelDefinition` in C#, registered with `AddEventModel<T>()` (see `../CritterCrush`). The specs'
+generated source still contributes the slices from the code side under the model name `CritterCrush`.

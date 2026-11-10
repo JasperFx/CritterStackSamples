@@ -6,17 +6,18 @@ using Shouldly;
 
 namespace BankAccountES.Tests;
 
+// The original tests, on xUnit v3. Five of them now live in BankAccountSpecs as Bobcat specifications.
 public class BankAccountTests : IAsyncLifetime
 {
     private IAlbaHost _host = null!;
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _host = await AlbaHost.For<Program>();
         await _host.CleanAllMartenDataAsync();
     }
 
-    public async Task DisposeAsync() => await _host.DisposeAsync();
+    public async ValueTask DisposeAsync() => await _host.DisposeAsync();
 
     private async Task<Client> EnrollTestClient(string name = "Jane Doe", string email = "jane@test.com")
     {
@@ -39,16 +40,6 @@ public class BankAccountTests : IAsyncLifetime
     }
 
     // --- Client ---
-
-    [Fact]
-    public async Task enroll_client()
-    {
-        var client = await EnrollTestClient("Alice Smith", "alice@test.com");
-
-        client.Id.ShouldNotBe(Guid.Empty);
-        client.Name.ShouldBe("Alice Smith");
-        client.Email.ShouldBe("alice@test.com");
-    }
 
     [Fact]
     public async Task update_client()
@@ -88,40 +79,6 @@ public class BankAccountTests : IAsyncLifetime
         account.Balance.ShouldBe(0m);
     }
 
-    [Fact]
-    public async Task open_account_with_invalid_client_returns_400()
-    {
-        await _host.Scenario(x =>
-        {
-            x.Post.Json(new OpenAccount(Guid.NewGuid(), "USD")).ToUrl("/api/accounts");
-            x.StatusCodeShouldBe(400);
-        });
-    }
-
-    // --- Deposits ---
-
-    [Fact]
-    public async Task deposit_funds()
-    {
-        var client = await EnrollTestClient();
-        var account = await OpenTestAccount(client.Id);
-
-        await _host.Scenario(x =>
-        {
-            x.Post.Json(new DepositFunds(account.Id, 500m)).ToUrl($"/api/accounts/{account.Id}/deposits");
-            x.StatusCodeShouldBe(204);
-        });
-
-        var getResult = await _host.Scenario(x =>
-        {
-            x.Get.Url($"/api/accounts/{account.Id}");
-        });
-
-        var updated = getResult.ReadAsJson<Account>();
-        updated.ShouldNotBeNull();
-        updated!.Balance.ShouldBe(500m);
-    }
-
     // --- Withdrawals ---
 
     [Fact]
@@ -150,60 +107,6 @@ public class BankAccountTests : IAsyncLifetime
         var updated = getResult.ReadAsJson<Account>();
         updated.ShouldNotBeNull();
         updated!.Balance.ShouldBe(700m);
-    }
-
-    [Fact]
-    public async Task withdraw_insufficient_funds_returns_400()
-    {
-        var client = await EnrollTestClient();
-        var account = await OpenTestAccount(client.Id);
-
-        await _host.Scenario(x =>
-        {
-            x.Post.Json(new DepositFunds(account.Id, 100m)).ToUrl($"/api/accounts/{account.Id}/deposits");
-            x.StatusCodeShouldBe(204);
-        });
-
-        await _host.Scenario(x =>
-        {
-            x.Post.Json(new WithdrawFunds(account.Id, 500m)).ToUrl($"/api/accounts/{account.Id}/withdrawals");
-            x.StatusCodeShouldBe(400);
-        });
-    }
-
-    // --- Transaction History ---
-
-    [Fact]
-    public async Task get_transactions()
-    {
-        var client = await EnrollTestClient();
-        var account = await OpenTestAccount(client.Id);
-
-        await _host.Scenario(x =>
-        {
-            x.Post.Json(new DepositFunds(account.Id, 1000m)).ToUrl($"/api/accounts/{account.Id}/deposits");
-            x.StatusCodeShouldBe(204);
-        });
-        await _host.Scenario(x =>
-        {
-            x.Post.Json(new WithdrawFunds(account.Id, 200m)).ToUrl($"/api/accounts/{account.Id}/withdrawals");
-            x.StatusCodeShouldBe(204);
-        });
-
-        var result = await _host.Scenario(x =>
-        {
-            x.Get.Url($"/api/accounts/{account.Id}/transactions");
-            x.StatusCodeShouldBe(200);
-        });
-
-        var txns = result.ReadAsJson<AccountTransactions>();
-        txns.ShouldNotBeNull();
-        txns!.Transactions.Count.ShouldBe(2);
-        txns.Transactions[0].Type.ShouldBe("Deposit");
-        txns.Transactions[0].Amount.ShouldBe(1000m);
-        txns.Transactions[1].Type.ShouldBe("Withdrawal");
-        txns.Transactions[1].Amount.ShouldBe(200m);
-        txns.Balance.ShouldBe(800m);
     }
 
     // --- Query Endpoints ---

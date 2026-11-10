@@ -1,5 +1,4 @@
 using Alba;
-using Booking;
 using BookingMonolith;
 using Flight;
 using Identity;
@@ -10,11 +9,13 @@ using Shouldly;
 
 namespace Tests;
 
+// The original tests, on xUnit v3. The event-sourced Booking module's six tests now live in BookingSpecs as
+// Bobcat specifications; these cover the document-only Identity, Passenger and Flight modules.
 public class BookingMonolithTests : IAsyncLifetime
 {
     private IAlbaHost _host = null!;
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _host = await AlbaHost.For<Program>();
         var store = _host.Services.GetRequiredService<IDocumentStore>();
@@ -22,7 +23,7 @@ public class BookingMonolithTests : IAsyncLifetime
         await store.Advanced.Clean.DeleteAllEventDataAsync();
     }
 
-    public async Task DisposeAsync() => await _host.DisposeAsync();
+    public async ValueTask DisposeAsync() => await _host.DisposeAsync();
 
     #region Identity
 
@@ -202,175 +203,6 @@ public class BookingMonolithTests : IAsyncLifetime
         {
             x.Get.Url($"/api/flights/{Guid.NewGuid()}");
             x.StatusCodeShouldBe(404);
-        });
-    }
-
-    #endregion
-
-    #region Booking
-
-    [Fact]
-    public async Task create_booking_with_valid_passenger_and_flight()
-    {
-        // Create passenger
-        var passengerResult = await _host.Scenario(x =>
-        {
-            x.Post.Json(new CreatePassenger("Jane Doe", "XY789012", PassengerType.Female, 28)).ToUrl("/api/passengers");
-        });
-        var passenger = passengerResult.ReadAsJson<Passenger.Passenger>()!;
-
-        // Create flight
-        var flightResult = await _host.Scenario(x =>
-        {
-            x.Post.Json(new CreateFlight(
-                "FL400", Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
-                180, 499.99m,
-                new DateTime(2026, 9, 1, 14, 0, 0),
-                new DateTime(2026, 9, 1, 17, 0, 0),
-                new DateTime(2026, 9, 1)
-            )).ToUrl("/api/flights");
-        });
-        var flight = flightResult.ReadAsJson<Flight.Flight>()!;
-
-        // Create booking
-        var result = await _host.Scenario(x =>
-        {
-            x.Post.Json(new CreateBooking(passenger.Id, flight.Id, "Window seat please")).ToUrl("/api/bookings");
-            x.StatusCodeShouldBeOk();
-        });
-
-        var booking = result.ReadAsJson<BookingRecord>();
-        booking.ShouldNotBeNull();
-        booking!.Id.ShouldNotBe(Guid.Empty);
-        booking.PassengerId.ShouldBe(passenger.Id);
-        booking.FlightId.ShouldBe(flight.Id);
-        booking.FlightNumber.ShouldBe("FL400");
-        booking.Price.ShouldBe(499.99m);
-        booking.Description.ShouldBe("Window seat please");
-    }
-
-    [Fact]
-    public async Task create_booking_returns_400_for_missing_passenger()
-    {
-        // Create flight only
-        var flightResult = await _host.Scenario(x =>
-        {
-            x.Post.Json(new CreateFlight(
-                "FL500", Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
-                90, 200m,
-                new DateTime(2026, 10, 1, 8, 0, 0),
-                new DateTime(2026, 10, 1, 9, 30, 0),
-                new DateTime(2026, 10, 1)
-            )).ToUrl("/api/flights");
-        });
-        var flight = flightResult.ReadAsJson<Flight.Flight>()!;
-
-        await _host.Scenario(x =>
-        {
-            x.Post.Json(new CreateBooking(Guid.NewGuid(), flight.Id, null)).ToUrl("/api/bookings");
-            x.StatusCodeShouldBe(400);
-        });
-    }
-
-    [Fact]
-    public async Task create_booking_returns_400_for_missing_flight()
-    {
-        var passengerResult = await _host.Scenario(x =>
-        {
-            x.Post.Json(new CreatePassenger("Test User", "ZZ000000", PassengerType.Male, 40)).ToUrl("/api/passengers");
-        });
-        var passenger = passengerResult.ReadAsJson<Passenger.Passenger>()!;
-
-        await _host.Scenario(x =>
-        {
-            x.Post.Json(new CreateBooking(passenger.Id, Guid.NewGuid(), null)).ToUrl("/api/bookings");
-            x.StatusCodeShouldBe(400);
-        });
-    }
-
-    [Fact]
-    public async Task get_bookings_returns_list()
-    {
-        // Create passenger + flight + booking
-        var passengerResult = await _host.Scenario(x =>
-        {
-            x.Post.Json(new CreatePassenger("List Test", "LT123456", PassengerType.Male, 25)).ToUrl("/api/passengers");
-        });
-        var passenger = passengerResult.ReadAsJson<Passenger.Passenger>()!;
-
-        var flightResult = await _host.Scenario(x =>
-        {
-            x.Post.Json(new CreateFlight(
-                "FL600", Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
-                60, 100m,
-                new DateTime(2026, 11, 1, 12, 0, 0),
-                new DateTime(2026, 11, 1, 13, 0, 0),
-                new DateTime(2026, 11, 1)
-            )).ToUrl("/api/flights");
-        });
-        var flight = flightResult.ReadAsJson<Flight.Flight>()!;
-
-        await _host.Scenario(x =>
-        {
-            x.Post.Json(new CreateBooking(passenger.Id, flight.Id, null)).ToUrl("/api/bookings");
-        });
-
-        var result = await _host.Scenario(x =>
-        {
-            x.Get.Url("/api/bookings");
-            x.StatusCodeShouldBeOk();
-        });
-
-        var bookings = result.ReadAsJson<List<BookingRecord>>();
-        bookings.ShouldNotBeNull();
-        bookings!.ShouldNotBeEmpty();
-    }
-
-    [Fact]
-    public async Task get_booking_by_id_returns_booking()
-    {
-        var passengerResult = await _host.Scenario(x =>
-        {
-            x.Post.Json(new CreatePassenger("ById Test", "BI123456", PassengerType.Female, 35)).ToUrl("/api/passengers");
-        });
-        var passenger = passengerResult.ReadAsJson<Passenger.Passenger>()!;
-
-        var flightResult = await _host.Scenario(x =>
-        {
-            x.Post.Json(new CreateFlight(
-                "FL700", Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
-                120, 350m,
-                new DateTime(2026, 12, 1, 9, 0, 0),
-                new DateTime(2026, 12, 1, 11, 0, 0),
-                new DateTime(2026, 12, 1)
-            )).ToUrl("/api/flights");
-        });
-        var flight = flightResult.ReadAsJson<Flight.Flight>()!;
-
-        var bookingResult = await _host.Scenario(x =>
-        {
-            x.Post.Json(new CreateBooking(passenger.Id, flight.Id, "Test booking")).ToUrl("/api/bookings");
-        });
-        var created = bookingResult.ReadAsJson<BookingRecord>()!;
-
-        var result = await _host.Scenario(x =>
-        {
-            x.Get.Url($"/api/bookings/{created.Id}");
-            x.StatusCodeShouldBeOk();
-        });
-
-        var booking = result.ReadAsJson<BookingRecord>();
-        booking.ShouldNotBeNull();
-        booking!.Id.ShouldBe(created.Id);
-    }
-
-    [Fact]
-    public async Task create_booking_validation_rejects_empty_ids()
-    {
-        await _host.Scenario(x =>
-        {
-            x.Post.Json(new CreateBooking(Guid.Empty, Guid.Empty, null)).ToUrl("/api/bookings");
-            x.StatusCodeShouldBe(400);
         });
     }
 
