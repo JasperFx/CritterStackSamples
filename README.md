@@ -32,6 +32,7 @@ docker compose down
 | [BookingMonolith](BookingMonolith/) | [meysamhadeli/booking-modular-monolith](https://github.com/meysamhadeli/booking-modular-monolith) | Travel booking — replaces EventStoreDB + MongoDB with Marten | Marten event store, inline snapshots, multiple `[Entity]` batch loading |
 | [BankAccountES](BankAccountES/) | Inspired by [andreschaffer/event-sourcing-cqrs-examples](https://github.com/andreschaffer/event-sourcing-cqrs-examples) | Bank accounts — pure Marten event sourcing from scratch | `[AggregateHandler]`, `[WriteAggregate]`, inline projections, `Validate` against aggregate state |
 | [LibraryQuickstart](LibraryQuickstart/) | [Cratis Chronicle quickstart](https://blog.cratis.io/blog/event-sourcing-in-dotnet-with-chronicle/) | Library books — Chronicle's "zero to first projection" quickstart rebuilt on Marten, then Wolverine | `Evolve()` read models, inline snapshots, `ISubscription`, `[Aggregate]` + `Validate`, fast event forwarding, Testcontainers |
+| [LoanUnderwriting](LoanUnderwriting/) | Original | Loan underwriting rules as a pure function, tested with a decision table | Bobcat `TableRunner` decision table with `out` parameter output columns, `[BobcatTheory]` + `[BobcatExamples]` for one specification per row, no database or host needed |
 | [MoreSpeakers](MoreSpeakers/) | [cwoodruff/morespeakers-com](https://github.com/cwoodruff/morespeakers-com) | Speaker mentorship platform — Marten as document DB | Nested collections, multiple `[Entity]` batch queries, mentorship lifecycle |
 
 ## Common Patterns Across Samples
