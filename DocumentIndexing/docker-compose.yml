@@ -1,0 +1,20 @@
+# PostgreSQL for the Marten sample, SQL Server 2025 for the Polecat sample.
+# Both use non-default host ports so they stay out of the way of anything else you are running.
+services:
+  postgresql:
+    image: "postgres:17"
+    ports:
+      - "5455:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2025-latest
+    platform: linux/amd64
+    ports:
+      - "14455:1433"
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "P@55w0rd"
+      MSSQL_PID: "Developer"

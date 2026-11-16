@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="MartenIndexing/MartenIndexing.csproj" />
+  <Project Path="PolecatIndexing/PolecatIndexing.csproj" />
+</Solution>
