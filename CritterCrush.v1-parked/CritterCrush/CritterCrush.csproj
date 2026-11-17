@@ -7,9 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Marten" Version="9.30.0" />
-    <PackageReference Include="WolverineFx.Http.Marten" Version="6.32.0" />
-    <PackageReference Include="WolverineFx.RuntimeCompilation" Version="6.32.0" />
+    <PackageReference Include="Marten" Version="9.50.3" />
+    <PackageReference Include="WolverineFx.Http.Marten" Version="6.51.0" />
+    <PackageReference Include="WolverineFx.RuntimeCompilation" Version="6.51.0" />
   </ItemGroup>
 
 </Project>

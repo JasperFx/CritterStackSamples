@@ -5,19 +5,21 @@ using Speakers;
 
 namespace MoreSpeakers.Tests;
 
+// The original speaker tests, on xUnit v3 and otherwise unchanged. The mentorship tests are now the
+// Bobcat specifications in MentorshipSpecs; one converted class is enough to show the pattern here.
 [Collection(DatabaseCollection.Name)]
 public class SpeakerEndpointTests : IAsyncLifetime
 {
     private IAlbaHost _host = null!;
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _host = await AlbaHost.For<Program>();
 
         await _host.DocumentStore().Advanced.Clean.DeleteAllDocumentsAsync();
     }
 
-    public async Task DisposeAsync() => await _host.DisposeAsync();
+    public async ValueTask DisposeAsync() => await _host.DisposeAsync();
 
     [Fact]
     public async Task Can_register_a_speaker()

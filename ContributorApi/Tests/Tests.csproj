@@ -1,19 +1,36 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
+  <!--
+    xUnit v3 on Microsoft.Testing.Platform, with Bobcat's projected specs beside the original
+    tests. ../global.json puts `dotnet test` into the platform's own mode, which
+    Microsoft.Testing.Platform 2.x requires on the .NET 10 SDK.
+  -->
   <PropertyGroup>
+    <OutputType>Exe</OutputType>
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+    <!-- The app has InternalsVisibleTo Include="Tests", so the assembly keeps its default name -->
+    <!-- The same version for all three Bobcat packages -->
+    <BobcatVersion>1.0.0-alpha.1</BobcatVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Alba" Version="8.5.3" />
-    <PackageReference Include="coverlet.collector" Version="6.0.2" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
     <PackageReference Include="Shouldly" Version="4.3.0" />
-    <PackageReference Include="xunit" Version="2.9.2" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageReference Include="xunit.v3" Version="4.0.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1" PrivateAssets="all" />
+
+    <PackageReference Include="Bobcat" Version="$(BobcatVersion)" />
+    <PackageReference Include="Bobcat.Generators" Version="$(BobcatVersion)" PrivateAssets="all" />
+    <PackageReference Include="Bobcat.Xunit" Version="$(BobcatVersion)" />
+    <!-- WolverineSpec: Bobcat's store vocabulary plus Wolverine's tracked acts -->
+    <PackageReference Include="WolverineFx.Bobcat" Version="6.51.0-alpha.1" />
   </ItemGroup>
 
   <ItemGroup>

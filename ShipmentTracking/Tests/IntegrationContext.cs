@@ -15,7 +15,8 @@ using Xunit;
 namespace Tests;
 
 /// <summary>
-/// Bootstraps the real application once for the whole suite.
+/// Bootstraps the real application once for the whole suite: an assembly fixture
+/// (AssemblyAttributes.cs), shared by the original tests and the Bobcat specifications.
 ///
 /// "Real database, real Wolverine, no mocks" is meant literally: this is
 /// ShipmentTracking's own Program.cs, its own Polecat store against a real SQL
@@ -33,7 +34,7 @@ public class AppFixture : IAsyncLifetime
 
     public IAlbaHost Host { get; private set; } = null!;
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         // Required when the application uses JasperFx for command line processing
         // and you want WebApplicationFactory / Alba to host it. Without it,
@@ -89,7 +90,7 @@ public class AppFixture : IAsyncLifetime
             }));
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (Host is not null) await Host.DisposeAsync();
     }
@@ -120,10 +121,6 @@ public class InstantCarrierLabelClient : ICarrierLabelClient
         => Task.FromResult($"{carrier.ToUpperInvariant()}-{shipmentId.ToString("N")[..10].ToUpperInvariant()}");
 }
 
-[CollectionDefinition("integration")]
-public class IntegrationCollection : ICollectionFixture<AppFixture>;
-
-[Collection("integration")]
 public abstract class IntegrationContext(AppFixture fixture) : IAsyncLifetime
 {
     public IAlbaHost Host => fixture.Host;
@@ -133,9 +130,9 @@ public abstract class IntegrationContext(AppFixture fixture) : IAsyncLifetime
     /// <summary>
     /// A clean slate per test. Polecat's own reset, not a hand-rolled TRUNCATE.
     /// </summary>
-    public async Task InitializeAsync() => await Host.ResetAllPolecatDataAsync();
+    public async ValueTask InitializeAsync() => await Host.ResetAllPolecatDataAsync();
 
-    public Task DisposeAsync() => Task.CompletedTask;
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     /// <summary>
     /// The one place the tracked-session configuration lives.

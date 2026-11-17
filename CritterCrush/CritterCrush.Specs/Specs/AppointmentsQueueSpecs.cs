@@ -10,27 +10,23 @@ namespace CritterCrush.Specs;
 /// Projected specifications for AppointmentsQueue.
 /// </summary>
 /// <remarks>
-/// Steps render from the marker comments in each test body; the verdict comes from the
-/// runner. [BobcatSlice] carries the BINDING only — the slice's domain, chapter and pattern
-/// are stated once, on the event model, and merge in by slice name.
-/// <para>
-/// [BobcatScenario] is what OPENS the recording each test's steps go into. Without it
-/// ScenarioRecorder.Current is null, every [BobcatStep] interceptor records into
-/// NoStep.Instance, and the suite goes green having rendered nothing at all (issue #379).
-/// </para>
+/// Steps render from the decorated helpers on <see cref="CritterCrushSpec"/>; the verdict comes from
+/// the runner. <c>[BobcatSpec]</c> is the <c>[Fact]</c>, opens the recording and carries the slice
+/// BINDING only — the slice's domain, chapter and pattern are stated once, on the event model
+/// (CritterCrushEventModel.cs in the app), and merge in by slice name. Through Bobcat 0.27 this was
+/// <c>[Fact]</c> + <c>[BobcatSlice]</c> with <c>[BobcatScenario]</c> on the class, and forgetting the
+/// last one rendered nothing at all (issue #379); <c>[BobcatSpec]</c> cannot come apart that way.
 /// </remarks>
-[BobcatScenario]
 [BobcatFeature("AppointmentsQueue")]
-[BobcatSlice(SliceType = typeof(AppointmentsQueue))]
 [Collection(CritterCrushHost.CollectionName)]
 public class AppointmentsQueueSpecs(CritterCrushHost host) : CritterCrushSpec(host)
 {
-    [Fact]
     /// <summary>
     /// The behaviour that makes this projection multi-stream: two DIFFERENT appointment streams
     /// fold into one shelter's document. A single-stream projection could not express it, so
     /// arranging both streams is the whole point of the scenario.
     /// </summary>
+    [BobcatSpec(typeof(AppointmentsQueue))]
     public async Task The_queue_counts_appointments_from_every_stream_in_the_shelter()
     {
         var shelterId = Guid.NewGuid();
@@ -55,7 +51,7 @@ public class AppointmentsQueueSpecs(CritterCrushHost host) : CritterCrushSpec(ho
         Assert.Equal(0, queue.Closed);
     }
 
-    [Fact]
+    [BobcatSpec(typeof(AppointmentsQueue))]
     public async Task An_appointment_cancelled_before_anyone_confirmed_it_leaves_the_awaiting_count()
     {
         var shelterId = Guid.NewGuid();
@@ -75,7 +71,7 @@ public class AppointmentsQueueSpecs(CritterCrushHost host) : CritterCrushSpec(ho
         Assert.Equal(1, queue.Closed);
     }
 
-    [Fact]
+    [BobcatSpec(typeof(AppointmentsQueue))]
     public async Task A_completed_appointment_leaves_the_queue()
     {
         var shelterId = Guid.NewGuid();

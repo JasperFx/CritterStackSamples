@@ -1,21 +1,41 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+    <!--
+      xUnit v3 on Microsoft.Testing.Platform, with Bobcat's projected specs beside the original
+      tests. ../global.json puts `dotnet test` into the platform's own mode, which
+      Microsoft.Testing.Platform 2.x requires on the .NET 10 SDK.
+    -->
     <PropertyGroup>
+        <OutputType>Exe</OutputType>
         <IsPackable>false</IsPackable>
+        <IsTestProject>true</IsTestProject>
+        <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+        <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
         <TargetFramework>net9.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
+        <AssemblyName>Tests</AssemblyName>
+        <RootNamespace>Tests</RootNamespace>
+        <!-- The same version for all three Bobcat packages -->
+        <BobcatVersion>1.0.0-alpha.1</BobcatVersion>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="Alba" Version="8.5.3" />
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
         <PackageReference Include="Shouldly" Version="4.3.0" />
-        <PackageReference Include="xunit" Version="2.9.2" />
-        <PackageReference Include="xunit.runner.visualstudio" Version="3.0.0">
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-            <PrivateAssets>all</PrivateAssets>
-        </PackageReference>
+        <PackageReference Include="xunit.v3" Version="4.0.2" />
+        <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1" PrivateAssets="all" />
+
+        <PackageReference Include="Bobcat" Version="$(BobcatVersion)" />
+        <PackageReference Include="Bobcat.Generators" Version="$(BobcatVersion)" PrivateAssets="all" />
+        <PackageReference Include="Bobcat.Xunit" Version="$(BobcatVersion)" />
+        <!-- WolverineSpec: a message-driven app on documents and a saga, so Wolverine's vocabulary -->
+        <PackageReference Include="WolverineFx.Bobcat" Version="6.51.0-alpha.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Xunit" />
     </ItemGroup>
 
     <ItemGroup>

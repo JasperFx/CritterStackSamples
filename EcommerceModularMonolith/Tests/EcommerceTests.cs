@@ -9,18 +9,20 @@ using Shouldly;
 
 namespace Tests;
 
+// The original tests, on xUnit v3. Five of them (basket checkout and delete, three Ordering tests) now live
+// in BasketAndOrderingSpecs as Bobcat specifications; the rest stay plain CRUD tests the specs already exemplify.
 public class EcommerceTests : IAsyncLifetime
 {
     private IAlbaHost _host = null!;
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _host = await AlbaHost.For<Program>();
         var store = _host.Services.GetRequiredService<IDocumentStore>();
         await store.Advanced.Clean.DeleteAllDocumentsAsync();
     }
 
-    public async Task DisposeAsync() => await _host.DisposeAsync();
+    public async ValueTask DisposeAsync() => await _host.DisposeAsync();
 
     #region Catalog
 
@@ -209,97 +211,9 @@ public class EcommerceTests : IAsyncLifetime
         retrieved.Items.ShouldHaveSingleItem();
     }
 
-    [Fact]
-    public async Task Can_delete_basket()
-    {
-        var cart = new ShoppingCart
-        {
-            Id = "deleteuser",
-            Items = [new ShoppingCartItem { ProductId = Guid.NewGuid(), ProductName = "X", Quantity = 1, Price = 5m, Color = "Blue" }]
-        };
-
-        await _host.Scenario(x =>
-        {
-            x.Post.Json(new StoreBasket(cart)).ToUrl("/basket");
-            x.StatusCodeShouldBe(200);
-        });
-
-        await _host.Scenario(x =>
-        {
-            x.Delete.Url("/basket/deleteuser");
-            x.StatusCodeShouldBe(204);
-        });
-
-        await _host.Scenario(x =>
-        {
-            x.Get.Url("/basket/deleteuser");
-            x.StatusCodeShouldBe(404);
-        });
-    }
-
-    [Fact]
-    public async Task Can_checkout_basket()
-    {
-        // Store a basket first
-        var cart = new ShoppingCart
-        {
-            Id = "checkoutuser",
-            Items = [new ShoppingCartItem { ProductId = Guid.NewGuid(), ProductName = "Laptop", Quantity = 1, Price = 999m, Color = "Silver" }]
-        };
-
-        await _host.Scenario(x =>
-        {
-            x.Post.Json(new StoreBasket(cart)).ToUrl("/basket");
-            x.StatusCodeShouldBe(200);
-        });
-
-        await _host.Scenario(x =>
-        {
-            x.Post.Json(new CheckoutBasket(
-                "checkoutuser",
-                Guid.NewGuid(),
-                "John", "Doe", "john@test.com",
-                "123 Main St", "US", "CA", "90210",
-                "John Doe", "4111111111111111", "12/28", "123", 1
-            )).ToUrl("/basket/checkout");
-
-            x.StatusCodeShouldBe(200);
-        });
-
-        // Basket should be deleted after checkout
-        await _host.Scenario(x =>
-        {
-            x.Get.Url("/basket/checkoutuser");
-            x.StatusCodeShouldBe(404);
-        });
-    }
-
     #endregion
 
     #region Ordering
-
-    [Fact]
-    public async Task Can_create_order()
-    {
-        var result = await _host.Scenario(x =>
-        {
-            x.Post.Json(new CreateOrder(
-                Guid.NewGuid(),
-                "TestOrder-1",
-                "Jane", "Smith", "jane@test.com",
-                "456 Oak Ave", "US", "NY", "10001",
-                "Jane Smith", "4222222222222222", "06/29", "456", 1,
-                [new OrderItem { ProductId = Guid.NewGuid(), ProductName = "Gadget", Quantity = 3, Price = 25m }]
-            )).ToUrl("/orders");
-
-            x.StatusCodeShouldBe(200);
-        });
-
-        var order = result.ReadAsJson<Order>();
-        order.ShouldNotBeNull();
-        order!.OrderName.ShouldBe("TestOrder-1");
-        order.Status.ShouldBe(OrderStatus.Pending);
-    }
 
     [Fact]
     public async Task Can_get_orders()
@@ -324,58 +238,6 @@ public class EcommerceTests : IAsyncLifetime
         var orders = result.ReadAsJson<List<OrderDto>>();
         orders.ShouldNotBeNull();
         orders!.ShouldNotBeEmpty();
-    }
-
-    [Fact]
-    public async Task Can_get_order_by_id()
-    {
-        var created = (await _host.Scenario(x =>
-        {
-            x.Post.Json(new CreateOrder(
-                Guid.NewGuid(), "FindOrder",
-                "F", "L", "f@l.com", "Addr", "US", "WA", "98101",
-                "FL", "4444444444444444", "03/30", "000", 1,
-                [new OrderItem { ProductId = Guid.NewGuid(), ProductName = "Thing", Quantity = 1, Price = 50m }]
-            )).ToUrl("/orders");
-            x.StatusCodeShouldBe(200);
-        })).ReadAsJson<Order>()!;
-
-        var result = await _host.Scenario(x =>
-        {
-            x.Get.Url($"/orders/{created.Id}");
-            x.StatusCodeShouldBe(200);
-        });
-
-        var order = result.ReadAsJson<OrderDto>();
-        order.ShouldNotBeNull();
-        order!.OrderName.ShouldBe("FindOrder");
-    }
-
-    [Fact]
-    public async Task Can_delete_order()
-    {
-        var created = (await _host.Scenario(x =>
-        {
-            x.Post.Json(new CreateOrder(
-                Guid.NewGuid(), "DeleteOrder",
-                "D", "O", "d@o.com", "Addr", "US", "IL", "60601",
-                "DO", "4555555555555555", "09/30", "111", 1,
-                [new OrderItem { ProductId = Guid.NewGuid(), ProductName = "Stuff", Quantity = 1, Price = 5m }]
-            )).ToUrl("/orders");
-            x.StatusCodeShouldBe(200);
-        })).ReadAsJson<Order>()!;
-
-        await _host.Scenario(x =>
-        {
-            x.Delete.Url($"/orders/{created.Id}");
-            x.StatusCodeShouldBe(204);
-        });
-
-        await _host.Scenario(x =>
-        {
-            x.Get.Url($"/orders/{created.Id}");
-            x.StatusCodeShouldBe(404);
-        });
     }
 
     #endregion

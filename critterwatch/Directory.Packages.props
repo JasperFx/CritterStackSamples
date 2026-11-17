@@ -65,11 +65,19 @@
     <PackageVersion Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.15.0-beta.1" />
   </ItemGroup>
 
-  <ItemGroup Label="Test stack">
+  <ItemGroup Label="Test stack (xUnit v3 on Microsoft.Testing.Platform 2.x; each solution's global.json opts dotnet test into it)">
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
-    <PackageVersion Include="xunit" Version="2.9.3" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageVersion Include="xunit.v3" Version="4.0.2" />
+    <!-- The shared harness is a library, not a test host: it takes xUnit's extensibility surface only. -->
+    <PackageVersion Include="xunit.v3.extensibility.core" Version="4.0.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
     <PackageVersion Include="Shouldly" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup Label="Bobcat (projected specs; the same version for all three)">
+    <PackageVersion Include="Bobcat" Version="1.0.0-alpha.1" />
+    <PackageVersion Include="Bobcat.Generators" Version="1.0.0-alpha.1" />
+    <PackageVersion Include="Bobcat.Xunit" Version="1.0.0-alpha.1" />
   </ItemGroup>
 
 </Project>

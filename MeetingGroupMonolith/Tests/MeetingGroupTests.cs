@@ -11,11 +11,14 @@ using UserAccess;
 
 namespace Tests;
 
+// The original tests, on xUnit v3. Five of them now live in Bobcat specifications: the event-sourced
+// Payments module's two in PaymentSpecs, and the three about one module messaging another in
+// ModuleMessagingSpecs. These are the plain document CRUD and GET tests, left as they were.
 public class MeetingGroupTests : IAsyncLifetime
 {
     private IAlbaHost _host = null!;
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _host = await AlbaHost.For<Program>();
 
@@ -24,32 +27,9 @@ public class MeetingGroupTests : IAsyncLifetime
         await _host.CleanAllMartenDataAsync();
     }
 
-    public async Task DisposeAsync() => await _host.DisposeAsync();
+    public async ValueTask DisposeAsync() => await _host.DisposeAsync();
 
     #region Registrations
-
-    [Fact]
-    public async Task Can_register_user()
-    {
-        var result = await _host.Scenario(x =>
-        {
-            x.Post.Json(new RegisterUser(
-                "jdoe",
-                "jdoe@example.com",
-                "John",
-                "Doe",
-                "password123"
-            )).ToUrl("/api/registrations");
-
-            x.StatusCodeShouldBe(200);
-        });
-
-        var user = result.ReadAsJson<User>();
-        user.ShouldNotBeNull();
-        user!.Id.ShouldNotBe(Guid.Empty);
-        user.Login.ShouldBe("jdoe");
-        user.Email.ShouldBe("jdoe@example.com");
-    }
 
     [Fact]
     public async Task Register_user_validates_input()
@@ -85,37 +65,6 @@ public class MeetingGroupTests : IAsyncLifetime
         proposal.ShouldNotBeNull();
         proposal!.Name.ShouldBe("C# Enthusiasts");
         proposal.Status.ShouldBe(ProposalStatus.InVerification);
-    }
-
-    [Fact]
-    public async Task Can_accept_proposal()
-    {
-        var userId = Guid.NewGuid();
-
-        // Create proposal
-        var created = (await _host.Scenario(x =>
-        {
-            x.Post.Json(new ProposeNewMeetingGroup(
-                "Rust Fans",
-                "For Rust lovers",
-                "Seattle",
-                "US",
-                userId
-            )).ToUrl("/api/administration/proposals");
-            x.StatusCodeShouldBe(200);
-        })).ReadAsJson<MeetingGroupProposal>()!;
-
-        // Accept it
-        var result = await _host.Scenario(x =>
-        {
-            x.Post.Json(new { }).ToUrl($"/api/administration/proposals/{created.Id}/accept");
-            x.StatusCodeShouldBe(200);
-        });
-
-        var accepted = result.ReadAsJson<MeetingGroupProposal>();
-        accepted.ShouldNotBeNull();
-        accepted!.Status.ShouldBe(ProposalStatus.Accepted);
-        accepted.DecisionDate.ShouldNotBeNull();
     }
 
     #endregion
@@ -181,65 +130,6 @@ public class MeetingGroupTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Can_add_attendee_to_meeting()
-    {
-        // Set up group and meeting
-        var userId = Guid.NewGuid();
-
-        var proposal = (await _host.Scenario(x =>
-        {
-            x.Post.Json(new ProposeNewMeetingGroup("Attendee Group", "Test", "Denver", "US", userId))
-                .ToUrl("/api/administration/proposals");
-            x.StatusCodeShouldBe(200);
-        })).ReadAsJson<MeetingGroupProposal>()!;
-
-        await _host.Scenario(x =>
-        {
-            x.Post.Json(new { }).ToUrl($"/api/administration/proposals/{proposal.Id}/accept");
-            x.StatusCodeShouldBe(200);
-        });
-
-        await Task.Delay(1000);
-
-        var groups = (await _host.Scenario(x =>
-        {
-            x.Get.Url("/api/meeting-groups");
-            x.StatusCodeShouldBe(200);
-        })).ReadAsJson<List<MeetingGroup>>()!;
-
-        var group = groups.First(g => g.Name == "Attendee Group");
-
-        var meeting = (await _host.Scenario(x =>
-        {
-            x.Post.Json(new CreateMeeting(
-                group.Id,
-                "Test Meeting",
-                "For attendee test",
-                DateTime.UtcNow.AddDays(3),
-                DateTime.UtcNow.AddDays(3).AddHours(1),
-                "456 Test Blvd",
-                10,
-                5m
-            )).ToUrl("/api/meetings");
-            x.StatusCodeShouldBe(200);
-        })).ReadAsJson<Meeting>()!;
-
-        // Add attendee
-        var memberId = Guid.NewGuid();
-        var result = await _host.Scenario(x =>
-        {
-            x.Post.Json(new AddAttendee(meeting.Id, memberId))
-                .ToUrl($"/api/meetings/{meeting.Id}/attendees");
-            x.StatusCodeShouldBe(200);
-        });
-
-        var updated = result.ReadAsJson<Meeting>();
-        updated.ShouldNotBeNull();
-        updated!.Attendees.ShouldHaveSingleItem();
-        updated.Attendees[0].MemberId.ShouldBe(memberId);
-    }
-
-    [Fact]
     public async Task Can_get_meeting_groups()
     {
         var result = await _host.Scenario(x =>
@@ -267,35 +157,4 @@ public class MeetingGroupTests : IAsyncLifetime
 
     #endregion
 
-    #region Payments
-
-    [Fact]
-    public async Task Can_create_subscription()
-    {
-        var payerId = Guid.NewGuid();
-
-        var result = await _host.Scenario(x =>
-        {
-            x.Post.Json(new CreateSubscription(payerId, "Monthly"))
-                .ToUrl("/api/payments/subscriptions");
-
-            x.StatusCodeShouldBe(200);
-        });
-
-        var subscriptionId = result.ReadAsJson<Guid>();
-        subscriptionId.ShouldNotBe(Guid.Empty);
-    }
-
-    [Fact]
-    public async Task Create_subscription_validates_period()
-    {
-        await _host.Scenario(x =>
-        {
-            x.Post.Json(new CreateSubscription(Guid.NewGuid(), "Invalid"))
-                .ToUrl("/api/payments/subscriptions");
-            x.StatusCodeShouldBe(400);
-        });
-    }
-
-    #endregion
 }

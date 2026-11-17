@@ -41,7 +41,7 @@ if (app.Environment.IsDevelopment())
 app.MapPost("/api/project/create", async (CreateProject command, IDocumentSession session) =>
 {
     var projectCreated = new ProjectCreated(command.Name);
-    var adminAssigned = new AdminAssigned(command.Name);
+    var adminAssigned = new AdminAssigned(command.Admin);
     var events = new object[] { projectCreated, adminAssigned }
         .Concat(command.TeamMembers.Select(x => new TeamMemberAssigned(x))).ToArray();
 

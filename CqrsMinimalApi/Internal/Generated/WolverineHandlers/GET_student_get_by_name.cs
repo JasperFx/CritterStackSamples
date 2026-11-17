@@ -24,8 +24,6 @@ namespace Internal.Generated.WolverineHandlers
             _wolverineRuntime = wolverineRuntime;
         }
 
-
-
         public override async System.Threading.Tasks.Task Handle(Microsoft.AspNetCore.Http.HttpContext httpContext)
         {
             var messageContext = new Wolverine.Runtime.MessageContext(_wolverineRuntime);
@@ -38,13 +36,11 @@ namespace Internal.Generated.WolverineHandlers
             var student_response = await CqrsMinimalApi.StudentEndpoints.GetByName(name, ((Marten.IQuerySession)documentSession), httpContext.RequestAborted).ConfigureAwait(false);
 
             // Writing the response body to JSON because this was the first 'return variable' in the method signature
-            await WriteJsonAsync(httpContext, student_response);
+            await WriteJsonAsync(httpContext, student_response, 404);
         }
-
     }
 
     // END: GET_student_get_by_name
     
     
 }
-
