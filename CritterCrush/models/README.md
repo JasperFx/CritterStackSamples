@@ -1,17 +1,25 @@
 # Regenerating CritterCrush from its event model
 
-`CritterCrush.emodel.yaml` is the source of truth. Everything under `CritterCrush/Scheduling/`,
-`CritterCrush/Volunteering/`, `CritterCrush.Specs/Features/` and `crittercrush-plan.yaml` is emitted from it by
-`Bobcat.EventModel.Scaffolding`, at zero token cost, and is safe to throw away and regenerate —
-until a slice is filled in, at which point regenerating that slice's file would overwrite the work.
+`CritterCrush.emodel.yaml` is the source of truth, and `CritterCrush.spec-ownership.yaml` says how
+each slice is specified — here, every one of them in the projected lane. Everything under
+`CritterCrush/Scheduling/`, `CritterCrush/Volunteering/`, `CritterCrush.Specs/Specs/` and
+`crittercrush-plan.yaml` is emitted from those two by `Bobcat.EventModel.Scaffolding`, at zero token
+cost. It is safe to throw away and regenerate until a slice is filled in; from then on, regenerating
+that slice's file overwrites the work.
+
+Every slice here is filled in, so regenerate into the pristine copy at the repository root and
+compare, rather than over the implementation:
 
 ```bash
-dotnet run --project models/Scaffolder -- models/CritterCrush.emodel.yaml out \
-    --arrangements --plan models/crittercrush-plan.yaml
-cp out/Features/*.feature CritterCrush.Specs/Features/
-cp out/Scheduling/*.cs CritterCrush/Scheduling/       # ONLY for slices still unimplemented
-cp out/Volunteering/*.cs CritterCrush/Volunteering/   # likewise
+dotnet run --project models/Scaffolder -- models/CritterCrush.emodel.yaml ../.scaffold-output \
+    --plan models/crittercrush-plan.yaml \
+    --manifest models/CritterCrush.spec-ownership.yaml
+git diff --stat ../.scaffold-output    # what this Bobcat changed about the output
+../review.sh Scheduling/ConfirmAppointment.cs    # one scaffold file beside its implementation
 ```
+
+Copy a file from `.scaffold-output/` into `CritterCrush/` or `CritterCrush.Specs/Specs/` **only** for
+a slice that is still unimplemented.
 
 The runner is `models/Scaffolder`, a few lines around `SliceScaffolder.ScaffoldAll(model)` — use
 that single entry point and not the individual `Scaffold`/`ScaffoldAggregates`/`ScaffoldFeatures`
@@ -20,15 +28,13 @@ methods, because the pieces are not independent and skipping one leaves a dangli
 scaffolding API change and a README that quietly stopped working is that building the solution
 compiles it.
 
-⚠️ **`--arrangements` is not optional for this chapter**, whatever its name suggests. The committed
-`BookingAppointments.feature` was generated with it (bobcat#259): twelve of sixteen scenarios shared
-the same arranged history and it is now three named `@arrangement` scenarios they reference by name.
-Regenerate without the flag and that history is silently inlined back into every scenario — a file
-that still passes and reads considerably worse. As of 2026-09-16 the command above reproduces all
-six committed features **byte for byte**.
+As of Bobcat 0.27.3 the command above reproduces all 33 committed files in `.scaffold-output/`
+**byte for byte**.
 
-⚠️ **Copy `.cs` files back only for slices that are still unimplemented.** Regenerating a filled-in
-slice overwrites the work; the `.feature` is the file that is always safe to take.
+`--arrangements` is no longer part of it. The flag extracts history that scenarios repeat into
+named `@arrangement` scenarios (bobcat#259), and that only shapes `.feature` output. With every
+slice projected, the output is identical with and without it, measured on 0.27.3. Put it back if a
+slice ever moves to the Gherkin lane.
 
 ## `--plan` exists because the last hand-written plan rotted
 
@@ -80,8 +86,9 @@ the specs rather than by the model author:
   duplication nothing checks, so when a contract gains a field, grep for the type name.
 - **A creating command whose stream id is not named `{Aggregate}Id` needs `[Identity]`** (from the
   `JasperFx` namespace). The scaffold recommends it in a comment, which does not boot a host: without
-  it Wolverine cannot resolve the aggregate and refuses at discovery, so all 37 scenarios report
-  `did not run` for one slice's mistake.
+  it Wolverine cannot resolve the aggregate and refuses at discovery, so the shared host never
+  starts and all 88 tests fail on the collection fixture for one slice's mistake. Seven
+  Volunteering commands need it here.
 
 ## The diagnostic that earns its keep
 
@@ -90,6 +97,12 @@ Scheduling's now-redundant `HomeCheckAssignmentAccepted.cs` was still on disk, s
 `HomeCheckAssignmentAccepted is received` resolved to two types — and the generator said exactly
 that, naming both namespaces, at build time. Deleting the consumer's stale copy of a contract is
 easy to forget, and this is what remembers.
+
+`BOBCAT028` does the same job for the projected lane. A class that binds a slice with
+`[BobcatSlice]` but never opens a recording renders as no specification at all, and at run time
+that is indistinguishable from a class with nothing to record: every test green, and nothing on
+the canvas. The attribute that opens the recording is `[BobcatScenario]`, and 0.27.2's scaffold
+writes it on every spec class.
 
 ## There used to be a patch step here
 
