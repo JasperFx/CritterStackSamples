@@ -11,6 +11,8 @@ public static class FakeExternalSystems
         services.AddSingleton<MoneyTransfer.Bank>();
         services.AddSingleton<TripBooking.TravelProviders>();
         services.AddSingleton<OrderApproval.Storefront>();
+        services.AddSingleton<Subscriptions.Billing>();
+        services.AddSingleton<FanOutFanIn.BackupStorage>();
         return services;
     }
 }

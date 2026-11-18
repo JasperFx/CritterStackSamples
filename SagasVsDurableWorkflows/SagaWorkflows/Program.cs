@@ -38,6 +38,17 @@ builder.Host.UseWolverine(opts =>
     opts.OnException<ConcurrencyException>()
         .RetryWithCooldown(50.Milliseconds(), 100.Milliseconds(), 250.Milliseconds(), 500.Milliseconds());
 
+    // Fan-in. Many replies for one saga at once would mostly lose that concurrency check, over and over. Instead,
+    // send the replies through partitioned local queues grouped by saga id: the replies for one saga are handled
+    // one at a time, and different sagas still run in parallel
+    opts.MessagePartitioning
+        .UseInferredMessageGrouping()
+        .PublishToPartitionedLocalMessaging("fan-in", 4, topology =>
+        {
+            topology.Message<SagaWorkflows.FanOutFanIn.FileBackedUp>();
+            topology.ConfigureQueues(queue => queue.UseDurableInbox());
+        });
+
     // Anything else: try three times in all, then dead letter. A dead lettered step sends its
     // Fault<T> back to a saga that declared a Compensate or Handle(Fault<T>) for it
     opts.OnException<Exception>().RetryTimes(2);
