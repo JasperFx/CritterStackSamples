@@ -46,6 +46,9 @@ builder.Host.UseWolverine(opts =>
         .PublishToPartitionedLocalMessaging("fan-in", 4, topology =>
         {
             topology.Message<SagaWorkflows.FanOutFanIn.FileBackedUp>();
+            topology.Message<SagaWorkflows.ChildWorkflows.DeviceProvisioned>();
+            topology.Message<SagaWorkflows.ChildWorkflows.DeviceProvisioningFailed>();
+            topology.Message<SagaWorkflows.AgentLoop.ToolFinished>();
             topology.ConfigureQueues(queue => queue.UseDurableInbox());
         });
 

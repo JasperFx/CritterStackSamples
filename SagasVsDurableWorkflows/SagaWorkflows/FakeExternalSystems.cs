@@ -13,6 +13,11 @@ public static class FakeExternalSystems
         services.AddSingleton<OrderApproval.Storefront>();
         services.AddSingleton<Subscriptions.Billing>();
         services.AddSingleton<FanOutFanIn.BackupStorage>();
+        services.AddSingleton<ChildWorkflows.DevicePortal>();
+        services.AddSingleton<Polling.FakeReportingApi>();
+        services.AddSingleton<Polling.IReportingApi>(s => s.GetRequiredService<Polling.FakeReportingApi>());
+        services.AddSingleton<AgentLoop.IChatModel, AgentLoop.ScriptedChatModel>();
+        services.AddSingleton<AgentLoop.ToolBox>();
         return services;
     }
 }
