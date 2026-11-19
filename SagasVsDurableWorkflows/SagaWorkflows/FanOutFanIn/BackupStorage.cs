@@ -11,6 +11,13 @@ public class BackupStorage
     public ConcurrentBag<string> Unreadable { get; } = [];
     public ConcurrentQueue<BackupCompleted> Completed { get; } = new();
 
+    public void Reset()
+    {
+        _files.Clear();
+        Copied.Clear();
+        Unreadable.Clear();
+    }
+
     public void Add(string path, long bytes) => _files[path] = bytes;
 
     public string[] List(string root) => _files.Keys.Where(x => x.StartsWith(root + "/")).Order().ToArray();

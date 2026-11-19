@@ -88,7 +88,7 @@ public abstract class SagaWorkflowSpec : WolverineSpec, IAsyncLifetime
 
     // ---- the storefront, the reporting system, the file share and the agent's tools ----------------------------------
 
-    [Given("the warehouse holds {quantity} {item}")]
+    [Given("the warehouse has {quantity} {item} in stock")]
     public void WarehouseHolds(int quantity, string item) => service<Storefront>().Stock(item, quantity);
 
     [Given("export {jobId} is ready after {polls} polls")]
@@ -127,6 +127,13 @@ public abstract class SagaWorkflowSpec : WolverineSpec, IAsyncLifetime
         var saga = await loadSaga<TSaga>(sagaId);
         SpecAssert.Check("undo stack", saga == null ? "(no saga)" : string.Join(", ", saga.UndoStack.Select(x => x.Tag)),
             string.Join(", ", steps));
+    }
+
+    [Then("the undo stack of saga {sagaId} is empty")]
+    public async Task ThenTheUndoStackIsEmpty<TSaga>(Guid sagaId) where TSaga : CompensatingSaga
+    {
+        var saga = await loadSaga<TSaga>(sagaId);
+        SpecAssert.Check("undo stack", saga == null ? "(no saga)" : string.Join(", ", saga.UndoStack.Select(x => x.Tag)), "");
     }
 
     /// <summary>The saga's last compensation sent the undo messages of these steps, in this order</summary>

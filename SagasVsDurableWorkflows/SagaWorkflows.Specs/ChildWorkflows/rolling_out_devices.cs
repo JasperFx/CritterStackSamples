@@ -31,12 +31,12 @@ public class rolling_out_devices(DocumentSagas app) : SagaWorkflowSpec(app)
     [BobcatSpec(typeof(RollOutDevices))]
     public async Task a_child_that_fails_is_a_result_for_the_parent()
     {
-        DeviceIsBroken("broken");
+        DeviceIsBroken("dev-9");
 
-        await WhenReceived(new RollOutDevices(RolloutId, ["broken"]));
+        await WhenReceived(new RollOutDevices(RolloutId, ["dev-9"]));
 
         ThenDeadLettered<CreateInstallationPackage>();
-        ThenMessageSent(new RolloutCompleted(RolloutId, [], ["broken"]));
+        ThenMessageSent(new RolloutCompleted(RolloutId, [], ["dev-9"]));
     }
 
     // [DiscardIfSagaMissing] on the DownloadAcknowledged message type: a device that answers after its provisioning

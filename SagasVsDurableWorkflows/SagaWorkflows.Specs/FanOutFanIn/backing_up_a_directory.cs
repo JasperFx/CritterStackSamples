@@ -10,7 +10,7 @@ namespace SagaWorkflows.Specs.FanOutFanIn;
 public class backing_up_a_directory(DocumentSagas app) : SagaWorkflowSpec(app)
 {
     private Guid BackupId { get; } = Guid.NewGuid();
-    private string Root { get; } = $"/sites/{Guid.NewGuid():N}";
+    private const string Root = "/sites/acme";
 
     [BobcatSpec(typeof(BackupDirectory))]
     public async Task twenty_five_files_are_copied_and_counted_once_each()
@@ -41,14 +41,14 @@ public class backing_up_a_directory(DocumentSagas app) : SagaWorkflowSpec(app)
     public async Task a_file_that_cannot_be_copied_is_reported_and_the_rest_carry_on()
     {
         DirectoryHolds(Root, 6);
-        FileCannotBeRead($"{Root}/file-03.txt");
+        FileCannotBeRead("/sites/acme/file-03.txt");
 
         await WhenReceived(new BackupDirectory(BackupId, Root));
 
         ThenDeadLettered<BackupFile>();
         ThenMessageSent(Specify<BackupCompleted>()
             .With(x => x.FilesCopied, 5)
-            .With(x => x.Failed, Expect.Exactly($"{Root}/file-03.txt")));
+            .With(x => x.Failed, new[] { "/sites/acme/file-03.txt" }));
     }
 
     // Nothing to fan out, so nothing will ever reply: the saga has to notice that itself

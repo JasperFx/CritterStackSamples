@@ -45,7 +45,7 @@ public abstract class SagaWorkflowsHost : IAsyncLifetime
         Host.Services.GetRequiredService<TravelProviders>().Reset();
         Host.Services.GetRequiredService<SagaWorkflows.AgentLoop.ToolBox>().Broken.Clear();
         Host.Services.GetRequiredService<SagaWorkflows.ChildWorkflows.DevicePortal>().BrokenDevices.Clear();
-        Host.Services.GetRequiredService<SagaWorkflows.FanOutFanIn.BackupStorage>().Unreadable.Clear();
+        Host.Services.GetRequiredService<SagaWorkflows.FanOutFanIn.BackupStorage>().Reset();
         Host.Services.GetRequiredService<SagaWorkflows.Polling.FakeReportingApi>().Down.Clear();
     }
 

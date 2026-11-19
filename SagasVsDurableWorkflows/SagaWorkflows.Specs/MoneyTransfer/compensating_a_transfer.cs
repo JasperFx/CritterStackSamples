@@ -54,7 +54,7 @@ public class compensating_a_transfer(DocumentSagas app) : SagaWorkflowSpec(app)
         ThenAttempted<RecordTransfer>(3);
         await ThenTheSagaCompensated<Transfer, RecordTransfer, LedgerUnavailableException>(TransferId);
         await ThenTheLastCompensationUndid<Transfer>(TransferId, "deposit", "withdrawal");
-        await ThenTheUndoStackHolds<Transfer>(TransferId);
+        await ThenTheUndoStackIsEmpty<Transfer>(TransferId);
         ThenMessageSent(new TransferFailed(TransferId, "The ledger is unavailable"));
         ThenAccountHolds("alice", 500m);
         ThenAccountHolds("bob", 0m);
