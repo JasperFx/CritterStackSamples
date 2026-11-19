@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="SagaWorkflows/SagaWorkflows.csproj" />
+  <Project Path="SagaWorkflows.Tests/SagaWorkflows.Tests.csproj" />
+</Solution>

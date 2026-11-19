@@ -1,0 +1,23 @@
+namespace SagaWorkflows;
+
+public static class FakeExternalSystems
+{
+    /// <summary>
+    /// The systems the workflows talk to (a bank, airlines, an LLM...), as in-memory fakes. The tests reach them
+    /// through the container to arrange failures
+    /// </summary>
+    public static IServiceCollection AddFakeExternalSystems(this IServiceCollection services)
+    {
+        services.AddSingleton<MoneyTransfer.Bank>();
+        services.AddSingleton<TripBooking.TravelProviders>();
+        services.AddSingleton<OrderApproval.Storefront>();
+        services.AddSingleton<Subscriptions.Billing>();
+        services.AddSingleton<FanOutFanIn.BackupStorage>();
+        services.AddSingleton<ChildWorkflows.DevicePortal>();
+        services.AddSingleton<Polling.FakeReportingApi>();
+        services.AddSingleton<Polling.IReportingApi>(s => s.GetRequiredService<Polling.FakeReportingApi>());
+        services.AddSingleton<AgentLoop.IChatModel, AgentLoop.ScriptedChatModel>();
+        services.AddSingleton<AgentLoop.ToolBox>();
+        return services;
+    }
+}

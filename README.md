@@ -35,6 +35,7 @@ docker compose down
 | [LibraryQuickstart](LibraryQuickstart/) | [Cratis Chronicle quickstart](https://blog.cratis.io/blog/event-sourcing-in-dotnet-with-chronicle/) | Library books — Chronicle's "zero to first projection" quickstart rebuilt on Marten, then Wolverine | `Evolve()` read models, inline snapshots, `ISubscription`, `[Aggregate]` + `Validate`, fast event forwarding, Testcontainers |
 | [LoanUnderwriting](LoanUnderwriting/) | Original | Loan underwriting rules as a pure function, tested with a decision table | Bobcat `TableRunner` decision table with `out` parameter output columns, `[BobcatTheory]` + `[BobcatExamples]` for one specification per row, no database or host needed |
 | [MoreSpeakers](MoreSpeakers/) | [cwoodruff/morespeakers-com](https://github.com/cwoodruff/morespeakers-com) | Speaker mentorship platform — Marten as document DB | Nested collections, multiple `[Entity]` batch queries, mentorship lifecycle |
+| [SagasVsDurableWorkflows](SagasVsDurableWorkflows/) | Temporal, Restate, Durable Functions and Dapr Workflow samples (each credited in its folder) | Eight durable workflow samples rebuilt as Wolverine sagas, with an [evaluation](SagasVsDurableWorkflows/EVALUATION.md) of where sagas hold up | `CompensatingSaga`, `Compensate`, `RemoteFailure<T>`, `[TerminalFailure]`, `Fault<T>`, `TimeoutMessage`, partitioned fan-in, `[RetainWhenCompleted]` |
 
 ## Common Patterns Across Samples
 

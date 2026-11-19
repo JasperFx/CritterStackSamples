@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <WolverineVersion>7.0.0-local.1</WolverineVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WolverineFx.Http.Marten" Version="$(WolverineVersion)" />
+    <!-- Wolverine 7 moved the runtime (Roslyn) compiler out of the core package -->
+    <PackageReference Include="WolverineFx.RuntimeCompilation" Version="$(WolverineVersion)" />
+  </ItemGroup>
+
+</Project>
