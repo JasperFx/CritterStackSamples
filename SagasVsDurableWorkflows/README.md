@@ -67,7 +67,7 @@ schema, the tests the same, and the specs `saga_specs` and `saga_specs_es`.
 as event-sourced sagas. `Sagas:EventSourced=true` (or `Sagas__EventSourced=true` in the environment) runs the
 event-sourced ones; use `Marten:Schema` to keep the two apart.
 
-**Wolverine packages.** Everything is on Wolverine `7.0.0-alpha.3` (Marten 10.0.0-alpha.5, JasperFx 3.8.0).
+**Wolverine packages.** Everything is on Wolverine `7.0.0-alpha.3` from nuget.org (Marten 10.0.0-alpha.5, JasperFx 3.8.0).
 
 **Specs.** `SagaWorkflows.Specs` is one [Bobcat](https://wolverinefx.net/guide/testing-with-bobcat) specification
 project for all eight samples: ordinary xUnit v3 test methods that render as Given / When / Then, one feature per
