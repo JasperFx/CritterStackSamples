@@ -10,17 +10,16 @@ namespace SagaWorkflows.FanOutFanIn;
 public record BackupDirectory(Guid BackupId, string RootDirectory);
 
 public record BackupFile(Guid BackupId, string Path);
-public record FileBackedUp(Guid BackupId, string Path, long Bytes);
+public record FileBackedUp(Guid BackupId, string Path, long Bytes) : IFanInReply;
 
 public record BackupCompleted(Guid BackupId, int FilesCopied, long TotalBytes, string[] Failed);
 
+// Every reply for this backup lands on the same document. FileBackedUp is an IFanInReply, so Program.cs's global
+// partitioning hands this backup its replies one at a time. IRevisioned still guards the document, and a Fault<BackupFile>
+// that loses a race is retried
 public class Backup : Saga, IRevisioned
 {
     public Guid Id { get; set; }
-
-    // Every reply for this backup lands on the same document. IRevisioned turns a lost update into a
-    // ConcurrencyException, which Program.cs retries
-    public int Version { get; set; }
 
     // What a workflow tool keeps as a list of pending tasks. Removing a path as its reply arrives also makes a
     // duplicate reply harmless

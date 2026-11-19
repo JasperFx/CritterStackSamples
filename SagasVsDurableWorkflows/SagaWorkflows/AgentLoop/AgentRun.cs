@@ -18,7 +18,7 @@ public record AskAgent(Guid AgentRunId, string Question, int MaxTurns);
 public record CallModel(Guid AgentRunId, ChatMessage[] Conversation);
 public record ModelReplied(Guid AgentRunId, string? Answer, ToolCall[] ToolCalls);
 public record RunTool(Guid AgentRunId, ToolCall Call);
-public record ToolFinished(Guid AgentRunId, string CallId, string Result);
+public record ToolFinished(Guid AgentRunId, string CallId, string Result) : IFanInReply;
 
 // Human in the loop
 public record ApprovalNeeded(Guid AgentRunId, ToolCall Call);
@@ -34,7 +34,6 @@ public class AgentRun : Saga, IRevisioned
     public static readonly string[] NeedApproval = ["issue_refund"];
 
     public Guid Id { get; set; }
-    public int Version { get; set; }
 
     public int MaxTurns { get; set; }
     public int Turns { get; set; }

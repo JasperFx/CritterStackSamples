@@ -44,23 +44,24 @@ public class TripBookingTests(AppFixture fixture) : WorkflowContext(fixture)
         session.AllRecordsInOrder(MessageEventType.ExecutionStarted).Count(x => x.Message is BookHotel).ShouldBe(1);
 
         // Hotel first (it may have gone through on the provider's side), then the car, then the flight, each one
-        // confirmed before the next is sent
-        session.AllRecordsInOrder(MessageEventType.MessageSucceeded)
-            .Select(x => x.Message)
-            .Where(x => x is CancelHotel or CancelCar or CancelFlight or HotelCancelled or CarCancelled or FlightCancelled)
-            .Select(x => x!.GetType())
-            .ShouldBe([
-                typeof(CancelHotel), typeof(HotelCancelled), typeof(CancelCar), typeof(CarCancelled),
-                typeof(CancelFlight), typeof(FlightCancelled)
-            ]);
+        // handled before the next is sent
+        var records = session.AllRecordsInOrder();
+        int handled(Type type) => Array.FindIndex(records, x => x.MessageEventType == MessageEventType.MessageSucceeded && type.IsInstanceOfType(x.Message));
+        int sent(Type type) => Array.FindIndex(records, x => x.MessageEventType == MessageEventType.Sent && type.IsInstanceOfType(x.Message));
 
-        session.Executed.SingleMessage<TripCancelled>().Reason.ShouldContain("No hotel available");
+        handled(typeof(CancelHotel)).ShouldBeLessThan(sent(typeof(CancelCar)));
+        handled(typeof(CancelCar)).ShouldBeLessThan(sent(typeof(CancelFlight)));
+        handled(typeof(CancelFlight)).ShouldBeGreaterThan(0);
+
         Providers.HasReservation(Booking.Flight, customer).ShouldBeFalse();
         Providers.HasReservation(Booking.Car, customer).ShouldBeFalse();
 
+        // UndoSequentially(completeWhenDone: true) closed the trip once the last cancellation was confirmed. It's
+        // retained, so it can still be read
         var saga = await LoadSaga<Trip>(command.TripId);
         saga!.Status.ShouldBe(SagaStatus.Compensated);
         saga.IsCompleted().ShouldBeTrue();
+        saga.CompensationLog.Last().Undone!.Select(x => x.Step).ShouldBe(["hotel", "car", "flight"]);
     }
 
     [Fact]
@@ -69,12 +70,14 @@ public class TripBookingTests(AppFixture fixture) : WorkflowContext(fixture)
         var customer = $"c-{Guid.NewGuid():N}";
         Providers.Refusals.Add((Booking.Flight, customer));
 
-        var session = await Run(trip(customer));
+        var command = trip(customer);
+
+        var session = await Run(command);
 
         session.Sent.MessagesOf<CancelCar>().ShouldBeEmpty();
         session.Sent.MessagesOf<CancelHotel>().ShouldBeEmpty();
         session.Executed.SingleMessage<CancelFlight>().CustomerId.ShouldBe(customer);
-        session.Executed.SingleMessage<TripCancelled>();
+        (await LoadSaga<Trip>(command.TripId))!.IsCompleted().ShouldBeTrue();
     }
 
     [Fact]
@@ -91,12 +94,11 @@ public class TripBookingTests(AppFixture fixture) : WorkflowContext(fixture)
         session.MovedToErrorQueue.SingleMessage<BookCar>();
 
         session.Sent.MessagesOf<CancelFlight>().ShouldBeEmpty();
-        session.Sent.MessagesOf<TripCancelled>().ShouldBeEmpty();
 
         // The trip is still waiting on the car, with the flight booked. Replaying the dead letter carries on
         var saga = await LoadSaga<Trip>(command.TripId);
         saga!.Status.ShouldBe(SagaStatus.Active);
-        saga.Attempted.ShouldBe([Booking.Flight, Booking.Car]);
+        saga.UndoStack.Select(x => x.Tag).ShouldBe(["flight", "car"]);
         Providers.HasReservation(Booking.Flight, customer).ShouldBeTrue();
     }
 }

@@ -2,6 +2,7 @@ using Alba;
 using JasperFx.CommandLine;
 using Marten;
 using Microsoft.Extensions.DependencyInjection;
+using Wolverine;
 using Wolverine.Tracking;
 
 [assembly: Xunit.v3.Parallelization(Mode = Xunit.Sdk.ParallelMode.None)]
@@ -15,7 +16,8 @@ public class AppFixture : IAsyncLifetime
     public async ValueTask InitializeAsync()
     {
         JasperFxEnvironment.AutoStartHost = true;
-        Host = await AlbaHost.For<Program>();
+        // One node owns every listener, the fan-in shards included, from the moment it starts
+        Host = await AlbaHost.For<Program>(x => x.ConfigureServices(services => services.RunWolverineInSoloMode()));
         await Host.CleanAllMartenDataAsync();
     }
 

@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <WolverineVersion>7.0.0-local.1</WolverineVersion>
+    <WolverineVersion>7.0.0-alpha.3</WolverineVersion>
   </PropertyGroup>
 
   <ItemGroup>

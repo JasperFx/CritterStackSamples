@@ -23,6 +23,13 @@ public class Bank
     // Transfers the ledger refuses to record, to make the last step fail
     public ConcurrentBag<Guid> LedgerRefuses { get; } = [];
 
+    public void Reset()
+    {
+        _balances.Clear();
+        ClosedAccounts.Clear();
+        LedgerRefuses.Clear();
+    }
+
     public void Open(string account, decimal balance) => _balances[account] = balance;
 
     public decimal BalanceOf(string account) => _balances.GetValueOrDefault(account);

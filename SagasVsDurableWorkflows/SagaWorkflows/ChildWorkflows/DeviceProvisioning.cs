@@ -11,7 +11,10 @@ public record PackageCreated(Guid DeviceProvisioningId, Uri PackageUrl);
 
 public record SendPackageUrlToDevice(Guid DeviceProvisioningId, string DeviceId, Uri PackageUrl);
 
-// From the device, over whatever channel it uses (Durable Functions' "DownloadCompletedAck" external event)
+// From the device, over whatever channel it uses (Durable Functions' "DownloadCompletedAck" external event). A device
+// can answer after its provisioning already timed out: [DiscardIfSagaMissing] on the message type drops such a late
+// answer wherever it goes, where the evaluation needed an empty NotFound method
+[DiscardIfSagaMissing]
 public record DownloadAcknowledged(Guid DeviceProvisioningId);
 public record DownloadTimedOut(Guid DeviceProvisioningId) : TimeoutMessage(1.Hours());
 
@@ -19,7 +22,6 @@ public record DownloadTimedOut(Guid DeviceProvisioningId) : TimeoutMessage(1.Hou
 public class DeviceProvisioning : CompensatingSaga, IRevisioned
 {
     public Guid Id { get; set; }
-    public int Version { get; set; }
 
     public Guid RolloutId { get; set; }
     public string DeviceId { get; set; } = "";
@@ -50,7 +52,4 @@ public class DeviceProvisioning : CompensatingSaga, IRevisioned
         MarkCompleted();
         return new DeviceProvisioningFailed(RolloutId, DeviceId, ex.Message);
     }
-
-    // An acknowledgement after the child already timed out
-    public static void NotFound(DownloadAcknowledged _) { }
 }

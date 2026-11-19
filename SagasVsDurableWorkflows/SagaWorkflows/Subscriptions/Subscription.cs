@@ -5,7 +5,7 @@ namespace SagaWorkflows.Subscriptions;
 
 // Rebuilt from Temporal's subscription workflow tutorial (temporalio/subscription-workflow-project-template-typescript):
 // a free trial, then a charge every billing period up to a maximum number of periods. The customer can cancel at any
-// time, the charge can change while it runs (signals), and anyone can ask how far along it is (queries).
+// time, the plan can change while it runs (signals), and anyone can ask how far along it is (queries).
 
 public record StartSubscription(
     Guid SubscriptionId,
@@ -17,10 +17,16 @@ public record StartSubscription(
 
 // Signals
 public record CancelSubscription(Guid SubscriptionId);
-public record UpdateBillingCharge(Guid SubscriptionId, decimal Amount);
 
-// Temporal's sleep() and condition(..., timeout). Each carries its own delay, because it comes from the subscription
+// A new price and billing period. After the trial, the new plan's first period starts right away
+public record ChangePlan(Guid SubscriptionId, decimal Charge, TimeSpan BillingPeriod);
+
+// Temporal's condition(cancelled, trialPeriod) and sleep(billingPeriod). Each carries its own delay, because it comes
+// from the subscription. A later BillingPeriodEnded for the same subscription replaces the one still pending, so a
+// plan change can never be followed by a charge for the old period
 public record TrialEnded(Guid SubscriptionId, TimeSpan Delay) : TimeoutMessage(Delay);
+
+[ReplacesEarlierTimeouts]
 public record BillingPeriodEnded(Guid SubscriptionId, int Period, TimeSpan Delay) : TimeoutMessage(Delay);
 
 // Activities
@@ -35,13 +41,14 @@ public enum EmailKind
     SubscriptionOver
 }
 
-// Kept after it finishes, so the queries still answer for a closed subscription
+// Kept after it finishes, so the queries still answer for a closed subscription. A signal that arrives after it
+// finished is logged and dropped, for every message this saga handles: [SagaMissing(Discard)] instead of a NotFound
+// method per signal
 [RetainWhenCompleted(Days = 30)]
+[SagaMissing(SagaMissingBehavior.Discard)]
 public class Subscription : Saga, IRevisioned
 {
     public Guid Id { get; set; }
-    public int Version { get; set; }
-
     public string CustomerId { get; set; } = "";
     public TimeSpan BillingPeriod { get; set; }
     public int MaxBillingPeriods { get; set; }
@@ -70,9 +77,18 @@ public class Subscription : Saga, IRevisioned
         return chargeOrFinish();
     }
 
-    public OutgoingMessages Handle(BillingPeriodEnded ended)
-        // Only the timeout for the current period counts
-        => ended.Period == BillingPeriodNumber ? chargeOrFinish() : [];
+    // No "is this the timeout for the current period?" guard: a timeout a later one replaced never gets here
+    public OutgoingMessages Handle(BillingPeriodEnded _) => chargeOrFinish();
+
+    public OutgoingMessages Handle(ChangePlan change)
+    {
+        BillingPeriodCharge = change.Charge;
+        BillingPeriod = change.BillingPeriod;
+
+        // In the trial, the new plan starts when the trial ends. Afterward its first period starts now, and the
+        // BillingPeriodEnded this schedules replaces the one pending for the old plan
+        return InTrial ? [] : [new BillingPeriodEnded(Id, BillingPeriodNumber, BillingPeriod)];
+    }
 
     public SendEmail Handle(CancelSubscription _)
     {
@@ -80,12 +96,6 @@ public class Subscription : Saga, IRevisioned
         MarkCompleted();
         return new SendEmail(Id, CustomerId, InTrial ? EmailKind.CancelledDuringTrial : EmailKind.SubscriptionFinished);
     }
-
-    public void Handle(UpdateBillingCharge update) => BillingPeriodCharge = update.Amount;
-
-    // Signals for a subscription that already ended
-    public static void NotFound(CancelSubscription _) { }
-    public static void NotFound(UpdateBillingCharge _) { }
 
     // The body of Temporal's while (true) loop: one billing period per timeout
     private OutgoingMessages chargeOrFinish()

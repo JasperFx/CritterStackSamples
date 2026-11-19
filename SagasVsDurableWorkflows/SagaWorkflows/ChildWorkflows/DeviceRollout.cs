@@ -10,8 +10,8 @@ namespace SagaWorkflows.ChildWorkflows;
 public record RollOutDevices(Guid DeviceRolloutId, string[] DeviceIds);
 
 // The child's result, sent to the parent. DeviceRolloutId is how Wolverine finds the parent saga
-public record DeviceProvisioned(Guid DeviceRolloutId, string DeviceId);
-public record DeviceProvisioningFailed(Guid DeviceRolloutId, string DeviceId, string Reason);
+public record DeviceProvisioned(Guid DeviceRolloutId, string DeviceId) : IFanInReply;
+public record DeviceProvisioningFailed(Guid DeviceRolloutId, string DeviceId, string Reason) : IFanInReply;
 
 public record RolloutCompleted(Guid RolloutId, string[] Provisioned, string[] Failed);
 
@@ -19,7 +19,6 @@ public record RolloutCompleted(Guid RolloutId, string[] Provisioned, string[] Fa
 public class DeviceRollout : Saga, IRevisioned
 {
     public Guid Id { get; set; }
-    public int Version { get; set; }
 
     public List<string> Pending { get; set; } = [];
     public List<string> Provisioned { get; set; } = [];

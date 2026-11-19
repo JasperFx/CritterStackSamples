@@ -62,13 +62,14 @@ public class SubscriptionTests(AppFixture fixture) : WorkflowContext(fixture)
     }
 
     [Fact]
-    public async Task a_new_charge_applies_from_the_next_period_and_cancelling_stops_billing()
+    public async Task a_new_plan_starts_a_new_period_and_cancelling_stops_billing()
     {
         var command = subscription(maxPeriods: 12);
         var session = await send(HttpMethod.Post, "/subscriptions", command);
-        session = await session.PlayScheduledMessagesAsync(30.Seconds()); // trial over, period 1 charged
+        await session.PlayScheduledMessagesAsync(30.Seconds()); // trial over, period 1 charged
 
-        await send(HttpMethod.Put, $"/subscriptions/{command.SubscriptionId}/charge", new NewCharge(25m));
+        // The new plan's first period starts now. Its timeout replaces the one pending for the old plan
+        session = await send(HttpMethod.Put, $"/subscriptions/{command.SubscriptionId}/plan", new NewPlan(25m, 7.Days()));
         (await query(command.SubscriptionId)).ShouldBe(new BillingInfo(command.CustomerId, 2, 25m, 10m, false));
 
         session = await session.PlayScheduledMessagesAsync(30.Seconds()); // period 2 charged at the new price
@@ -95,8 +96,5 @@ public class SubscriptionTests(AppFixture fixture) : WorkflowContext(fixture)
 
         first.OfType<ChargeCustomer>().Single().Period.ShouldBe(1);
         first.OfType<BillingPeriodEnded>().Single().ShouldBe(new BillingPeriodEnded(saga.Id, 2, 30.Days()));
-
-        // A stale timeout for a period already billed does nothing
-        saga.Handle(new BillingPeriodEnded(saga.Id, 1, 30.Days())).ShouldBeEmpty();
     }
 }

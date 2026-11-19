@@ -1,14 +1,6 @@
 using System.Collections.Concurrent;
-using Wolverine.ErrorHandling;
 
 namespace SagaWorkflows.TripBooking;
-
-// A provider said no. Retrying won't change its mind, so Wolverine skips the retries
-[TerminalFailure]
-public class BookingRefusedException(string message) : Exception(message);
-
-// A provider is down. Worth retrying
-public class ProviderUnavailableException(string provider) : Exception($"{provider} is unavailable");
 
 /// <summary>The airline, car rental and hotel systems, in memory</summary>
 public class TravelProviders
@@ -17,10 +9,25 @@ public class TravelProviders
 
     public ConcurrentBag<(Booking, string customer)> Refusals { get; } = [];
     public ConcurrentBag<(Booking, string customer)> Outages { get; } = [];
+    public ConcurrentBag<string> NoCars { get; } = [];
+    public ConcurrentBag<string> FullHotels { get; } = [];
+    public ConcurrentBag<(Booking, string customer)> CancellationRefusals { get; } = [];
+
+    public void Reset()
+    {
+        Reservations.Clear();
+        Refusals.Clear();
+        Outages.Clear();
+        NoCars.Clear();
+        FullHotels.Clear();
+        CancellationRefusals.Clear();
+    }
 
     public void Book(Booking booking, string customer)
     {
         if (Outages.Contains((booking, customer))) throw new ProviderUnavailableException(booking.ToString());
+        if (booking == Booking.Car && NoCars.Contains(customer)) throw new NoCarsException($"No cars for {customer}");
+        if (booking == Booking.Hotel && FullHotels.Contains(customer)) throw new NoRoomsException($"No rooms for {customer}");
         if (Refusals.Contains((booking, customer)))
             throw new BookingRefusedException($"No {booking.ToString().ToLowerInvariant()} available for {customer}");
 
@@ -28,7 +35,13 @@ public class TravelProviders
     }
 
     // Cancelling something that was never booked is fine: cancellations have to be idempotent, in Restate too
-    public void Cancel(Booking booking, string customer) => Reservations.TryRemove((booking, customer), out _);
+    public void Cancel(Booking booking, string customer)
+    {
+        if (CancellationRefusals.Contains((booking, customer)))
+            throw new CancellationRefusedException($"The {booking.ToString().ToLowerInvariant()} for {customer} cannot be cancelled");
+
+        Reservations.TryRemove((booking, customer), out _);
+    }
 
     public bool HasReservation(Booking booking, string customer) => Reservations.ContainsKey((booking, customer));
 }
@@ -65,12 +78,9 @@ public static class TravelProviderHandler
         return new CarCancelled(command.TripId);
     }
 
-    public static HotelCancelled Handle(CancelHotel command, TravelProviders providers)
-    {
-        providers.Cancel(Booking.Hotel, command.CustomerId);
-        return new HotelCancelled(command.TripId);
-    }
+    // No reply of its own: Wolverine's acknowledgement confirms it to the trip
+    public static void Handle(CancelHotel command, TravelProviders providers)
+        => providers.Cancel(Booking.Hotel, command.CustomerId);
 
     public static void Handle(TripBooked _) { }
-    public static void Handle(TripCancelled _) { }
 }

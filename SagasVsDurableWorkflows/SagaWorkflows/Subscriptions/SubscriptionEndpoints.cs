@@ -3,7 +3,7 @@ using Wolverine.Persistence;
 
 namespace SagaWorkflows.Subscriptions;
 
-public record NewCharge(decimal Amount);
+public record NewPlan(decimal Charge, TimeSpan BillingPeriod);
 
 public record BillingInfo(string CustomerId, int BillingPeriodNumber, decimal BillingPeriodCharge, decimal TotalCharged,
     bool Finished);
@@ -19,9 +19,10 @@ public static class SubscriptionEndpoints
     public static (AcceptResponse, CancelSubscription) Cancel(Guid subscriptionId)
         => (new AcceptResponse($"/subscriptions/{subscriptionId}"), new CancelSubscription(subscriptionId));
 
-    [WolverinePut("/subscriptions/{subscriptionId}/charge")]
-    public static (AcceptResponse, UpdateBillingCharge) Charge(Guid subscriptionId, NewCharge charge)
-        => (new AcceptResponse($"/subscriptions/{subscriptionId}"), new UpdateBillingCharge(subscriptionId, charge.Amount));
+    [WolverinePut("/subscriptions/{subscriptionId}/plan")]
+    public static (AcceptResponse, ChangePlan) Plan(Guid subscriptionId, NewPlan plan)
+        => (new AcceptResponse($"/subscriptions/{subscriptionId}"),
+            new ChangePlan(subscriptionId, plan.Charge, plan.BillingPeriod));
 
     // Temporal's queries, all at once
     [WolverineGet("/subscriptions/{id}")]

@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Bobcat specifications for the eight workflows: ordinary xUnit v3 test methods that render as Given / When / Then.
+       One project for all of them, one host per saga style, so `dotnet test` or `bobcat watch` shows the whole set. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit.v3" Version="4.0.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Bobcat" Version="1.0.0" />
+    <PackageReference Include="Bobcat.Xunit" Version="1.0.0" />
+    <!-- Intercepts every step call at compile time; without it the specs pass with no specification at all -->
+    <PackageReference Include="Bobcat.Generators" Version="1.0.0" />
+    <PackageReference Include="WolverineFx.Bobcat" Version="7.0.0-alpha.3" />
+    <PackageReference Include="Alba" Version="9.0.0" />
+    <PackageReference Include="Shouldly" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SagaWorkflows\SagaWorkflows.csproj" />
+  </ItemGroup>
+
+</Project>

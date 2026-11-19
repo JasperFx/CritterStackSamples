@@ -30,14 +30,16 @@ public record InventoryUpdated(Guid OrderId);
 
 public record NotifyCustomer(Guid OrderId, string Text);
 
-// Kept after it finishes so GET /orders/{id} can still answer, as a workflow tool can for a closed workflow
+// Kept after it finishes so GET /orders/{id} can still answer, as a workflow tool can for a closed workflow.
+// [RecordSagaHistory] keeps a row for every message the order handles, so GET /orders/{id}/history shows how it got
+// there: the same timeline an event-sourced saga gets from its stream
 [RetainWhenCompleted(Days = 7)]
+[RecordSagaHistory]
 public class Order : CompensatingSaga, IRevisioned
 {
     public const decimal ApprovalThreshold = 50_000m;
 
     public Guid Id { get; set; }
-    public int Version { get; set; }
 
     public string Item { get; set; } = "";
     public int Quantity { get; set; }
@@ -69,16 +71,16 @@ public class Order : CompensatingSaga, IRevisioned
         return [new RequestApproval(Id, TotalCost), new ApprovalTimedOut(Id)];
     }
 
+    // An answer for an order that already finished (timed out, rejected, or completed) is logged and dropped,
+    // rather than failing with UnknownSagaException. A TimeoutMessage always gets that treatment
+    [DiscardIfSagaMissing]
     public OutgoingMessages Handle(ManagerDecision decision)
     {
-        // An answer that comes after the timeout, or a second answer, changes nothing
+        // A second answer while the order is still going changes nothing
         if (Stage != "Waiting for approval") return [];
 
         return decision.Approved ? takePayment() : finish(false, "Order was rejected by approver");
     }
-
-    // A manager answering after the order already finished. A TimeoutMessage needs no such method
-    public static void NotFound(ManagerDecision decision) { }
 
     public OutgoingMessages Handle(ApprovalTimedOut _)
         => Stage == "Waiting for approval"
