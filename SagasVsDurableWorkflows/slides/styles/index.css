@@ -1,0 +1,92 @@
+/* A light, plain take on the previous Critter Stack deck: Inter, headings at 500, an indigo accent */
+:root {
+  --deck-ground: #161826;
+  --deck-section: #262a60;
+  --deck-accent-300: #d2cefd;
+  --deck-accent-400: #b5abfc;
+  --deck-accent-600: #796cbf;
+  --deck-accent-700: #5d5294;
+  --deck-accent-800: #423a6a;
+  --slidev-theme-primary: #796cbf;
+}
+
+.slidev-layout {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: var(--deck-ground);
+}
+
+.slidev-layout h1,
+.slidev-layout h2,
+.slidev-layout h3 {
+  font-weight: 500;
+}
+
+.slidev-layout h1 {
+  color: var(--deck-section);
+}
+
+.slidev-layout h1 + p {
+  opacity: 0.75;
+}
+
+.slidev-layout a {
+  color: var(--deck-accent-700);
+  border-bottom: 1px solid var(--deck-accent-400);
+}
+
+.slidev-layout code:not(pre code) {
+  color: var(--deck-accent-800);
+}
+
+.slidev-layout.section {
+  background: var(--deck-section);
+  color: #e9e9ed;
+}
+.slidev-layout.section h1 {
+  color: #e9e9ed;
+}
+.slidev-layout.section p {
+  color: var(--deck-accent-300);
+}
+
+.slidev-layout.cover {
+  background: var(--deck-ground) !important;
+  color: #e9e9ed;
+}
+.slidev-layout.cover h1 {
+  color: #e9e9ed;
+}
+.slidev-layout.cover p {
+  color: var(--deck-accent-300);
+}
+
+/* An issue number, outlined, never filled */
+.issue {
+  display: inline-block;
+  border: 1px solid var(--deck-accent-600);
+  color: var(--deck-accent-700);
+  border-radius: 6px;
+  padding: 0 0.5em;
+  font-size: 0.75em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  margin: 0 0.25em 0.25em 0;
+}
+
+/* Marks a slide about something that isn't shipped */
+.design {
+  display: inline-block;
+  border: 1px dashed #c2410c;
+  color: #c2410c;
+  border-radius: 6px;
+  padding: 0 0.5em;
+  font-size: 0.75em;
+}
+
+.slidev-layout table {
+  font-size: 0.8em;
+}
+
+.slidev-layout pre,
+.slidev-layout code {
+  font-variant-ligatures: none;
+}

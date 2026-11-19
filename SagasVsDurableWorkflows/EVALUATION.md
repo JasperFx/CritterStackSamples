@@ -314,3 +314,44 @@ not `SagaWorkflows`. No handlers or sagas are found, and every send fails with `
   to the app's assembly, would be the better answer there.
 - I didn't check whether 6.x behaves the same. The older samples in this repository run under Alba without setting
   `ApplicationAssembly`, so this looks like a 7.0 regression, but that's unconfirmed.
+
+## What changed with Wolverine 7.0.0-alpha.3
+
+The evaluation above was written against `7.0.0-local.1`. The samples now run on `7.0.0-alpha.3`, which has the saga
+features this evaluation and its follow-up issues asked for. Scenario by scenario, what got shorter or went away:
+
+| Scenario | Then | Now |
+|---|---|---|
+| 1. Money transfer | `Withdrawn` / `Deposited` flags, three `Compensate` methods, a private `undo()` | `PushUndo` as each step happens, one `Compensate(ITransferStep, ExceptionInfo)` returning `UndoMessages()` (#5672, #5673). An event-sourced twin keeps the whole history (#5415) |
+| 2. Trip booking | An `Attempted` list, three `Handle(XCancelled)` methods and an `undoNext()`: "the one place where the saga is plainly more code" | `PushUndo(..., confirmedBy:)` before each booking and `UndoSequentially(completeWhenDone: true)`. The hand-written state machine is gone (#5673) |
+| 3. Order approval | An empty `NotFound(ManagerDecision)` so a late answer isn't an `UnknownSagaException` | `[DiscardIfSagaMissing]` on the `Handle` method (#5674); `[RecordSagaHistory]` shows how the order got where it is (#5665) |
+| 4. Subscription | The stale-timeout guard `ended.Period == BillingPeriodNumber`, and a `NotFound` per signal | `[ReplacesEarlierTimeouts]` on the billing timeout and `[SagaMissing(Discard)]` on the saga (#5674) |
+| 5. Fan-out / fan-in | `PublishToPartitionedLocalMessaging` listing every reply type by hand | Global partitioning with inferred grouping over a marker interface, `IFanInReply` (the documented answer from #5663 / #5666) |
+| 7. Polling | Gave up after N polls, because a deadline couldn't be tested | A real one-hour deadline, tested with `PlayScheduledMessagesAsync(advanceBy:)` and Bobcat's `WhenTimePasses` (#5664) |
+| 8. Agent loop | Nothing to see while it waits on a person | Idle runs found by `LastModified` (#5558) |
+
+On the three gaps in "Real gaps worth features":
+
+- **Fan-in.** No per-saga switch (#5663 is parked for 7.1). Global partitioning plus `UseInferredMessageGrouping()` is
+  the answer, and with a marker interface the configuration names no reply types. The scenarios that need it (backup,
+  child workflows, agent loop) run without a concurrency conflict in the specs.
+- **Visibility.** Closed for both kinds of saga: an event-sourced saga's stream is its history, with time travel to any
+  version or time, and a document saga can record a row per handled message. Both are read through
+  `ISagaHistoryDiagnostics`, which is what CritterWatch's planned saga timeline reads.
+- **Testing timers.** Closed: `PlayScheduledMessagesAsync(advanceBy:)` and `WhenTimePasses`.
+
+What the alpha.3 rebuild turned up:
+
+- **Letting time pass doesn't compensate.** `PlayScheduledMessagesAsync(advanceBy:)` runs a local scheduled message
+  inline, so a failure of the saga's own handler is thrown at the test instead of being retried, dead lettered and
+  compensated. The polling spec delivers the due poll to its queue instead (`WhenReceived` with `DeliveryOptions`).
+- **An event-sourced `Compensate` returning `(event, UndoSequence)`** unwinds, but `completeWhenDone` is lost and the
+  compensation log records only the last step. Returning the `UndoSequence` alone works, so `EventSourcedTrip` does.
+- **`saga-flow` quirks.** Under `[SagaMissing(Discard)]` the start message is drawn as "logged and dropped" too; a
+  `Compensate(ITransferStep, ...)` or `Compensate(object, ...)` adds a message box for the interface (or `Object`), and
+  the catch-all is drawn as covering `TripBooked`, which the trip only sends when it's done.
+- **Durable faults across a crash** (`GivenTheServiceCrashesAfterItsNextDeadLetter` / `WhenTheServiceRestarts`) work
+  in Wolverine's own two-service `SagaFaults` sample. Here, with the fault going to a durable *local* queue in the
+  same service, the restart never delivered it within 30 seconds. Not investigated further; the samples don't claim it.
+
+Counts: 47 Bobcat specs in `SagaWorkflows.Specs` and the original 32 tests, all green, three runs in a row.

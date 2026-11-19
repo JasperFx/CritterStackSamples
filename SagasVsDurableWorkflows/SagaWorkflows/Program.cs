@@ -40,6 +40,10 @@ builder.Host.UseWolverine(opts =>
 {
     opts.ServiceName = "saga-workflows";
 
+    // Node workloads: one image, deployed as HTTP-only nodes, messaging nodes and durability nodes. The durability
+    // workload includes sweeping retained sagas. All, unless Wolverine:Workloads says otherwise
+    opts.Durability.Workloads = builder.Configuration.GetValue("Wolverine:Workloads", NodeWorkloads.All);
+
     // Under the test runner the entry assembly is the test project, so say where the handlers are
     opts.ApplicationAssembly = typeof(Program).Assembly;
 
