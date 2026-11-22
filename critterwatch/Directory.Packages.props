@@ -1,51 +1,53 @@
 <Project>
 
   <!-- Central pin set for the CritterWatch samples island. Aligned to CritterWatch
-       1.0.1's dependency closure (rounded up to the latest GA of each) (see CritterWatch's own
-       Directory.Packages.props). CritterWatch 1.0.1 is published to nuget.org,
-       so the samples resolve everything from nuget.org — no local feed needed.
+       1.5.0's dependency closure (its nuspecs and CritterWatch's own Directory.Packages.props
+       at the v1.5.0 tag). CritterWatch 1.5.0 is published to nuget.org, so the samples
+       resolve everything from nuget.org — no local feed needed. Embedded.Sqlite used to carry
+       its own nested island pinned to a local 1.1 pack; it inherits this one now.
        Bump these together at release time, then re-run the per-solution Aspire battery. -->
 
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <CritterWatchVersion>1.0.1</CritterWatchVersion>
+    <CritterWatchVersion>1.5.0</CritterWatchVersion>
   </PropertyGroup>
 
   <ItemGroup Label="CritterWatch (nuget.org)">
     <PackageVersion Include="CritterWatch" Version="$(CritterWatchVersion)" />
     <PackageVersion Include="CritterWatch.SqlServer" Version="$(CritterWatchVersion)" />
-    <PackageVersion Include="CritterWatch.Abstractions" Version="$(CritterWatchVersion)" />
+    <PackageVersion Include="CritterWatch.Sqlite" Version="$(CritterWatchVersion)" />
+    <PackageVersion Include="CritterWatch.Services" Version="$(CritterWatchVersion)" />
     <PackageVersion Include="Wolverine.CritterWatch" Version="$(CritterWatchVersion)" />
     <PackageVersion Include="Wolverine.CritterWatch.Http" Version="$(CritterWatchVersion)" />
   </ItemGroup>
 
-  <ItemGroup Label="Wolverine (6.30.0 GA — >= the 6.29.1 CritterWatch 1.0.1 depends on)">
-    <PackageVersion Include="WolverineFx" Version="6.30.0" />
-    <PackageVersion Include="WolverineFx.RuntimeCompilation" Version="6.30.0" />
-    <PackageVersion Include="WolverineFx.Http" Version="6.30.0" />
-    <PackageVersion Include="WolverineFx.Marten" Version="6.30.0" />
-    <PackageVersion Include="WolverineFx.Http.Marten" Version="6.30.0" />
-    <PackageVersion Include="WolverineFx.Polecat" Version="6.30.0" />
-    <PackageVersion Include="WolverineFx.Http.Polecat" Version="6.30.0" />
-    <PackageVersion Include="WolverineFx.Postgresql" Version="6.30.0" />
-    <PackageVersion Include="WolverineFx.SqlServer" Version="6.30.0" />
-    <PackageVersion Include="WolverineFx.RabbitMQ" Version="6.30.0" />
-    <PackageVersion Include="WolverineFx.AmazonSqs" Version="6.30.0" />
-    <PackageVersion Include="WolverineFx.AzureServiceBus" Version="6.30.0" />
-    <PackageVersion Include="WolverineFx.Kafka" Version="6.30.0" />
-    <PackageVersion Include="WolverineFx.Redis" Version="6.30.0" />
-    <PackageVersion Include="WolverineFx.Pubsub" Version="6.30.0" />
+  <ItemGroup Label="Wolverine (6.64.0 — exactly what CritterWatch 1.5.0 depends on)">
+    <PackageVersion Include="WolverineFx" Version="6.64.0" />
+    <PackageVersion Include="WolverineFx.RuntimeCompilation" Version="6.64.0" />
+    <PackageVersion Include="WolverineFx.Http" Version="6.64.0" />
+    <PackageVersion Include="WolverineFx.Marten" Version="6.64.0" />
+    <PackageVersion Include="WolverineFx.Http.Marten" Version="6.64.0" />
+    <PackageVersion Include="WolverineFx.Polecat" Version="6.64.0" />
+    <PackageVersion Include="WolverineFx.Http.Polecat" Version="6.64.0" />
+    <PackageVersion Include="WolverineFx.Fisher" Version="6.64.0" />
+    <PackageVersion Include="WolverineFx.Http.Fisher" Version="6.64.0" />
+    <PackageVersion Include="WolverineFx.Postgresql" Version="6.64.0" />
+    <PackageVersion Include="WolverineFx.SqlServer" Version="6.64.0" />
+    <PackageVersion Include="WolverineFx.RabbitMQ" Version="6.64.0" />
+    <PackageVersion Include="WolverineFx.AmazonSqs" Version="6.64.0" />
+    <PackageVersion Include="WolverineFx.AzureServiceBus" Version="6.64.0" />
+    <PackageVersion Include="WolverineFx.Kafka" Version="6.64.0" />
+    <PackageVersion Include="WolverineFx.Redis" Version="6.64.0" />
+    <PackageVersion Include="WolverineFx.Pubsub" Version="6.64.0" />
   </ItemGroup>
 
-  <ItemGroup Label="Event stores (latest GA stable — satisfies CritterWatch 1.0.1's closure)">
-    <!-- Marten 9.29.0 / Polecat 5.19.2 are the latest stable releases and are >= what
-         CritterWatch 1.0.1 asks for (Marten 9.28.0). JasperFx is on
-         2.55.0 to match Marten 9.29.0 (CritterWatch itself only asks for 2.52.1). -->
-    <PackageVersion Include="Marten" Version="9.29.0" />
-    <PackageVersion Include="Polecat" Version="5.19.2" />
-    <PackageVersion Include="JasperFx" Version="2.55.0" />
-    <PackageVersion Include="JasperFx.Events" Version="2.55.0" />
-    <PackageVersion Include="JasperFx.Events.SourceGenerator" Version="2.55.0" />
+  <ItemGroup Label="Event stores (exactly CritterWatch 1.5.0's closure)">
+    <PackageVersion Include="Marten" Version="9.59.0" />
+    <PackageVersion Include="Polecat" Version="5.50.0" />
+    <PackageVersion Include="Fisher" Version="1.29.0" />
+    <PackageVersion Include="JasperFx" Version="2.102.0" />
+    <PackageVersion Include="JasperFx.Events" Version="2.102.0" />
+    <PackageVersion Include="JasperFx.Events.SourceGenerator" Version="2.102.0" />
     <PackageVersion Include="Npgsql" Version="9.0.4" />
   </ItemGroup>
 
@@ -70,6 +72,7 @@
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="Shouldly" Version="4.3.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.0" />
   </ItemGroup>
 
 </Project>
