@@ -1,17 +1,35 @@
 # Regenerating CritterCrush from its event model
 
-`CritterCrush.emodel.yaml` is the source of truth. Everything under `CritterCrush/Scheduling/`,
-`CritterCrush/Volunteering/`, `CritterCrush.Specs/Features/` and `crittercrush-plan.yaml` is emitted from it by
-`Bobcat.EventModel.Scaffolding`, at zero token cost, and is safe to throw away and regenerate —
+> **Bobcat 1.0 status.** This regeneration path is frozen on the last versions that support it.
+> Bobcat retired the curated `.emodel.yaml` format as an authoring surface and deleted
+> `Bobcat.EventModel.Scaffolding` (bobcat#406, after 0.30.0); `bobcat import-event-model` now reads only
+> an eventmodelers.ai / emlang board export and refuses a curated file, and skeleton generation for
+> declared-only slices is Wolverine's `scaffold` command. Neither can take this file: an emlang board
+> carries no fields, so importing one gives field-less stubs, and everything that makes this model
+> worth regenerating from (the `elements:` field shapes, the scenario `with:` values, the spec-ownership
+> manifest) has no 1.0 input format. So `models/Scaffolder` references **Bobcat.EventModel and
+> Bobcat.EventModel.Scaffolding 0.30.0** (it is a separate executable, so it does not drag those
+> versions into the app or the specs, which are on Bobcat 1.0.0-alpha.1), and the application
+> registers the model's slice declarations from C# instead (`CritterCrush/CritterCrushEventModel.cs`).
+> A change to the model's slices now has to be made in both places.
+
+`CritterCrush.emodel.yaml` is the scaffolder's source. Everything under `CritterCrush/Scheduling/`,
+`CritterCrush/Volunteering/`, the spec skeletons under `CritterCrush.Specs/Specs/` and
+`crittercrush-plan.yaml` is emitted from it by `Bobcat.EventModel.Scaffolding`, at zero token cost —
 until a slice is filled in, at which point regenerating that slice's file would overwrite the work.
 
 ```bash
 dotnet run --project models/Scaffolder -- models/CritterCrush.emodel.yaml out \
-    --arrangements --plan models/crittercrush-plan.yaml
-cp out/Features/*.feature CritterCrush.Specs/Features/
+    --arrangements --plan models/crittercrush-plan.yaml --manifest models/CritterCrush.spec-ownership.yaml
 cp out/Scheduling/*.cs CritterCrush/Scheduling/       # ONLY for slices still unimplemented
 cp out/Volunteering/*.cs CritterCrush/Volunteering/   # likewise
 ```
+
+As of 2026-10-17 (0.30.0) the plan regenerates byte for byte. The `.feature` files the scaffolder
+used to write are gone with the Gherkin lane (bobcat#471); with `--manifest` it writes xUnit spec
+skeletons to `out/Specs/` instead, in the 0.27 shape (`[Fact]` + `[BobcatSlice]` +
+`[BobcatScenario]`), which the committed specs have since moved to `[BobcatSpec]`. Use them as a
+starting point for a new slice's specs, never as a replacement for the committed ones.
 
 The runner is `models/Scaffolder`, a few lines around `SliceScaffolder.ScaffoldAll(model)` — use
 that single entry point and not the individual `Scaffold`/`ScaffoldAggregates`/`ScaffoldFeatures`
@@ -20,15 +38,8 @@ methods, because the pieces are not independent and skipping one leaves a dangli
 scaffolding API change and a README that quietly stopped working is that building the solution
 compiles it.
 
-⚠️ **`--arrangements` is not optional for this chapter**, whatever its name suggests. The committed
-`BookingAppointments.feature` was generated with it (bobcat#259): twelve of sixteen scenarios shared
-the same arranged history and it is now three named `@arrangement` scenarios they reference by name.
-Regenerate without the flag and that history is silently inlined back into every scenario — a file
-that still passes and reads considerably worse. As of 2026-09-16 the command above reproduces all
-six committed features **byte for byte**.
-
 ⚠️ **Copy `.cs` files back only for slices that are still unimplemented.** Regenerating a filled-in
-slice overwrites the work; the `.feature` is the file that is always safe to take.
+slice overwrites the work.
 
 ## `--plan` exists because the last hand-written plan rotted
 

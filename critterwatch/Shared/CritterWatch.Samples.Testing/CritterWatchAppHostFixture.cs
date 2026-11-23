@@ -47,7 +47,7 @@ public class CritterWatchAppHostFixture<TAppHost> : IAsyncLifetime
     /// on demand on failure — see <see cref="ResourceLogCapture"/>), then blocks until the
     /// <c>critterwatch</c> resource reports <see cref="KnownResourceStates.Running"/>.
     /// </summary>
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         var builder = await DistributedApplicationTestingBuilder.CreateAsync<TAppHost>();
 
@@ -138,7 +138,7 @@ public class CritterWatchAppHostFixture<TAppHost> : IAsyncLifetime
     /// </summary>
     public string DumpResourceLogs(params string[] resourceNames) => _logCapture.Dump(resourceNames);
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (_app is not null)
         {
